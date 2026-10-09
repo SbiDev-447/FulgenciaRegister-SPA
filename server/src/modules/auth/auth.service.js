@@ -2,7 +2,7 @@
 
 const db = require('../../config/db')
 const jwt = require('../../utils/jwt')
-const password = require('../../utils/password')
+const { checkCredentials } = require('./credentials')
 const { HttpError } = require('../../utils/httpError')
 
 /**
@@ -29,8 +29,9 @@ function toPublicUser(row) {
 async function login(usuario, clientHash) {
   const row = await db.tabla('usuarios').selectOne(null, null, { usuario })
 
-  // Generic error for both unknown user and bad password: no user enumeration.
-  if (!row || !password.verify(clientHash, row.salt, row.password_hash)) {
+  // Generic error for both unknown user and bad password. checkCredentials runs
+  // the KDF even for unknown users, so timing does not leak user existence.
+  if (!checkCredentials(row, clientHash)) {
     throw HttpError.unauthorized('Invalid credentials')
   }
 
