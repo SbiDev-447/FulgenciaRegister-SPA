@@ -5,6 +5,7 @@ const express = require('express')
 const cookieParser = require('cookie-parser')
 const { notFound, errorHandler } = require('./middlewares/error')
 const academic = require('./constants/academic')
+const authRoutes = require('./modules/auth/auth.routes')
 
 function createApp() {
   const app = express()
@@ -14,6 +15,7 @@ function createApp() {
 
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
   app.get('/api/academico/opciones', (req, res) => res.json(academic.options()))
+  app.use('/api/auth', authRoutes)
 
   // In development the same Express process serves the static SPA. Routing is
   // hash-based, so a plain static middleware is enough (everything is `/`).
