@@ -6,3 +6,24 @@ STRUCTURE.md
 docs/
 odd/
 .atl/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+build/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

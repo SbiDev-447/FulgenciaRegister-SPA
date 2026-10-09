@@ -1,0 +1,19 @@
+{
+  "name": "fulgencia",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fulgencia — SPA de registro estudiantil (vanilla JS + Express + MariaDB)",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev": "pnpm --filter @fulgencia/server dev",
+    "start": "pnpm --filter @fulgencia/server start",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "db:seed": "pnpm --filter @fulgencia/server db:seed",
+    "test": "pnpm -r test"
+  }
+}
