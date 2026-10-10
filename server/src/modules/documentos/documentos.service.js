@@ -2,6 +2,7 @@
 
 const db = require('../../config/db')
 const { HttpError } = require('../../utils/httpError')
+const { cedulaWhere } = require('../../utils/cedula')
 
 // Venezuelan cédula: V/E prefix, optional dash, 1-12 digits. Matched against
 // the trimmed, upper-cased input, so `v12345678` and `V-12345678` are equivalent.
@@ -64,7 +65,7 @@ async function verificar(rawCedula) {
 
   const student = await db
     .tabla('estudiantes')
-    .selectOne(null, null, { tipo_ci: cedula.tipo_ci, numero_ci: cedula.numero_ci })
+    .selectOne(null, null, cedulaWhere(cedula.tipo_ci, cedula.numero_ci))
   if (!student) {
     throw HttpError.notFound('Estudiante not found')
   }

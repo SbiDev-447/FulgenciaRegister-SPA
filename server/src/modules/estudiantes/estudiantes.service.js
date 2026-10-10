@@ -2,6 +2,7 @@
 
 const db = require('../../config/db')
 const { HttpError } = require('../../utils/httpError')
+const { cedulaWhere } = require('../../utils/cedula')
 const { isValidSeccion } = require('./estudiantes.validators')
 
 const STUDENT_FIELDS = [
@@ -238,7 +239,7 @@ async function listEstudiantes(filters = {}) {
 async function findOrCreateRepresentante(data) {
   const existing = await db
     .tabla('representantes')
-    .selectOne(null, null, { tipo_ci: data.tipo_ci, numero_ci: data.numero_ci })
+    .selectOne(null, null, cedulaWhere(data.tipo_ci, data.numero_ci))
   if (existing) {
     return { id: existing.id }
   }
