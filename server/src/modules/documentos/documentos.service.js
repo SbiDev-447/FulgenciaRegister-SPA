@@ -2,27 +2,7 @@
 
 const db = require('../../config/db')
 const { HttpError } = require('../../utils/httpError')
-const { cedulaWhere } = require('../../utils/cedula')
-
-// Venezuelan cédula: V/E prefix, optional dash, 1-12 digits. Matched against
-// the trimmed, upper-cased input, so `v12345678` and `V-12345678` are equivalent.
-const CEDULA_RE = /^([VE])-?(\d{1,12})$/
-
-/**
- * Parse a cédula from its free-text form.
- * @param {unknown} raw
- * @returns {{ tipo_ci: string, numero_ci: string }|null} null when malformed
- */
-function parseCedula(raw) {
-  if (typeof raw !== 'string') {
-    return null
-  }
-  const match = CEDULA_RE.exec(raw.trim().toUpperCase())
-  if (!match) {
-    return null
-  }
-  return { tipo_ci: match[1], numero_ci: match[2] }
-}
+const { parseCedula, cedulaWhere } = require('../../utils/cedula')
 
 /**
  * Printable student summary shared by verify and emit: identity, full name and

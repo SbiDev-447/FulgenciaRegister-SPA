@@ -34,7 +34,7 @@ function withTimeout(promise, ms) {
 }
 
 // Fixed fixtures, cleaned before and after so the suite is idempotent.
-const STUDENT_CIS = new Set(['00012', '13', '14'])
+const STUDENT_CIS = new Set(['00012', '13', '14', '15000001'])
 const REP_CIS = new Set(['99999999', '00099', '99'])
 
 const studentPayload = (numeroCi, nombre, repCi) => ({
@@ -128,6 +128,13 @@ test('cédula lookups compare numero_ci as a string (leading-zero safety)', asyn
   assert.equal(exact.status, 200, 'V-00012 must resolve to its own student')
   assert.equal((await exact.json()).estudiante.numero_ci, '00012')
 
+  // Human-formatted input (thousands separator) resolves to the same student.
+  const dotted = await fetch(`${base}/api/documentos/verificar/V-00.012`, {
+    headers: { Cookie: cookie },
+  })
+  assert.equal(dotted.status, 200, 'V-00.012 must resolve to the V-00012 student')
+  assert.equal((await dotted.json()).estudiante.numero_ci, '00012')
+
   // Scenario B — representative reuse must key on the exact cédula string.
   // V-00099 and V-99 are different cédulas and must stay separate rows.
   const s13 = await create(studentPayload('13', 'Trece', '00099'))
@@ -138,4 +145,19 @@ test('cédula lookups compare numero_ci as a string (leading-zero safety)', asyn
   const reps = await db.tabla('representantes').select(null, null, { tipo_ci: 'V' })
   const distinct = reps.filter((rep) => rep.numero_ci === '00099' || rep.numero_ci === '99')
   assert.equal(distinct.length, 2, 'V-00099 and V-99 must be two distinct representatives')
+
+  // Scenario C — the request body may carry human-formatted cédulas too; they
+  // are canonicalized before validation, storage and lookup.
+  const dottedCreate = await create(studentPayload('15.000.001', 'Quince', '99999999'))
+  assert.equal(dottedCreate.status, 201, 'a formatted numero_ci should be accepted')
+  const vStudents = await db.tabla('estudiantes').select(null, null, { tipo_ci: 'V' })
+  const stored = vStudents.find((row) => row.numero_ci === '15000001')
+  assert.ok(stored, 'numero_ci must be stored in canonical digits-only form')
+  for (const form of ['V-15000001', 'V-15.000.001']) {
+    const res = await fetch(`${base}/api/documentos/verificar/${form}`, {
+      headers: { Cookie: cookie },
+    })
+    assert.equal(res.status, 200, `${form} must resolve`)
+    assert.equal((await res.json()).estudiante.numero_ci, '15000001')
+  }
 })

@@ -3,8 +3,14 @@
 const service = require('./estudiantes.service')
 const validators = require('./estudiantes.validators')
 const { HttpError } = require('../../utils/httpError')
+const { normalizeNumeroCi } = require('../../utils/cedula')
 
 function assertValidStudent(student, { partial = false } = {}) {
+  // Canonicalize human-formatted input (`12.345.678`, spaces) before validating
+  // and before it is stored. Mutating the shared object propagates to the service.
+  if (student.numero_ci !== undefined) {
+    student.numero_ci = normalizeNumeroCi(student.numero_ci)
+  }
   const details = {}
   const check = (key, valid, message) => {
     if (!partial || student[key] !== undefined) {
@@ -71,6 +77,9 @@ function assertValidRepresentantes(representantes, { allowEmpty = false } = {}) 
 
   const seen = new Set()
   representantes.forEach((item, index) => {
+    if (item.numero_ci !== undefined) {
+      item.numero_ci = normalizeNumeroCi(item.numero_ci)
+    }
     const details = {}
     if (!validators.isNonEmptyString(item.nombre)) {
       details.nombre = 'is required'
