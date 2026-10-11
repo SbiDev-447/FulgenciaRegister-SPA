@@ -1,0 +1,21 @@
+{
+  "name": "@fulgencia/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fulgencia REST API (Express + mysql-tab + MariaDB)",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --env-file-if-exists=../.env --watch src/index.js",
+    "start": "node --env-file-if-exists=../.env src/index.js",
+    "db:seed": "node --env-file-if-exists=../.env db/seed.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "cookie-parser": "1.4.7",
+    "express": "5.3.0",
+    "jsonwebtoken": "9.0.3",
+    "mysql-tab": "2.1.1",
+    "tabla-model": "2.0.6"
+  }
+}
