@@ -175,10 +175,10 @@ function buildSearchWhere(q) {
 }
 
 /**
- * List students with optional filters. When `anio` is given the list is
- * restricted to students with a matching inscription; otherwise each student
- * shows their most recent inscripcion (string max of anio_escolar, which sorts
- * chronologically because it is YYYY-YYYY).
+ * List students with optional filters. When `anio` or `seccion` is given the
+ * list is restricted to students with a matching inscription; otherwise each
+ * student shows their most recent inscripcion (string max of anio_escolar,
+ * which sorts chronologically because it is YYYY-YYYY).
  * @param {{ q?: string, anio?: string, seccion?: string }} filters
  */
 async function listEstudiantes(filters = {}) {
@@ -209,7 +209,7 @@ async function listEstudiantes(filters = {}) {
 
   const estudiantes = []
   for (const student of students) {
-    if (anio && !latestByStudent.has(student.id)) {
+    if ((anio || seccion) && !latestByStudent.has(student.id)) {
       continue
     }
     const ins = latestByStudent.get(student.id) ?? null

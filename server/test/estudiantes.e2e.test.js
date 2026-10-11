@@ -65,6 +65,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
   let createdId = null
   let deletedId = null
   const createdRepCis = []
+  const extraStudentIds = []
 
   t.after(async () => {
     // Best-effort cleanup: remove the student and any orphan representatives
@@ -77,6 +78,19 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         })
       } catch {
         // Cleanup is best-effort; a failure here must not mask test results.
+      }
+    }
+    for (const id of extraStudentIds) {
+      if (!cookie) {
+        break
+      }
+      try {
+        await fetch(`${base}/api/estudiantes/${id}`, {
+          method: 'DELETE',
+          headers: { Cookie: cookie },
+        })
+      } catch {
+        // Best-effort cleanup.
       }
     }
     for (const ci of createdRepCis) {
@@ -260,6 +274,47 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     const body = await res.json()
     const found = body.estudiantes.find((student) => student.id === createdId)
     assert.ok(found, 'expected the created student in the anio-filtered list')
+  })
+
+  await t.test('filters the list by seccion alone', async () => {
+    // A student in a different section must be excluded when only `seccion` is
+    // supplied: the set restriction must not depend on `anio` being present.
+    const sectionCi = uniqueCi('44')
+    const sectionRepCi = uniqueCi('55')
+    const create = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        tipo_ci: 'V',
+        numero_ci: sectionCi,
+        primer_nombre: 'Sección',
+        primer_apellido: 'Solo',
+        fecha_nacimiento: '2012-05-05',
+        sexo: 'F',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '2do Año',
+        seccion: 'C',
+        fecha_inscripcion: '2025-09-15',
+      },
+      representantes: [
+        { tipo_ci: 'V', numero_ci: sectionRepCi, nombre: 'Rep Sección', parentesco: 'Madre' },
+      ],
+    })
+    assert.equal(create.status, 201)
+    const sectionStudent = await create.json()
+    const sectionStudentId = sectionStudent.estudiante.id
+    extraStudentIds.push(sectionStudentId)
+    createdRepCis.push(sectionRepCi)
+
+    const res = await api('GET', '/api/estudiantes?seccion=C')
+    assert.equal(res.status, 200)
+    const body = await res.json()
+    const ids = body.estudiantes.map((student) => student.id)
+    assert.ok(ids.includes(sectionStudentId), 'expected the section C student in the list')
+    assert.ok(
+      !ids.includes(createdId),
+      'expected the section A student to be excluded by the seccion filter',
+    )
   })
 
   await t.test('the list q filter excludes non-matching students', async () => {
