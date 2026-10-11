@@ -2,6 +2,7 @@
 
 const db = require('../../config/db')
 const { HttpError } = require('../../utils/httpError')
+const { cedulaWhere } = require('../../utils/cedula')
 const { isValidSeccion } = require('./estudiantes.validators')
 
 const STUDENT_FIELDS = [
@@ -174,10 +175,10 @@ function buildSearchWhere(q) {
 }
 
 /**
- * List students with optional filters. When `anio` is given the list is
- * restricted to students with a matching inscription; otherwise each student
- * shows their most recent inscripcion (string max of anio_escolar, which sorts
- * chronologically because it is YYYY-YYYY).
+ * List students with optional filters. When `anio` or `seccion` is given the
+ * list is restricted to students with a matching inscription; otherwise each
+ * student shows their most recent inscripcion (string max of anio_escolar,
+ * which sorts chronologically because it is YYYY-YYYY).
  * @param {{ q?: string, anio?: string, seccion?: string }} filters
  */
 async function listEstudiantes(filters = {}) {
@@ -208,7 +209,7 @@ async function listEstudiantes(filters = {}) {
 
   const estudiantes = []
   for (const student of students) {
-    if (anio && !latestByStudent.has(student.id)) {
+    if ((anio || seccion) && !latestByStudent.has(student.id)) {
       continue
     }
     const ins = latestByStudent.get(student.id) ?? null
@@ -238,7 +239,7 @@ async function listEstudiantes(filters = {}) {
 async function findOrCreateRepresentante(data) {
   const existing = await db
     .tabla('representantes')
-    .selectOne(null, null, { tipo_ci: data.tipo_ci, numero_ci: data.numero_ci })
+    .selectOne(null, null, cedulaWhere(data.tipo_ci, data.numero_ci))
   if (existing) {
     return { id: existing.id }
   }
