@@ -69,6 +69,18 @@ export const api = {
   me: () => request('/auth/me'),
   logout: () => request('/auth/logout', { method: 'POST' }),
   opciones: () => request('/academico/opciones'),
+  /**
+   * Dashboard statistics.
+   * @param {{ anio?: string, seccion?: string }} [filters] - years/sections
+   *   labels as defined by /api/academico/opciones; omit for all.
+   */
+  estadisticas: ({ anio, seccion } = {}) => {
+    const params = new URLSearchParams()
+    if (anio) params.set('anio', anio)
+    if (seccion) params.set('seccion', seccion)
+    const qs = params.toString()
+    return request(`/estadisticas${qs ? `?${qs}` : ''}`)
+  },
 }
 
 /**
