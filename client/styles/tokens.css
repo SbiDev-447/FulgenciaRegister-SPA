@@ -1,5 +1,6 @@
 /* Design tokens: the single source of truth for colors, spacing, type and
-   elevation. Components consume only these variables, never raw values. */
+   elevation. Components consume only these variables, never raw values.
+   Palette follows AGENTS/docs/COLORS.md: pure white and pure black are avoided. */
 
 @font-face {
   font-family: 'InterTight';
@@ -30,25 +31,26 @@
 
   --font-sans: 'InterTight', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  --color-bg: #eef2f8;
-  --color-surface: #ffffff;
-  --color-surface-2: #f5f8fd;
-  --color-surface-3: #e9eff9;
-  --color-border: #d8e0ee;
-  --color-border-strong: #b9c6dd;
-  --color-text: #16203a;
-  --color-text-muted: #5c6b87;
-  --color-text-subtle: #8896ad;
+  /* Warm, low-fatigue light theme (cream / tan / navy). */
+  --color-bg: #e9e0c3;
+  --color-surface: #ece2c9;
+  --color-surface-2: #e3d8d8;
+  --color-surface-3: #d8cb9e;
+  --color-border: #d8cb9e;
+  --color-border-strong: #c3b184;
+  --color-text: #0f172a;
+  --color-text-muted: #4a5568;
+  --color-text-subtle: #6b7280;
 
-  --color-primary: #1f4bd8;
-  --color-primary-strong: #1637a8;
-  --color-primary-soft: #e5ebff;
-  --color-primary-contrast: #ffffff;
-  --color-accent: #d4a017;
-  --color-danger: #c0392b;
-  --color-danger-soft: #fdecea;
-  --color-success: #1f8a4c;
-  --color-success-soft: #e6f6ec;
+  --color-primary: #1e40af;
+  --color-primary-strong: #1e3a8a;
+  --color-primary-soft: #d6ddf5;
+  --color-primary-contrast: #e9e0c3;
+  --color-accent: #e0c15a;
+  --color-danger: #a13a3a;
+  --color-danger-soft: #f0dcd8;
+  --color-success: #0e7c5a;
+  --color-success-soft: #d5ece1;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -64,9 +66,9 @@
   --radius-lg: 20px;
   --radius-pill: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(16, 26, 48, 0.08);
-  --shadow-md: 0 12px 32px rgba(16, 26, 48, 0.14);
-  --shadow-lg: 0 24px 64px rgba(16, 26, 48, 0.22);
+  --shadow-sm: 0 1px 2px rgba(6, 8, 15, 0.08);
+  --shadow-md: 0 12px 32px rgba(6, 8, 15, 0.14);
+  --shadow-lg: 0 24px 64px rgba(6, 8, 15, 0.22);
 
   --sidebar-width: 264px;
   --topbar-height: 68px;
@@ -76,30 +78,31 @@
   --transition: 220ms ease;
 }
 
+/* Dark theme overrides only the tokens; no component redefines colors. */
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --color-bg: #0b1220;
-  --color-surface: #141d31;
-  --color-surface-2: #1a2540;
-  --color-surface-3: #223053;
-  --color-border: #26344f;
+  --color-bg: #06080f;
+  --color-surface: #0f172a;
+  --color-surface-2: #1e293b;
+  --color-surface-3: #27354b;
+  --color-border: #243147;
   --color-border-strong: #35486c;
-  --color-text: #e9f0fb;
-  --color-text-muted: #9fb0cc;
-  --color-text-subtle: #74869f;
+  --color-text: #e9e0c3;
+  --color-text-muted: #9aa7bd;
+  --color-text-subtle: #748098;
 
-  --color-primary: #5b8cff;
-  --color-primary-strong: #86a8ff;
-  --color-primary-soft: #1b2a4d;
-  --color-primary-contrast: #06122b;
-  --color-accent: #f0c04a;
-  --color-danger: #ff6b5e;
-  --color-danger-soft: #3a1a1a;
-  --color-success: #4cd07d;
-  --color-success-soft: #14291d;
+  --color-primary: #587fe0;
+  --color-primary-strong: #7d9cec;
+  --color-primary-soft: #1a2440;
+  --color-primary-contrast: #06080f;
+  --color-accent: #e0c15a;
+  --color-danger: #e07a6f;
+  --color-danger-soft: #2a1414;
+  --color-success: #3fbf92;
+  --color-success-soft: #0f2b22;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 2px rgba(6, 8, 15, 0.4);
+  --shadow-md: 0 12px 32px rgba(6, 8, 15, 0.5);
+  --shadow-lg: 0 24px 64px rgba(6, 8, 15, 0.6);
 }

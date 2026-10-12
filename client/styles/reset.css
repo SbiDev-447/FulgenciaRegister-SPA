@@ -1,14 +1,15 @@
 /* Minimal, opinionated reset. Keeps defaults predictable without fighting the
-   browser on things we actually want (e.g. form controls). */
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+   browser on things we actually want (e.g. form controls).
+   Children/subchildren nest without `&`; pseudo-elements on the parent need it. */
 
 * {
+  box-sizing: border-box;
   margin: 0;
+
+  &::before,
+  &::after {
+    box-sizing: border-box;
+  }
 }
 
 html,
