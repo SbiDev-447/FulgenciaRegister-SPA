@@ -33,7 +33,7 @@
 
   /* Warm, low-fatigue light theme (cream / tan / navy). */
   --color-bg: #e9e0c3;
-  --color-surface: #f3f6f9;
+  --color-surface: #f8f6f0;
   --color-surface-2: #e3d8d8;
   --color-surface-3: #d8cb9e;
   --color-border: #d8cb9e;
@@ -53,8 +53,9 @@
   --color-danger-soft: #f0dcd8;
   --color-success: #0e7c5a;
   --color-success-soft: #d5ece1;
-  /* Input fields: lighter than surfaces so they stand out from beige panels. */
-  --color-input: #f8f6f0;
+  /* Input fields: slightly deeper than surfaces so the card reads as the
+       lightest layer. */
+  --color-input: #f3f6f9;
 
   --space-1: 4px;
   --space-2: 8px;
