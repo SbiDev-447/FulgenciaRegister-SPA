@@ -1,7 +1,12 @@
-// Inicio view: welcome panel and quick-access cards. Placeholder for the future
-// statistics dashboard.
+// Inicio view: statistics dashboard. Consumes /api/estadisticas with optional
+// year/section filters sourced from /api/academico/opciones; shows KPI cards
+// and a per-year distribution. Markup is built with h() and textContent only
+// (AGENTS/docs/ARQUITECTURA.md §6: no innerHTML with data).
 
 import { h, clear } from '../ui/dom.js'
+import { api } from '../api.js'
+
+const fmt = new Intl.NumberFormat('es-VE')
 
 /**
  * @param {HTMLElement} container
@@ -11,32 +16,183 @@ export function renderInicio(container, { user } = {}) {
   const nombre = user?.nombre ?? user?.usuario ?? ''
   const bienvenida = nombre ? `Bienvenido, ${nombre}` : 'Bienvenido'
 
+  const anioSelect = h('select', {
+    class: 'inicio__select',
+    'aria-label': 'Filtrar por año',
+    disabled: true,
+  })
+  const seccionSelect = h('select', {
+    class: 'inicio__select',
+    'aria-label': 'Filtrar por sección',
+    disabled: true,
+  })
+  const results = h('div', { class: 'inicio__results' })
+
   const view = h('section', { class: 'inicio' }, [
     h('div', { class: 'inicio__hero' }, [
       h('h2', { text: bienvenida }),
       h('p', {
-        text: 'Panel de gestión de la inscripción estudiantil del liceo. Desde aquí consultarás estudiantes, emitirás documentos y verás las estadísticas del período.',
+        text: 'Resumen de la inscripción: estudiantes, documentos emitidos y distribución por año.',
       }),
     ]),
-    h('div', { class: 'inicio__grid' }, [
-      h('article', { class: 'card inicio__card' }, [
-        h('h3', { text: 'Estudiantes' }),
-        h('p', { text: 'Listado, búsqueda por nombre o cédula, ficha e inscripción.' }),
-        h('a', { class: 'tag', href: '#/estudiantes', text: 'En construcción' }),
+    h('form', { class: 'inicio__filtros', on: { submit: (event) => event.preventDefault() } }, [
+      h('label', { class: 'inicio__field' }, [
+        h('span', { text: 'Año' }),
+        anioSelect,
       ]),
-      h('article', { class: 'card inicio__card' }, [
-        h('h3', { text: 'Documentos' }),
-        h('p', { text: 'Verificación por cédula y emisión de constancias imprimibles.' }),
-        h('a', { class: 'tag', href: '#/documentos', text: 'En construcción' }),
-      ]),
-      h('article', { class: 'card inicio__card' }, [
-        h('h3', { text: 'Estadísticas' }),
-        h('p', { text: 'Total de estudiantes, distribución por sexo y por año.' }),
-        h('span', { class: 'tag', text: 'En construcción' }),
+      h('label', { class: 'inicio__field' }, [
+        h('span', { text: 'Sección' }),
+        seccionSelect,
       ]),
     ]),
+    results,
   ])
 
   clear(container)
   container.append(view)
+
+  // Incremented on every reload so a slow earlier response never overwrites a
+  // newer one after the user changed filters.
+  let seq = 0
+
+  function numeric(value) {
+    return fmt.format(value)
+  }
+
+  function renderStats(data) {
+    const { estudiantes, documentosEmitidos, porAnio } = data
+
+    const cards = [
+      { label: 'Estudiantes', value: estudiantes.total },
+      { label: 'Mujeres', value: estudiantes.mujeres },
+      { label: 'Hombres', value: estudiantes.hombres },
+      { label: 'Documentos emitidos', value: documentosEmitidos },
+    ]
+
+    const maxTotal = Math.max(...porAnio.map((row) => row.total), 1)
+
+    const breakdown = h('article', { class: 'card inicio__breakdown' }, [
+      h('h3', { text: 'Distribución por año' }),
+      h('div', { class: 'inicio__rows' },
+        porAnio.map((row) => {
+          const pct = Math.round((row.total / maxTotal) * 100)
+          return h('div', { class: 'inicio__row', dataset: { anio: row.anio } }, [
+            h('span', { class: 'inicio__row-label', text: row.anio }),
+            h('div', { class: 'inicio__bar', 'aria-hidden': 'true' }, [
+              row.total > 0
+                ? h('span', { class: 'inicio__bar-fill', style: { width: `${Math.max(pct, 3)}%` } })
+                : null,
+            ]),
+            h('span', { class: 'inicio__row-total', text: numeric(row.total) }),
+            h('span', { class: 'inicio__row-split', text: `${numeric(row.mujeres)} M · ${numeric(row.hombres)} H` }),
+          ])
+        }),
+      ),
+    ])
+
+    results.replaceChildren(
+      h('div', { class: 'inicio__stats' },
+        cards.map((card) =>
+          h('article', { class: 'card inicio__kpi' }, [
+            h('span', { class: 'inicio__kpi-label', text: card.label }),
+            h('strong', { class: 'inicio__kpi-value', text: numeric(card.value) }),
+          ]),
+        ),
+      ),
+      breakdown,
+    )
+  }
+
+  function renderError(error) {
+    const message = error && error.message ? error.message : 'No se pudieron cargar las estadísticas.'
+    results.replaceChildren(
+      h('div', { class: 'inicio__error' }, [
+        h('p', { text: message }),
+        h('button', { class: 'btn btn--primary', type: 'button', on: { click: load } }, [
+          h('span', { text: 'Reintentar' }),
+        ]),
+      ]),
+    )
+  }
+
+  function load() {
+    const id = ++seq
+    results.replaceChildren(h('p', { class: 'inicio__status', text: 'Cargando estadísticas…' }))
+    api
+      .estadisticas({ anio: anioSelect.value, seccion: seccionSelect.value })
+      .then((data) => {
+        if (id === seq) renderStats(data)
+      })
+      .catch((error) => {
+        if (id === seq) renderError(error)
+      })
+  }
+
+  /** @param {{ years: Array<{ label: string, sections: string[] }> }} options */
+  function fillFilters(options) {
+    const years = options.years ?? []
+
+    const allSections = []
+    const seen = new Set()
+    for (const year of years) {
+      for (const section of year.sections) {
+        if (!seen.has(section)) {
+          seen.add(section)
+          allSections.push(section)
+        }
+      }
+    }
+
+    anioSelect.replaceChildren(
+      h('option', { value: '', text: 'Todos los años' }),
+      ...years.map((year) => h('option', { value: year.label, text: year.label })),
+    )
+    anioSelect.disabled = false
+    anioSelect.value = ''
+
+    fillSections(allSections)
+    seccionSelect.value = ''
+    seccionSelect.disabled = false
+
+    anioSelect.addEventListener('change', () => {
+      const year = years.find((entry) => entry.label === anioSelect.value)
+      const sections = year ? year.sections : allSections
+      fillSections(sections)
+      if (!sections.includes(seccionSelect.value)) {
+        seccionSelect.value = ''
+      }
+      load()
+    })
+    seccionSelect.addEventListener('change', load)
+
+    load()
+  }
+
+  function fillSections(sections) {
+    seccionSelect.replaceChildren(
+      h('option', { value: '', text: 'Todas las secciones' }),
+      ...sections.map((section) => h('option', { value: section, text: section })),
+    )
+  }
+
+  function renderFiltersError(error) {
+    const message = error && error.message ? error.message : 'No se pudieron cargar los filtros.'
+    results.replaceChildren(
+      h('div', { class: 'inicio__error' }, [
+        h('p', { text: message }),
+        h('button', { class: 'btn btn--primary', type: 'button', on: { click: loadFilters } }, [
+          h('span', { text: 'Reintentar' }),
+        ]),
+      ]),
+    )
+  }
+
+  function loadFilters() {
+    api
+      .opciones()
+      .then(fillFilters)
+      .catch(renderFiltersError)
+  }
+
+  loadFilters()
 }
