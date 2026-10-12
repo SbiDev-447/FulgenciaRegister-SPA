@@ -6,7 +6,7 @@
   place-items: center;
   min-height: 100vh;
   padding: var(--space-5);
-  background: url('../assets/img/background-login.webp') center / cover no-repeat fixed;
+  background: url('../../assets/img/background-login.webp') center / cover no-repeat fixed;
 }
 
 .login::before {
