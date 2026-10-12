@@ -1,7 +1,7 @@
 // Application bootstrap: theme, session check, then the hash router. Decides
 // between the public login screen and the authenticated shell on every change.
 
-import { initTheme } from './features/theme.js'
+import { initTheme, getTheme, applyTheme } from './features/theme.js'
 import { getUser, isAuthenticated, loadSession, logout } from './features/session.js'
 import { createRouter } from './router.js'
 import { mountShell } from './shell.js'
@@ -38,6 +38,9 @@ function handleChange(match, path) {
   // Unauthenticated: the login screen is the only reachable route.
   if (!isAuthenticated()) {
     shell = null
+    // The login screen stays light regardless of the persisted/OS theme;
+    // the authenticated shell reapplies the saved theme below.
+    applyTheme('light')
     if (path !== LOGIN_PATH) {
       router.go(LOGIN_PATH, { replace: true })
       return
@@ -52,6 +55,7 @@ function handleChange(match, path) {
     return
   }
 
+  applyTheme(getTheme())
   if (!shell) {
     shell = mountShell(app, { user: getUser(), onLogout: handleLogout })
   }
