@@ -76,6 +76,27 @@
           letter-spacing: 0.16em;
         }
       }
+
+      /* Short viewports: keep the shield large, shrink the text column. */
+      @media (max-height: 740px) {
+        gap: var(--space-2);
+
+        .sidebar__shield {
+          width: 110px;
+        }
+
+        .sidebar__brand-text {
+          line-height: 1.1;
+
+          strong {
+            font-size: 1.6rem;
+          }
+
+          small {
+            font-size: 1.2rem;
+          }
+        }
+      }
     }
 
     .sidebar__nav {
