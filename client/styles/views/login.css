@@ -50,7 +50,7 @@
       transform: translateX(-50%);
       width: auto;
       height: var(--shield-h);
-      filter: drop-shadow(0 4px 8px rgba(6, 8, 15, 0.14));
+      filter: drop-shadow(0 2px 4px rgba(6, 8, 15, 0.1));
     }
 
     .login__header {
