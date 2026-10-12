@@ -46,6 +46,8 @@
   --color-primary-strong: #1e3a8a;
   --color-primary-soft: #d6ddf5;
   --color-primary-contrast: #e9e0c3;
+  /* Dark navy brand tone (light-theme only; the login screen is light-only). */
+  --color-navy: #263d56;
   --color-accent: #e0c15a;
   --color-danger: #a13a3a;
   --color-danger-soft: #f0dcd8;

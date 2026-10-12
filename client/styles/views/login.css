@@ -63,7 +63,7 @@
       .login__title {
         font-size: 2rem;
         text-transform: uppercase;
-        color: var(--color-primary);
+        color: var(--color-navy);
       }
 
       .login__subtitle {
