@@ -39,7 +39,7 @@
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-xl);
 
     /* Emblem floats over the card's top edge, centered: it never contributes
        to the card's own size. Rendered at the image's natural proportion. */
