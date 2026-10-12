@@ -19,7 +19,7 @@ export function renderLogin(container, { onSuccess } = {}) {
     type: 'text',
     name: 'usuario',
     autocomplete: 'username',
-    placeholder: 'admin',
+    placeholder: 'Ingrese su usuario',
     required: true,
     autofocus: true,
   })
@@ -29,7 +29,7 @@ export function renderLogin(container, { onSuccess } = {}) {
     type: 'password',
     name: 'password',
     autocomplete: 'current-password',
-    placeholder: '••••••••',
+    placeholder: 'Ingrese su contraseña',
     required: true,
   })
 
