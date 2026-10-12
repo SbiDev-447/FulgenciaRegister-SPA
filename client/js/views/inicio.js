@@ -1,45 +1,42 @@
 // Inicio view: welcome panel and quick-access cards. Placeholder for the future
 // statistics dashboard.
 
-import { escapeHtml } from '../utils.js'
+import { h, clear } from '../ui/dom.js'
 
 /**
  * @param {HTMLElement} container
  * @param {{ user?: object }} [context]
  */
 export function renderInicio(container, { user } = {}) {
-  const nombre = escapeHtml(user?.nombre ?? user?.usuario ?? '')
+  const nombre = user?.nombre ?? user?.usuario ?? ''
+  const bienvenida = nombre ? `Bienvenido, ${nombre}` : 'Bienvenido'
 
-  container.innerHTML = `
-    <section class="inicio">
-      <div class="inicio__hero">
-        <h2>Bienvenido${nombre ? `, ${nombre}` : ''}</h2>
-        <p>
-          Panel de gestión de la inscripción estudiantil del liceo. Desde aquí
-          consultarás estudiantes, emitirás documentos y verás las estadísticas del
-          período.
-        </p>
-      </div>
+  const view = h('section', { class: 'inicio' }, [
+    h('div', { class: 'inicio__hero' }, [
+      h('h2', { text: bienvenida }),
+      h('p', {
+        text: 'Panel de gestión de la inscripción estudiantil del liceo. Desde aquí consultarás estudiantes, emitirás documentos y verás las estadísticas del período.',
+      }),
+    ]),
+    h('div', { class: 'inicio__grid' }, [
+      h('article', { class: 'card inicio__card' }, [
+        h('h3', { text: 'Estudiantes' }),
+        h('p', { text: 'Listado, búsqueda por nombre o cédula, ficha e inscripción.' }),
+        h('a', { class: 'tag', href: '#/estudiantes', text: 'En construcción' }),
+      ]),
+      h('article', { class: 'card inicio__card' }, [
+        h('h3', { text: 'Documentos' }),
+        h('p', { text: 'Verificación por cédula y emisión de constancias imprimibles.' }),
+        h('a', { class: 'tag', href: '#/documentos', text: 'En construcción' }),
+      ]),
+      h('article', { class: 'card inicio__card' }, [
+        h('h3', { text: 'Estadísticas' }),
+        h('p', { text: 'Total de estudiantes, distribución por sexo y por año.' }),
+        h('span', { class: 'tag', text: 'En construcción' }),
+      ]),
+    ]),
+  ])
 
-      <div class="inicio__grid">
-        <article class="card inicio__card">
-          <h3>Estudiantes</h3>
-          <p>Listado, búsqueda por nombre o cédula, ficha e inscripción.</p>
-          <a class="tag" href="#/estudiantes">En construcción</a>
-        </article>
-
-        <article class="card inicio__card">
-          <h3>Documentos</h3>
-          <p>Verificación por cédula y emisión de constancias imprimibles.</p>
-          <a class="tag" href="#/documentos">En construcción</a>
-        </article>
-
-        <article class="card inicio__card">
-          <h3>Estadísticas</h3>
-          <p>Total de estudiantes, distribución por sexo y por año.</p>
-          <span class="tag">En construcción</span>
-        </article>
-      </div>
-    </section>
-  `
+  clear(container)
+  container.append(view)
 }

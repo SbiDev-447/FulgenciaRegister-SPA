@@ -43,7 +43,8 @@ fulgenciaProject/
 │   ├── index.html
 │   ├── assets/              # tipografías e imágenes locales
 │   ├── styles/              # tokens.css, reset.css, layout.css, views/
-│   └── js/                  # main.js, router.js, api.js, views/, features/
+│   └── js/                  # main.js, router.js, api.js, views/, features/, ui/
+│       └── ui/              # helpers DOM (h, svgIcon) e iconos SVG
 ├── server/                  # API REST (Express + mysql-tab)
 │   ├── src/
 │   │   ├── modules/         # auth, estudiantes, documentos, estadisticas

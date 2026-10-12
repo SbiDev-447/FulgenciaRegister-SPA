@@ -3,6 +3,7 @@
 
 import { ApiError } from '../api.js'
 import { login } from '../features/session.js'
+import { h, clear } from '../ui/dom.js'
 
 /**
  * @param {HTMLElement} container
@@ -10,56 +11,62 @@ import { login } from '../features/session.js'
  */
 export function renderLogin(container, { onSuccess } = {}) {
   document.title = 'Iniciar sesión · Fulgencia Register'
-  container.innerHTML = `
-    <section class="login">
-      <div class="login__card">
-        <div class="login__header">
-          <img class="login__shield" src="./assets/img/Shield-Liceo.webp" alt="Escudo del liceo" />
-          <h1 class="login__title">Fulgencia Register</h1>
-          <p class="login__subtitle">Inicia sesión para gestionar la inscripción estudiantil</p>
-        </div>
 
-        <div class="alert alert--error" id="login-error" role="alert" hidden></div>
+  const errorBox = h('div', { class: 'alert alert--error', id: 'login-error', role: 'alert', hidden: true })
 
-        <form class="login__form" id="login-form" novalidate>
-          <label class="field">
-            <span class="field__label">Usuario</span>
-            <input
-              class="input"
-              type="text"
-              name="usuario"
-              autocomplete="username"
-              placeholder="admin"
-              required
-              autofocus
-            />
-          </label>
+  const usuarioInput = h('input', {
+    class: 'input',
+    type: 'text',
+    name: 'usuario',
+    autocomplete: 'username',
+    placeholder: 'admin',
+    required: true,
+    autofocus: true,
+  })
 
-          <label class="field">
-            <span class="field__label">Contraseña</span>
-            <input
-              class="input"
-              type="password"
-              name="password"
-              autocomplete="current-password"
-              placeholder="••••••••"
-              required
-            />
-          </label>
+  const passwordInput = h('input', {
+    class: 'input',
+    type: 'password',
+    name: 'password',
+    autocomplete: 'current-password',
+    placeholder: '••••••••',
+    required: true,
+  })
 
-          <button class="btn btn--primary btn--block" type="submit" id="login-submit">
-            Iniciar sesión
-          </button>
-        </form>
+  const submitButton = h('button', {
+    class: 'btn btn--primary btn--block',
+    type: 'submit',
+    id: 'login-submit',
+    text: 'Iniciar sesión',
+  })
 
-        <p class="login__footer">Sistema de registro estudiantil · Liceo</p>
-      </div>
-    </section>
-  `
+  const form = h('form', { class: 'login__form', id: 'login-form', novalidate: true }, [
+    h('label', { class: 'field' }, [
+      h('span', { class: 'field__label', text: 'Usuario' }),
+      usuarioInput,
+    ]),
+    h('label', { class: 'field' }, [
+      h('span', { class: 'field__label', text: 'Contraseña' }),
+      passwordInput,
+    ]),
+    submitButton,
+  ])
 
-  const form = container.querySelector('#login-form')
-  const errorBox = container.querySelector('#login-error')
-  const submitButton = container.querySelector('#login-submit')
+  const view = h('section', { class: 'login' }, [
+    h('div', { class: 'login__card' }, [
+      h('div', { class: 'login__header' }, [
+        h('img', { class: 'login__shield', src: './assets/img/Shield-Liceo.webp', alt: 'Escudo del liceo' }),
+        h('h1', { class: 'login__title', text: 'Fulgencia Register' }),
+        h('p', { class: 'login__subtitle', text: 'Inicia sesión para gestionar la inscripción estudiantil' }),
+      ]),
+      errorBox,
+      form,
+      h('p', { class: 'login__footer', text: 'Sistema de registro estudiantil · Liceo' }),
+    ]),
+  ])
+
+  clear(container)
+  container.append(view)
 
   function showError(message) {
     errorBox.textContent = message
