@@ -4,7 +4,7 @@
 
 @font-face {
   font-family: 'InterTight';
-  src: url('../assets/fonts/InterTight-Light.ttf') format('truetype');
+  src: url('../assets/fonts/InterTight-Light.woff2') format('woff2');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
@@ -12,7 +12,7 @@
 
 @font-face {
   font-family: 'InterTight';
-  src: url('../assets/fonts/InterTight-Regular.ttf') format('truetype');
+  src: url('../assets/fonts/InterTight-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -20,7 +20,7 @@
 
 @font-face {
   font-family: 'InterTight';
-  src: url('../assets/fonts/InterTight-Bold.ttf') format('truetype');
+  src: url('../assets/fonts/InterTight-Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
