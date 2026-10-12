@@ -1,4 +1,4 @@
-/* Inicio view: welcome banner and quick-access cards. */
+/* Inicio view: statistics dashboard (filter bar, KPI cards, per-year bars). */
 
 .inicio {
   display: flex;
@@ -23,37 +23,159 @@
     }
   }
 
-  .inicio__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  .inicio__filtros {
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--space-4);
 
-    .inicio__card {
+    .inicio__field {
       display: flex;
       flex-direction: column;
       gap: var(--space-2);
+      color: var(--color-text-muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
 
-      h3 {
-        font-size: 1rem;
+    .inicio__select {
+      min-width: 200px;
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-input);
+      color: var(--color-text);
+      font: inherit;
+      font-size: 0.95rem;
+      letter-spacing: 0;
+      text-transform: none;
+
+      &:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
       }
 
-      p {
-        color: var(--color-text-muted);
-        font-size: 0.9rem;
-      }
-
-      .tag {
-        align-self: flex-start;
-        margin-top: var(--space-2);
-        padding: 2px var(--space-3);
-        border-radius: var(--radius-pill);
-        background: var(--color-surface-3);
-        color: var(--color-text-muted);
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
+      &:disabled {
+        opacity: 0.6;
       }
     }
+  }
+
+  .inicio__results {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .inicio__status {
+    padding: var(--space-5) 0;
+    color: var(--color-text-muted);
+  }
+
+  .inicio__error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+
+    .btn {
+      align-self: flex-start;
+    }
+  }
+
+  .inicio__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-4);
+  }
+
+  .inicio__kpi {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-5);
+
+    .inicio__kpi-label {
+      color: var(--color-text-muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .inicio__kpi-value {
+      color: var(--color-navy);
+      font-size: 2.2rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+  }
+
+  .inicio__breakdown {
+    padding: var(--space-5);
+
+    h3 {
+      margin-bottom: var(--space-4);
+      font-size: 1rem;
+    }
+
+    .inicio__rows {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .inicio__row {
+      display: grid;
+      grid-template-columns: minmax(92px, auto) 1fr minmax(52px, auto) auto;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .inicio__row-label {
+      color: var(--color-text-muted);
+      font-size: 0.9rem;
+    }
+
+    .inicio__bar {
+      height: 8px;
+      border-radius: var(--radius-pill);
+      background: var(--color-surface-2);
+      overflow: hidden;
+    }
+
+    .inicio__bar-fill {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-primary-strong));
+    }
+
+    .inicio__row-total {
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .inicio__row-split {
+      color: var(--color-text-subtle);
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+  }
+}
+
+@media (max-width: 520px) {
+  .inicio__row {
+    /* Keep the label/bar/total; the M·H split wraps below on small cards. */
+    grid-template-columns: minmax(92px, auto) 1fr minmax(52px, auto);
+  }
+
+  .inicio__row-split {
+    grid-column: 2 / 3;
   }
 }
