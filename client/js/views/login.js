@@ -54,8 +54,8 @@ export function renderLogin(container, { onSuccess } = {}) {
 
   const view = h('section', { class: 'login' }, [
     h('div', { class: 'login__card' }, [
+      h('img', { class: 'login__shield', src: './assets/img/Shield-Liceo.webp', alt: 'Escudo del liceo' }),
       h('div', { class: 'login__header' }, [
-        h('img', { class: 'login__shield', src: './assets/img/Shield-Liceo.webp', alt: 'Escudo del liceo' }),
         h('h1', { class: 'login__title', text: 'Fulgencia Register' }),
         h('p', { class: 'login__subtitle', text: 'Inicia sesión para gestionar la inscripción estudiantil' }),
       ]),
