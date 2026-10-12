@@ -1,0 +1,105 @@
+/* Design tokens: the single source of truth for colors, spacing, type and
+   elevation. Components consume only these variables, never raw values. */
+
+@font-face {
+  font-family: 'InterTight';
+  src: url('../assets/fonts/InterTight-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'InterTight';
+  src: url('../assets/fonts/InterTight-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'InterTight';
+  src: url('../assets/fonts/InterTight-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+
+  --font-sans: 'InterTight', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --color-bg: #eef2f8;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f8fd;
+  --color-surface-3: #e9eff9;
+  --color-border: #d8e0ee;
+  --color-border-strong: #b9c6dd;
+  --color-text: #16203a;
+  --color-text-muted: #5c6b87;
+  --color-text-subtle: #8896ad;
+
+  --color-primary: #1f4bd8;
+  --color-primary-strong: #1637a8;
+  --color-primary-soft: #e5ebff;
+  --color-primary-contrast: #ffffff;
+  --color-accent: #d4a017;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fdecea;
+  --color-success: #1f8a4c;
+  --color-success-soft: #e6f6ec;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(16, 26, 48, 0.08);
+  --shadow-md: 0 12px 32px rgba(16, 26, 48, 0.14);
+  --shadow-lg: 0 24px 64px rgba(16, 26, 48, 0.22);
+
+  --sidebar-width: 264px;
+  --topbar-height: 68px;
+  --content-max: 1180px;
+
+  --transition-fast: 140ms ease;
+  --transition: 220ms ease;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #0b1220;
+  --color-surface: #141d31;
+  --color-surface-2: #1a2540;
+  --color-surface-3: #223053;
+  --color-border: #26344f;
+  --color-border-strong: #35486c;
+  --color-text: #e9f0fb;
+  --color-text-muted: #9fb0cc;
+  --color-text-subtle: #74869f;
+
+  --color-primary: #5b8cff;
+  --color-primary-strong: #86a8ff;
+  --color-primary-soft: #1b2a4d;
+  --color-primary-contrast: #06122b;
+  --color-accent: #f0c04a;
+  --color-danger: #ff6b5e;
+  --color-danger-soft: #3a1a1a;
+  --color-success: #4cd07d;
+  --color-success-soft: #14291d;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
+}

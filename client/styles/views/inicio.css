@@ -1,0 +1,59 @@
+/* Inicio view: welcome banner and quick-access cards. */
+
+.inicio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.inicio__hero {
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  color: var(--color-primary-contrast);
+  box-shadow: var(--shadow-md);
+}
+
+.inicio__hero h2 {
+  font-size: 1.4rem;
+  margin-bottom: var(--space-2);
+}
+
+.inicio__hero p {
+  opacity: 0.9;
+  max-width: 60ch;
+}
+
+.inicio__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.inicio__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inicio__card h3 {
+  font-size: 1rem;
+}
+
+.inicio__card p {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.inicio__card .tag {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-3);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}

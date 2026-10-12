@@ -1,0 +1,71 @@
+/* Login screen: full-bleed background image with a centered card. */
+
+.login {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: var(--space-5);
+  background: url('../assets/img/background-login.webp') center / cover no-repeat fixed;
+}
+
+.login::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    160deg,
+    rgba(9, 16, 36, 0.78),
+    rgba(9, 16, 36, 0.55) 45%,
+    rgba(9, 16, 36, 0.82)
+  );
+}
+
+.login__card {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-7) var(--space-6) var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.login__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.login__shield {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.login__title {
+  font-size: 1.5rem;
+}
+
+.login__subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.login__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.login__footer {
+  text-align: center;
+  color: var(--color-text-subtle);
+  font-size: 0.8rem;
+}
