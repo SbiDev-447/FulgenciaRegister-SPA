@@ -53,7 +53,7 @@
       text-align: center;
 
       .sidebar__shield {
-        width: 64px;
+        width: 150px;
         height: auto;
       }
 
@@ -63,7 +63,7 @@
         line-height: 1.15;
 
         strong {
-          font-size: 1rem;
+          font-size: 2rem;
           letter-spacing: 0.06em;
           text-transform: uppercase;
           color: var(--color-navy);
@@ -71,7 +71,7 @@
 
         small {
           color: var(--color-navy);
-          font-size: 0.72rem;
+          font-size: 1.5rem;
           text-transform: uppercase;
           letter-spacing: 0.16em;
         }
