@@ -198,7 +198,9 @@
   }
 }
 
-.sidebar-toggle {
+/* Compound selector beats `.icon-btn` (same specificity, later in source):
+   the hamburger only shows when the sidebar is collapsed (mobile). */
+.icon-btn.sidebar-toggle {
   display: none;
 
   @media (max-width: 960px) {
