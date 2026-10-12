@@ -23,26 +23,32 @@
   }
 
   .login__card {
+    /* Shield geometry: 348px tall at 280px wide (intrinsic 288x358). The card
+       reserves its own top space so the shield's size never stretches the card. */
+    --shield-h: 348px;
+    --shield-overlap: 32px;
     position: relative;
     width: 100%;
-    max-width: 480px;
+    max-width: 420px;
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
-    padding: var(--space-4) var(--space-6) var(--space-6);
+    gap: var(--space-4);
+    padding: calc(var(--shield-h) - var(--shield-overlap) + var(--space-4))
+      var(--space-5) var(--space-5);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
 
-    /* Emblem: big, centered over the card's top edge, slightly overlapping it.
-       Rendered at the image's natural proportion (288x358, ~280x348 at this
-       size), so the height follows the width: no distortion, no letterbox. */
+    /* Emblem floats over the card's top edge, centered: it never contributes
+       to the card's own size. Rendered at the image's natural proportion. */
     .login__shield {
-      align-self: center;
-      width: 280px;
-      height: auto;
-      margin-top: calc(-1 * (var(--space-4) + var(--space-6)));
+      position: absolute;
+      top: calc(var(--shield-overlap) * -1);
+      left: 50%;
+      transform: translateX(-50%);
+      width: auto;
+      height: var(--shield-h);
       filter: drop-shadow(0 8px 16px rgba(6, 8, 15, 0.16));
     }
 
