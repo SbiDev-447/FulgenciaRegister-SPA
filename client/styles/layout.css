@@ -235,6 +235,12 @@
   transition: background var(--transition-fast), border-color var(--transition-fast),
     color var(--transition-fast), opacity var(--transition-fast);
 
+  svg {
+    width: 20px;
+    height: 20px;
+    flex: none;
+  }
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;

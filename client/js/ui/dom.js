@@ -27,6 +27,10 @@ const SVG_NS = 'http://www.w3.org/2000/svg'
 export function svgIcon(nodes, props = {}) {
   const svg = document.createElementNS(SVG_NS, 'svg')
   svg.setAttribute('viewBox', '0 0 24 24')
+  // Default size: without it, un-sized inline SVGs render at 300x150 and blow
+  // up inside flex containers (max-width: 100%). Callers may override via props.
+  svg.setAttribute('width', '24')
+  svg.setAttribute('height', '24')
   svg.setAttribute('fill', 'none')
   svg.setAttribute('stroke', 'currentColor')
   svg.setAttribute('stroke-width', '1.8')
