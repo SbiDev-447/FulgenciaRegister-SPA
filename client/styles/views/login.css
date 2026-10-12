@@ -25,26 +25,25 @@
   .login__card {
     position: relative;
     width: 100%;
-    max-width: 400px;
+    max-width: 480px;
     display: flex;
     flex-direction: column;
     gap: var(--space-5);
-    padding: calc(var(--space-7) + var(--space-5)) var(--space-6) var(--space-6);
+    padding: var(--space-4) var(--space-6) var(--space-6);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
 
-    /* Emblem straddling the card's top edge, centered on it. */
+    /* Emblem: big, centered over the card's top edge, slightly overlapping it.
+       Rendered at the image's natural proportion (288x358, ~280x348 at this
+       size), so the height follows the width: no distortion, no letterbox. */
     .login__shield {
-      position: absolute;
-      top: calc(var(--space-7) * -1);
-      left: 50%;
-      transform: translateX(-50%);
-      width: 96px;
-      height: 96px;
-      object-fit: contain;
-      filter: drop-shadow(0 10px 20px rgba(6, 8, 15, 0.28));
+      align-self: center;
+      width: 280px;
+      height: auto;
+      margin-top: calc(-1 * (var(--space-4) + var(--space-6)));
+      filter: drop-shadow(0 8px 16px rgba(6, 8, 15, 0.16));
     }
 
     .login__header {
