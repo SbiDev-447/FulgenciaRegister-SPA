@@ -2,7 +2,10 @@ services:
   db:
     image: mariadb:11
     container_name: fulgencia-db
-    restart: unless-stopped
+    # Dev-only DB on a laptop: never start on its own. Bring it up explicitly
+    # with `pnpm db:up` and stop it with `pnpm db:down` (data persists in the
+    # named volume). Do not restore `unless-stopped`.
+    restart: "no"
     environment:
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root}
       MARIADB_DATABASE: ${DB_NAME:-fulgencia}
