@@ -190,7 +190,7 @@ export function openInscripcion({ opciones, onCreated }) {
     on: { click: () => close?.() },
   }, [h('span', { text: 'Cancelar' })])
 
-  const form = h('form', { id: 'inscripcion-form', class: 'inscripcion', on: { submit: onSubmit } }, [
+  const form = h('form', { id: 'inscripcion-form', class: 'inscripcion', novalidate: true, on: { submit: onSubmit } }, [
     errorBox,
     h('section', { class: 'inscripcion__section' }, [
       h('h3', { class: 'inscripcion__section-title', text: 'Datos del estudiante' }),
