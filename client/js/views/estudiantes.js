@@ -259,7 +259,7 @@ export function renderEstudiantes(container) {
     const detailList =
       details.length > 0
         ? h('dl', { class: 'ficha__grid' },
-            details.map(([label, value]) => [
+            details.flatMap(([label, value]) => [
               h('dt', { text: label }),
               h('dd', { text: String(value) }),
             ]),

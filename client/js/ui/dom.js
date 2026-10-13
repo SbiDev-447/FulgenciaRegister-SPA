@@ -91,6 +91,12 @@ function applyProps(el, props) {
 function appendChildren(el, children) {
   const list = Array.isArray(children) ? children : [children]
   for (const child of list) {
+    // Flatten nested arrays so callers may build grouped children (e.g.
+    // [[dt, dd], [dt, dd]]) without accidentally stringifying the nodes.
+    if (Array.isArray(child)) {
+      appendChildren(el, child)
+      continue
+    }
     if (child === null || child === undefined || child === false || child === '') continue
     el.append(child instanceof Node ? child : document.createTextNode(String(child)))
   }
