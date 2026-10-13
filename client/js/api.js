@@ -81,6 +81,27 @@ export const api = {
     const qs = params.toString()
     return request(`/estadisticas${qs ? `?${qs}` : ''}`)
   },
+  /**
+   * Student list with optional filters.
+   * @param {{ q?: string, anio?: string, seccion?: string }} [filters] - q is a
+   *   free-text match over names and cédula; anio/seccion restrict to students
+   *   with a matching inscription.
+   */
+  estudiantes: ({ q, anio, seccion } = {}) => {
+    const params = new URLSearchParams()
+    if (q && q.trim()) params.set('q', q.trim())
+    if (anio) params.set('anio', anio)
+    if (seccion) params.set('seccion', seccion)
+    const qs = params.toString()
+    return request(`/estudiantes${qs ? `?${qs}` : ''}`)
+  },
+  /** @param {number} id - full record: estudiante, inscripciones, representantes */
+  estudiante: (id) => request(`/estudiantes/${id}`),
+  /**
+   * Create a student with their first inscription.
+   * @param {{ estudiante: object, inscripcion: object, representantes: Array, documentos?: object }} payload
+   */
+  crearEstudiante: (payload) => request('/estudiantes', { method: 'POST', body: payload }),
 }
 
 /**
