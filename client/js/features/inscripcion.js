@@ -60,7 +60,7 @@ export function openInscripcion({ opciones, onCreated }) {
 
   // --- Estudiante fields -----------------------------------------------------
 
-  const tipoCi = h('select', { class: 'input', 'aria-label': 'Tipo de cédula' }, [
+  const tipoCi = h('select', { class: 'input input--sm', 'aria-label': 'Tipo de cédula' }, [
     h('option', { value: 'V', text: 'V' }),
     h('option', { value: 'E', text: 'E' }),
   ])
