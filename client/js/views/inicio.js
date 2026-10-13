@@ -128,20 +128,26 @@ export function renderInicio(container, { user } = {}) {
       })
   }
 
-  /** @param {{ years: Array<{ label: string, sections: string[] }> }} options */
-  function fillFilters(options) {
+  let options = null
+
+  // Bound once: retries re-fill the options but must not stack handlers.
+  anioSelect.addEventListener('change', () => {
+    const year = (options?.years ?? []).find((entry) => entry.label === anioSelect.value)
+    const sections = year ? year.sections : collectSections(options?.years ?? [])
+    fillSections(sections)
+    if (!sections.includes(seccionSelect.value)) {
+      seccionSelect.value = ''
+    }
+    load()
+  })
+  seccionSelect.addEventListener('change', load)
+
+  /** @param {{ years: Array<{ label: string, sections: string[] }> }} academic */
+  function fillFilters(academic) {
+    options = academic
     const years = options.years ?? []
 
-    const allSections = []
-    const seen = new Set()
-    for (const year of years) {
-      for (const section of year.sections) {
-        if (!seen.has(section)) {
-          seen.add(section)
-          allSections.push(section)
-        }
-      }
-    }
+    const allSections = collectSections(years)
 
     anioSelect.replaceChildren(
       h('option', { value: '', text: 'Todos los años' }),
@@ -154,18 +160,22 @@ export function renderInicio(container, { user } = {}) {
     seccionSelect.value = ''
     seccionSelect.disabled = false
 
-    anioSelect.addEventListener('change', () => {
-      const year = years.find((entry) => entry.label === anioSelect.value)
-      const sections = year ? year.sections : allSections
-      fillSections(sections)
-      if (!sections.includes(seccionSelect.value)) {
-        seccionSelect.value = ''
-      }
-      load()
-    })
-    seccionSelect.addEventListener('change', load)
-
     load()
+  }
+
+  /** Union of every section label across all years, in first-seen order. */
+  function collectSections(years) {
+    const sections = []
+    const seen = new Set()
+    for (const year of years) {
+      for (const section of year.sections) {
+        if (!seen.has(section)) {
+          seen.add(section)
+          sections.push(section)
+        }
+      }
+    }
+    return sections
   }
 
   function fillSections(sections) {
