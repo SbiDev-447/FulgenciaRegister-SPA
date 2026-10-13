@@ -113,8 +113,12 @@ export function openInscripcion({ opciones, onCreated }) {
     h('option', { value: schoolYear, text: schoolYear, selected: true }),
   ])
   const fechaInscripcion = h('input', { class: 'input', type: 'date', value: localDateIso(now) })
-  const regular = h('input', { type: 'checkbox', checked: true })
-  const repite = h('input', { type: 'checkbox' })
+  // Mutually exclusive by domain: a regular registration is a new admission or
+  // a promotion to the next year; the only alternative is repeating the year.
+  // Native radios sharing a name make the pair exclusive, so the third
+  // "neither" state cannot be produced from this form.
+  const regular = h('input', { type: 'radio', name: 'tipo_inscripcion', checked: true })
+  const repite = h('input', { type: 'radio', name: 'tipo_inscripcion' })
 
   anioSelect.addEventListener('change', () => {
     const year = years.find((entry) => entry.label === anioSelect.value)
@@ -225,7 +229,10 @@ export function openInscripcion({ opciones, onCreated }) {
         field('Sección *', seccionSelect),
         field('Año escolar *', anioEscolar),
         field('Fecha de inscripción *', fechaInscripcion),
-        h('label', { class: 'inscripcion__check' }, [regular, h('span', { text: 'Inscripción regular' })]),
+        h('label', { class: 'inscripcion__check' }, [
+          regular,
+          h('span', { text: 'Regular (nuevo ingreso o cambio de año)' }),
+        ]),
         h('label', { class: 'inscripcion__check' }, [repite, h('span', { text: 'Repite el año' })]),
       ]),
     ]),

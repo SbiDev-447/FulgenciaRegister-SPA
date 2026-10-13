@@ -269,14 +269,15 @@ export function renderEstudiantes(container) {
     const inscriptions =
       inscripciones.length > 0
         ? inscripciones.map((ins) => {
+            // Exactly one status, never two: a regular registration (new
+            // admission or promotion to the next year) or a repeater. If legacy
+            // data carries both flags, `repite` wins — a repeater must not be
+            // hidden behind a "regular" chip.
             const statuses = [
-              ins.regular
-                ? h('span', { class: 'chip chip--success', text: 'Inscripción regular' })
-                : h('span', { class: 'chip', text: 'Convalidado' }),
+              ins.repite
+                ? h('span', { class: 'chip chip--danger', text: 'Repite el año' })
+                : h('span', { class: 'chip chip--success', text: 'Inscripción regular' }),
             ]
-            if (ins.repite) {
-              statuses.push(h('span', { class: 'chip chip--danger', text: 'Repite año' }))
-            }
 
             return h('article', { class: 'ficha__ins' }, [
               h('header', { class: 'ficha__ins-head' }, [
