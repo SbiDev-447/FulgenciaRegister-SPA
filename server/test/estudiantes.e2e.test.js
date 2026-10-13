@@ -360,6 +360,47 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     assert.equal(body.inscripciones[0].documentos.partida_nacimiento, 1)
   })
 
+  await t.test('keeps the inscription status exclusive (regular or repeater)', async () => {
+    const repeaterCi = uniqueCi('44')
+    const repCi = uniqueCi('45')
+
+    const res = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        tipo_ci: 'V',
+        numero_ci: repeaterCi,
+        primer_nombre: 'Luis',
+        primer_apellido: 'Gómez',
+        fecha_nacimiento: '2011-06-02',
+        sexo: 'M',
+      },
+      inscripcion: {
+        anio: '1er Año',
+        seccion: 'A',
+        anio_escolar: '2025-2026',
+        fecha_inscripcion: '2025-09-16',
+        repite: true,
+      },
+      representantes: [{ tipo_ci: 'V', numero_ci: repCi, nombre: 'Eva Gómez', parentesco: 'Madre' }],
+    })
+    assert.equal(res.status, 201)
+    const body = await res.json()
+    extraStudentIds.push(body.estudiante.id)
+    createdRepCis.push(repCi)
+
+    // A repeater is never a regular registration: `repite` alone clears `regular`.
+    assert.equal(body.inscripciones[0].regular, 0)
+    assert.equal(body.inscripciones[0].repite, 1)
+
+    // Going back to regular must clear `repite`.
+    const updated = await api('PUT', `/api/estudiantes/${body.estudiante.id}`, {
+      inscripcion: { anio_escolar: '2025-2026', regular: true },
+    })
+    assert.equal(updated.status, 200)
+    const updatedBody = await updated.json()
+    assert.equal(updatedBody.inscripciones[0].regular, 1)
+    assert.equal(updatedBody.inscripciones[0].repite, 0)
+  })
+
   await t.test('reconciles representatives on update', async () => {
     const repCiSecondary = uniqueCi('33')
     createdRepCis.push(repCiSecondary)

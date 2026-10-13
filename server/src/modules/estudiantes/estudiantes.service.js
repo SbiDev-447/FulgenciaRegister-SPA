@@ -95,6 +95,26 @@ function toParentesco(value) {
   return value === undefined || value === null ? null : String(value)
 }
 
+/**
+ * `regular` and `repite` are mutually exclusive by domain: a regular
+ * registration is a new admission or a promotion to the next year, and the only
+ * alternative is repeating the year — there is no third state. The controller
+ * already guarantees both are booleans when present, so when either arrives the
+ * other is derived: `repite: true` wins over a contradictory `regular: true`,
+ * and turning `regular` back on clears `repite`.
+ *
+ * Mutates `data` in place and leaves it untouched when neither flag is present.
+ * @param {{ regular?: boolean, repite?: boolean }} data
+ */
+function normalizeInscriptionStatus(data) {
+  if (data.regular === undefined && data.repite === undefined) {
+    return
+  }
+  const isRepeater = data.repite === true || data.regular === false
+  data.regular = !isRepeater
+  data.repite = isRepeater
+}
+
 function toDuplicateError(error) {
   // MySQL error 1062 / ER_DUP_ENTRY: the (tipo_ci, numero_ci) pair already exists.
   if (error && (error.errno === 1062 || error.code === 'ER_DUP_ENTRY')) {
@@ -295,6 +315,7 @@ async function createEstudiante(payload) {
     if (inscripcionData.repite === undefined) {
       inscripcionData.repite = false
     }
+    normalizeInscriptionStatus(inscripcionData)
     const inscripcionInsert = await db.tabla('inscripciones').insert(inscripcionData)
     const inscripcionId = inscripcionInsert.insertId
 
@@ -374,6 +395,7 @@ async function updateEstudiante(id, payload) {
 
       const sets = pick(inscripcion, INSCRIPTION_FIELDS)
       delete sets.anio_escolar // identifier of the row being updated, not editable
+      normalizeInscriptionStatus(sets)
       if (Object.keys(sets).length > 0) {
         await db.tabla('inscripciones').update(sets, { id: ins.id })
       }
