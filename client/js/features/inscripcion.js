@@ -243,6 +243,10 @@ export function openInscripcion({ opciones, onCreated }) {
     ]),
     h('section', { class: 'inscripcion__section' }, [
       h('h3', { class: 'inscripcion__section-title', text: 'Documentos consignados' }),
+      h('p', {
+        class: 'inscripcion__hint',
+        text: 'Los seis documentos son obligatorios para inscribir al alumno.',
+      }),
       h('div', { class: 'inscripcion__docs' },
         documentoInputs.map(({ label, input }) =>
           h('label', { class: 'inscripcion__check' }, [input, h('span', { text: label })]),
@@ -296,6 +300,11 @@ export function openInscripcion({ opciones, onCreated }) {
       errors.push('El año escolar debe tener la forma YYYY-YYYY.')
     }
     if (!fechaInscripcion.value) errors.push('Falta la fecha de inscripción.')
+
+    const faltantes = documentoInputs.filter(({ input }) => !input.checked).map(({ label }) => label)
+    if (faltantes.length > 0) {
+      errors.push(`Todos los documentos son obligatorios para inscribir: falta ${faltantes.join(', ')}.`)
+    }
 
     const repInputs = Array.from(repsContainer.querySelectorAll('.inscripcion__rep')).map((row) => ({
       nombre: row.querySelector('input[placeholder="Nombre y apellido"]')?.value ?? '',

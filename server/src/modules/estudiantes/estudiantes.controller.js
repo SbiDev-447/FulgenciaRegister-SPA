@@ -101,17 +101,25 @@ function assertValidRepresentantes(representantes, { allowEmpty = false } = {}) 
   })
 }
 
-function assertValidDocumentos(documentos) {
-  for (const key of [
-    'partida_nacimiento',
-    'copia_cedula',
-    'boleta',
-    'fotos',
-    'carpeta',
-    'certificado_6to_grado',
-  ]) {
+/**
+ * @param {object} documentos
+ * @param {{ requireAll?: boolean }} [options] enrollment demands the full set:
+ *   primary school is grades 1-6 and entering the liceo requires the 6th grade
+ *   certificate, so every student can consign all of them.
+ */
+function assertValidDocumentos(documentos, { requireAll = false } = {}) {
+  for (const key of service.DOCUMENT_FIELDS) {
     if (documentos[key] !== undefined && typeof documentos[key] !== 'boolean') {
       throw HttpError.badRequest('Invalid documentos data', { [key]: 'must be a boolean' })
+    }
+  }
+
+  if (requireAll) {
+    const missing = service.DOCUMENT_FIELDS.filter((key) => documentos[key] !== true)
+    if (missing.length > 0) {
+      throw HttpError.badRequest('Invalid documentos data', {
+        documentos: `all consigned documents are required to enroll a student (missing: ${missing.join(', ')})`,
+      })
     }
   }
 }
@@ -164,7 +172,7 @@ async function create(req, res, next) {
     assertValidStudent(body.estudiante)
     assertValidInscripcion(body.inscripcion)
     assertValidRepresentantes(body.representantes)
-    assertValidDocumentos(body.documentos ?? {})
+    assertValidDocumentos(body.documentos ?? {}, { requireAll: true })
 
     const record = await service.createEstudiante(body)
     res.status(201).json(record)

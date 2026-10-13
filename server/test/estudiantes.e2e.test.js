@@ -36,6 +36,19 @@ function withTimeout(promise, ms) {
 // The base is 9 digits so any 2-digit offset keeps the total inside 1-12.
 const uniqueCi = (offset = '') => String(Date.now()).slice(-9) + offset
 
+// Consigning every document is required to enroll a student: primary school is
+// grades 1-6, and entering the liceo (1st year of secondary) requires the 6th
+// grade certificate, so every enrolled student can hand the full set in. The
+// rule itself is asserted by its own test.
+const allDocumentos = {
+  partida_nacimiento: true,
+  copia_cedula: true,
+  boleta: true,
+  fotos: true,
+  carpeta: true,
+  certificado_6to_grado: true,
+}
+
 test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) => {
   if (!hasEnv) {
     return t.skip('Skipping estudiantes e2e: missing required env vars (.env at repo root)')
@@ -180,7 +193,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
       representantes: [
         { tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' },
       ],
-      documentos: { partida_nacimiento: true, copia_cedula: true },
+      documentos: { ...allDocumentos },
     })
     assert.equal(res.status, 201)
 
@@ -198,11 +211,39 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     assert.equal(body.inscripciones[0].anio_escolar, '2025-2026')
     assert.equal(body.inscripciones[0].regular, 1)
     assert.equal(body.inscripciones[0].documentos.partida_nacimiento, 1)
-    assert.equal(body.inscripciones[0].documentos.carpeta, 0)
+    assert.equal(body.inscripciones[0].documentos.carpeta, 1)
 
     assert.equal(body.representantes.length, 1)
     assert.equal(body.representantes[0].numero_ci, repCiPrimary)
     assert.equal(body.representantes[0].parentesco, 'Madre')
+  })
+
+  await t.test('rejects an enrollment that is missing consigned documents', async () => {
+    const res = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        tipo_ci: 'V',
+        numero_ci: uniqueCi('55'),
+        primer_nombre: 'Sin',
+        primer_apellido: 'Documentos',
+        fecha_nacimiento: '2012-07-01',
+        sexo: 'M',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-17',
+      },
+      representantes: [
+        { tipo_ci: 'V', numero_ci: uniqueCi('56'), nombre: 'Rep Documentos', parentesco: 'Madre' },
+      ],
+      documentos: { ...allDocumentos, boleta: false },
+    })
+    assert.equal(res.status, 400)
+    const body = await res.json()
+    assert.equal(body.code, 'bad_request')
+    // The rejection names the document that is missing.
+    assert.match(body.details.documentos, /boleta/)
   })
 
   await t.test('rejects a duplicate cédula with 409', async () => {
@@ -222,6 +263,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         fecha_inscripcion: '2025-09-15',
       },
       representantes: [{ tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' }],
+      documentos: { ...allDocumentos },
     })
     assert.equal(res.status, 409)
     const body = await res.json()
@@ -299,6 +341,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
       representantes: [
         { tipo_ci: 'V', numero_ci: sectionRepCi, nombre: 'Rep Sección', parentesco: 'Madre' },
       ],
+      documentos: { ...allDocumentos },
     })
     assert.equal(create.status, 201)
     const sectionStudent = await create.json()
@@ -381,6 +424,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         repite: true,
       },
       representantes: [{ tipo_ci: 'V', numero_ci: repCi, nombre: 'Eva Gómez', parentesco: 'Madre' }],
+      documentos: { ...allDocumentos },
     })
     assert.equal(res.status, 201)
     const body = await res.json()

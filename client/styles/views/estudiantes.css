@@ -389,6 +389,12 @@
     gap: var(--space-3);
   }
 
+  .inscripcion__hint {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+  }
+
   .inscripcion__check {
     display: inline-flex;
     align-items: flex-start;

@@ -53,6 +53,14 @@ const studentPayload = (numeroCi, nombre, repCi) => ({
     fecha_inscripcion: '2026-09-01',
   },
   representantes: [{ tipo_ci: 'V', numero_ci: repCi, nombre: 'Rep Cero' }],
+  documentos: {
+    partida_nacimiento: true,
+    copia_cedula: true,
+    boleta: true,
+    fotos: true,
+    carpeta: true,
+    certificado_6to_grado: true,
+  },
 })
 
 // A cédula is an identifier, not a number: lookups must compare `numero_ci` as

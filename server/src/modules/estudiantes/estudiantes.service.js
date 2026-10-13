@@ -493,4 +493,5 @@ module.exports = {
   createEstudiante,
   updateEstudiante,
   deleteEstudiante,
+  DOCUMENT_FIELDS,
 }
