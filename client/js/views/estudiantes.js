@@ -7,17 +7,9 @@ import { h, clear } from '../ui/dom.js'
 import { api } from '../api.js'
 import { icon } from '../ui/icons.js'
 import { openModal } from '../ui/modal.js'
+import { openInscripcion, DOC_LABELS } from '../features/inscripcion.js'
 
 const fmt = new Intl.NumberFormat('es-VE')
-
-const DOC_LABELS = {
-  partida_nacimiento: 'Partida de nacimiento',
-  copia_cedula: 'Copia de cédula',
-  boleta: 'Boleta',
-  fotos: 'Fotos',
-  carpeta: 'Carpeta',
-  certificado_6to_grado: 'Certificado de 6to grado',
-}
 
 /** Labels for the optional estudiante fields shown on the ficha. */
 const STUDENT_DETAIL_LABELS = {
@@ -82,6 +74,9 @@ export function renderEstudiantes(container) {
     icon('plus'),
     h('span', { text: 'Nueva inscripción' }),
   ])
+  nuevaBtn.addEventListener('click', () => {
+    openInscripcion({ opciones: options, onCreated: () => load() })
+  })
 
   const view = h('section', { class: 'estudiantes' }, [
     h('div', { class: 'estudiantes__hero' }, [
