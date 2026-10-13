@@ -1,0 +1,370 @@
+/* Estudiantes view: student list (search + year/section filters + table), the
+   ficha modal and the inscription form. Composes the shared primitives
+   (.btn, .input, .field, .card, .badge, .chip) from layout.css. */
+
+.estudiantes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+
+  .estudiantes__hero {
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+    color: var(--color-primary-contrast);
+    box-shadow: var(--shadow-md);
+
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: var(--space-2);
+    }
+
+    p {
+      opacity: 0.9;
+      max-width: 60ch;
+    }
+  }
+
+  .estudiantes__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .estudiantes__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-4);
+  }
+
+  .estudiantes__search {
+    flex: 1;
+    min-width: 240px;
+    max-width: 360px;
+  }
+
+  .estudiantes__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .estudiantes__select {
+    min-width: 180px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-input);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    text-transform: none;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+
+  .estudiantes__results {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .estudiantes__count {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+
+  .estudiantes__status {
+    padding: var(--space-5) 0;
+    color: var(--color-text-muted);
+  }
+
+  .estudiantes__error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+
+    .btn {
+      align-self: flex-start;
+    }
+  }
+
+  .estudiantes__empty {
+    padding: var(--space-8) var(--space-5);
+    border: 1px dashed var(--color-border-strong);
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    text-align: center;
+
+    p + p {
+      margin-top: var(--space-2);
+      font-size: 0.9rem;
+      color: var(--color-text-subtle);
+    }
+  }
+
+  .estudiantes__table-wrap {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+  }
+
+  .estudiantes__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+
+    th {
+      padding: var(--space-3) var(--space-4);
+      text-align: left;
+      color: var(--color-text-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+      color: var(--color-text);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .estudiantes__row {
+      cursor: pointer;
+      transition: background var(--transition-fast);
+
+      &:hover {
+        background: var(--color-surface-2);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: -2px;
+      }
+    }
+
+    .estudiantes__name {
+      font-weight: 700;
+    }
+
+    .estudiantes__ci {
+      color: var(--color-text-muted);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+/* --- Ficha modal ------------------------------------------------------------- */
+
+.ficha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+
+  .ficha__head {
+    .ficha__name {
+      font-size: 1.15rem;
+    }
+
+    .ficha__meta {
+      margin-top: var(--space-1);
+      color: var(--color-text-muted);
+      font-size: 0.9rem;
+    }
+  }
+
+  .ficha__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+
+    dt {
+      color: var(--color-text-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    dd {
+      margin-top: 2px;
+      color: var(--color-text);
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .ficha__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+
+    .ficha__section-title {
+      font-size: 1rem;
+      border-bottom: 1px solid var(--color-border);
+      padding-bottom: var(--space-2);
+    }
+  }
+
+  .ficha__ins,
+  .ficha__rep {
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+
+    h4 {
+      font-size: 0.95rem;
+    }
+
+    .ficha__ins-meta,
+    .ficha__rep-meta {
+      margin-top: var(--space-1);
+      color: var(--color-text-muted);
+      font-size: 0.88rem;
+    }
+  }
+
+  .ficha__docs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+
+  .ficha__docs-empty {
+    color: var(--color-text-subtle);
+    font-size: 0.85rem;
+  }
+
+  .ficha__empty {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+}
+
+/* --- Inscription form ---------------------------------------------------------- */
+
+.inscripcion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+
+  .inscripcion__error ul {
+    margin: var(--space-2) 0 0 var(--space-4);
+    list-style: disc;
+
+    li + li {
+      margin-top: var(--space-1);
+    }
+  }
+
+  .inscripcion__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .inscripcion__section-title {
+    font-size: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-2);
+  }
+
+  .inscripcion__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-4);
+
+    .field--full {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .inscripcion__reps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .inscripcion__rep {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-2);
+
+    .field {
+      flex: 1 1 160px;
+    }
+
+    .inscripcion__ci {
+      flex: 1 1 240px;
+      display: grid;
+      grid-template-columns: 96px 1fr;
+      gap: var(--space-2);
+      align-items: end;
+    }
+
+    .inscripcion__rep-remove {
+      margin-left: auto;
+      align-self: end;
+    }
+  }
+
+  .inscripcion__docs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-3);
+  }
+
+  .inscripcion__check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text);
+    font-size: 0.92rem;
+
+    input[type='checkbox'] {
+      width: 1.1rem;
+      height: 1.1rem;
+      accent-color: var(--color-primary);
+    }
+  }
+}
