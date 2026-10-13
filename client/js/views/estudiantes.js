@@ -268,17 +268,28 @@ export function renderEstudiantes(container) {
 
     const inscriptions =
       inscripciones.length > 0
-        ? inscripciones.map((ins) =>
-            h('article', { class: 'ficha__ins' }, [
-              h('h4', { text: `${ins.anio} · Sección ${ins.seccion} · ${ins.anio_escolar}` }),
-              h('p', { class: 'ficha__ins-meta', text: [
-                `Inscrito el ${formatFecha(ins.fecha_inscripcion)}`,
-                ins.regular ? 'Regular' : 'Convalidado',
-                ins.repite ? 'Repite año' : null,
-              ].filter(Boolean).join(' · ') }),
+        ? inscripciones.map((ins) => {
+            const statuses = [
+              ins.regular
+                ? h('span', { class: 'chip chip--success', text: 'Inscripción regular' })
+                : h('span', { class: 'chip', text: 'Convalidado' }),
+            ]
+            if (ins.repite) {
+              statuses.push(h('span', { class: 'chip chip--danger', text: 'Repite año' }))
+            }
+
+            return h('article', { class: 'ficha__ins' }, [
+              h('header', { class: 'ficha__ins-head' }, [
+                h('h4', { class: 'ficha__ins-title', text: `${ins.anio} · Sección ${ins.seccion}` }),
+                h('span', { class: 'chip', text: ins.anio_escolar }),
+              ]),
+              h('div', { class: 'ficha__ins-status' }, [
+                h('span', { class: 'ficha__ins-date', text: `Inscrito el ${formatFecha(ins.fecha_inscripcion)}` }),
+                ...statuses,
+              ]),
               h('div', { class: 'ficha__docs' }, renderDocs(ins.documentos)),
-            ]),
-          )
+            ])
+          })
         : [h('p', { class: 'ficha__empty', text: 'Sin inscripciones registradas.' })]
 
     const reps =

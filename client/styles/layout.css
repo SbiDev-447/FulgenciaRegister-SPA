@@ -390,6 +390,18 @@
   font-size: 0.8rem;
 }
 
+.chip--success {
+  border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.chip--danger {
+  border-color: color-mix(in srgb, var(--color-danger) 40%, transparent);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
 /* ------------------------------------------------------------------ Modal --- */
 
 /* The modal is a shared view primitive: a fixed overlay + centered panel. */
