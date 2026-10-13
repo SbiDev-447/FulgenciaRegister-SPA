@@ -34,6 +34,10 @@ const ICONS = {
     ['path', { d: 'M12 5v14' }],
     ['path', { d: 'M5 12h14' }],
   ],
+  x: [
+    ['path', { d: 'M18 6 6 18' }],
+    ['path', { d: 'M6 6l12 12' }],
+  ],
   compass: [
     ['circle', { cx: '12', cy: '12', r: '9' }],
     ['path', { d: 'M15.5 8.5l-2 5-5 2 2-5z' }],

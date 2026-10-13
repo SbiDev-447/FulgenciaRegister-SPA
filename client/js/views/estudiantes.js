@@ -6,8 +6,55 @@
 import { h, clear } from '../ui/dom.js'
 import { api } from '../api.js'
 import { icon } from '../ui/icons.js'
+import { openModal } from '../ui/modal.js'
 
 const fmt = new Intl.NumberFormat('es-VE')
+
+const DOC_LABELS = {
+  partida_nacimiento: 'Partida de nacimiento',
+  copia_cedula: 'Copia de cédula',
+  boleta: 'Boleta',
+  fotos: 'Fotos',
+  carpeta: 'Carpeta',
+  certificado_6to_grado: 'Certificado de 6to grado',
+}
+
+/** Labels for the optional estudiante fields shown on the ficha. */
+const STUDENT_DETAIL_LABELS = {
+  telefono: 'Teléfono',
+  correo: 'Correo',
+  direccion_habitacion: 'Dirección',
+  pais_nacimiento: 'País de nacimiento',
+  estado_nacimiento: 'Estado de nacimiento',
+  municipio_nacimiento: 'Municipio de nacimiento',
+  lateralidad: 'Lateralidad',
+  talla: 'Talla',
+  peso: 'Peso',
+  camisa: 'Camisa',
+  pantalon: 'Pantalón',
+  zapatos: 'Zapatos',
+  alergico_a: 'Alergias',
+  enfermedades_padecidas: 'Enfermedades',
+}
+
+/** Format a YYYY-MM-DD value as a short Spanish date without TZ shifts. */
+function formatFecha(value) {
+  if (!value) return '—'
+  const date = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function nombreCompleto(estudiante) {
+  const parts = [
+    estudiante.primer_nombre,
+    estudiante.segundo_nombre,
+    estudiante.primer_apellido,
+    estudiante.segundo_apellido,
+  ]
+  const nombre = parts.filter(Boolean).join(' ')
+  return nombre || 'Estudiante'
+}
 
 /**
  * @param {HTMLElement} container
@@ -113,20 +160,32 @@ export function renderEstudiantes(container) {
           ]),
         ]),
         h('tbody', {},
-          estudiantes.map((student) =>
-            h('tr', { class: 'estudiantes__row', dataset: { id: student.id } }, [
-              h('td', {
-                class: 'estudiantes__name',
-                text: `${student.primer_nombre} ${student.primer_apellido}`,
-              }),
+          estudiantes.map((student) => {
+            const name = `${student.primer_nombre} ${student.primer_apellido}`
+            return h('tr', {
+              class: 'estudiantes__row',
+              tabindex: '0',
+              dataset: { id: student.id },
+              'aria-label': `Ver ficha de ${name}`,
+              on: {
+                click: () => openFicha(student.id),
+                keydown: (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    openFicha(student.id)
+                  }
+                },
+              },
+            }, [
+              h('td', { class: 'estudiantes__name', text: name }),
               h('td', { class: 'estudiantes__ci', text: ciText(student) }),
               h('td', {}, [h('span', { class: 'badge', text: sexoLabel(student.sexo) })]),
               h('td', { text: student.telefono || '—' }),
               h('td', { text: student.anio || '—' }),
               h('td', { text: student.seccion || '—' }),
               h('td', { text: student.anio_escolar || '—' }),
-            ]),
-          ),
+            ])
+          }),
         ),
       ]),
     ])
@@ -156,6 +215,117 @@ export function renderEstudiantes(container) {
         ]),
       ]),
     )
+  }
+
+  /** Open the full record of one student (GET /estudiantes/:id) in a modal. */
+  function openFicha(id) {
+    const status = h('p', { class: 'estudiantes__status', text: 'Cargando ficha…' })
+
+    let closeFicha = null
+    const closeButton = h('button', {
+      class: 'btn btn--ghost',
+      type: 'button',
+      on: { click: () => closeFicha?.() },
+    }, [h('span', { text: 'Cerrar' })])
+    const modal = openModal({ title: 'Ficha del estudiante', content: status, footer: [closeButton] })
+    closeFicha = modal.close
+
+    api
+      .estudiante(id)
+      .then((record) => {
+        modal.element.querySelector('.modal__body')?.replaceChildren(renderFicha(record))
+      })
+      .catch((error) => {
+        const message = error && error.message ? error.message : 'No se pudo cargar la ficha.'
+        modal.element.querySelector('.modal__body')?.replaceChildren(
+          h('div', { class: 'alert alert--error', role: 'alert' }, [h('p', { text: message })]),
+        )
+      })
+  }
+
+  /** Build the ficha body from a GET /estudiantes/:id response. */
+  function renderFicha(record) {
+    const { estudiante, inscripciones, representantes } = record
+    const name = nombreCompleto(estudiante)
+
+    const head = h('header', { class: 'ficha__head' }, [
+      h('h3', { class: 'ficha__name', text: name }),
+      h('p', { class: 'ficha__meta', text: [
+        `${estudiante.tipo_ci}-${estudiante.numero_ci}`,
+        sexoLabel(estudiante.sexo),
+        formatFecha(estudiante.fecha_nacimiento),
+      ].filter((value) => value && value !== '—').join(' · ') }),
+    ])
+
+    const details = Object.entries(STUDENT_DETAIL_LABELS)
+      .map(([key, label]) => [label, estudiante[key]])
+      .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '')
+
+    const detailList =
+      details.length > 0
+        ? h('dl', { class: 'ficha__grid' },
+            details.map(([label, value]) => [
+              h('dt', { text: label }),
+              h('dd', { text: String(value) }),
+            ]),
+          )
+        : null
+
+    const inscriptions =
+      inscripciones.length > 0
+        ? inscripciones.map((ins) =>
+            h('article', { class: 'ficha__ins' }, [
+              h('h4', { text: `${ins.anio} · Sección ${ins.seccion} · ${ins.anio_escolar}` }),
+              h('p', { class: 'ficha__ins-meta', text: [
+                `Inscrito el ${formatFecha(ins.fecha_inscripcion)}`,
+                ins.regular ? 'Regular' : 'Convalidado',
+                ins.repite ? 'Repite año' : null,
+              ].filter(Boolean).join(' · ') }),
+              h('div', { class: 'ficha__docs' }, renderDocs(ins.documentos)),
+            ]),
+          )
+        : [h('p', { class: 'ficha__empty', text: 'Sin inscripciones registradas.' })]
+
+    const reps =
+      representantes.length > 0
+        ? representantes.map((rep) =>
+            h('article', { class: 'ficha__rep' }, [
+              h('h4', { text: rep.nombre }),
+              h('p', { class: 'ficha__rep-meta', text: [
+                rep.parentesco ? `Parentesco: ${rep.parentesco}` : null,
+                `${rep.tipo_ci}-${rep.numero_ci}`,
+                rep.telefono,
+                rep.correo,
+              ].filter(Boolean).join(' · ') }),
+            ]),
+          )
+        : [h('p', { class: 'ficha__empty', text: 'Sin representantes registrados.' })]
+
+    return h('div', { class: 'ficha' }, [
+      head,
+      detailList,
+      h('section', { class: 'ficha__section' }, [
+        h('h4', { class: 'ficha__section-title', text: 'Inscripciones' }),
+        ...inscriptions,
+      ]),
+      h('section', { class: 'ficha__section' }, [
+        h('h4', { class: 'ficha__section-title', text: 'Representantes' }),
+        ...reps,
+      ]),
+    ])
+  }
+
+  /** Document chips for one inscripcion; passes the full list through. */
+  function renderDocs(documentos) {
+    if (!documentos) {
+      return [h('span', { class: 'ficha__docs-empty', text: 'Sin documentos consignados' })]
+    }
+    const chips = Object.entries(DOC_LABELS)
+      .filter(([key]) => documentos[key])
+      .map(([, label]) => h('span', { class: 'chip', text: label }))
+    return chips.length > 0
+      ? chips
+      : [h('span', { class: 'ficha__docs-empty', text: 'Sin documentos consignados' })]
   }
 
   function load() {

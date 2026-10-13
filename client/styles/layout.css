@@ -368,3 +368,58 @@
     border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
   }
 }
+
+/* ------------------------------------------------------------------ Modal --- */
+
+/* The modal is a shared view primitive: a fixed overlay + centered panel. */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: rgba(6, 8, 15, 0.5);
+  z-index: 40;
+
+  .modal__panel {
+    display: flex;
+    flex-direction: column;
+    width: min(94vw, 760px);
+    max-height: 86vh;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xl);
+
+    .modal__header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+
+      .modal__title {
+        flex: 1;
+        font-size: 1.1rem;
+      }
+    }
+
+    .modal__body {
+      overflow: auto;
+      padding: var(--space-5);
+    }
+
+    .modal__footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      padding: var(--space-4) var(--space-5);
+      border-top: 1px solid var(--color-border);
+    }
+  }
+}
+
+body.modal-open {
+  overflow: hidden;
+}
