@@ -349,13 +349,6 @@
   }
 }
 
-/* Compact inputs for single-character or very short values (e.g. a V/E
-   cédula-type select): only as wide as their content needs. */
-.input--sm {
-  width: 64px;
-  flex: none;
-}
-
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

@@ -344,6 +344,15 @@
     }
   }
 
+  /* Cédula unit: type select (V/E) + number input in one row, used both in
+     the student section and in each representative row. */
+  .inscripcion__ci {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: var(--space-2);
+    align-items: end;
+  }
+
   .inscripcion__reps {
     display: flex;
     flex-direction: column;
@@ -366,10 +375,6 @@
 
     .inscripcion__ci {
       flex: 1 1 240px;
-      display: grid;
-      grid-template-columns: 96px 1fr;
-      gap: var(--space-2);
-      align-items: end;
     }
 
     .inscripcion__rep-remove {

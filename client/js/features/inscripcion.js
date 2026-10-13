@@ -60,7 +60,7 @@ export function openInscripcion({ opciones, onCreated }) {
 
   // --- Estudiante fields -----------------------------------------------------
 
-  const tipoCi = h('select', { class: 'input input--sm', 'aria-label': 'Tipo de cédula' }, [
+  const tipoCi = h('select', { class: 'input', 'aria-label': 'Tipo de cédula' }, [
     h('option', { value: 'V', text: 'V' }),
     h('option', { value: 'E', text: 'E' }),
   ])
@@ -195,8 +195,7 @@ export function openInscripcion({ opciones, onCreated }) {
     h('section', { class: 'inscripcion__section' }, [
       h('h3', { class: 'inscripcion__section-title', text: 'Datos del estudiante' }),
       h('div', { class: 'inscripcion__grid' }, [
-        field('Tipo de cédula', tipoCi),
-        field('Número de cédula', numeroCi),
+        field('Cédula', h('div', { class: 'inscripcion__ci' }, [tipoCi, numeroCi])),
         field('Primer nombre *', primerNombre),
         field('Segundo nombre', segundoNombre),
         field('Primer apellido *', primerApellido),
