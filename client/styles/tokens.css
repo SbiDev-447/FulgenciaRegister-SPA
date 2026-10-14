@@ -33,6 +33,10 @@
 
   /* Warm, low-fatigue light theme (cream / tan / navy). */
   --color-bg: #e9e0c3;
+  /* View background artwork (the shell's content and frosted topbar sit over
+       it). The solid color above stays behind the image as a fallback while it
+       loads; the dark theme swaps the artwork with the dark one. */
+  --bg-image: url('../assets/img/background-light.webp');
   --color-surface: #f8f6f0;
   --color-surface-2: #e3d8d8;
   --color-surface-3: #d8cb9e;
@@ -97,6 +101,7 @@
   color-scheme: dark;
 
   --color-bg: #06080f;
+  --bg-image: url('../assets/img/background-dark.webp');
   --color-surface: #0f172a;
   --color-surface-2: #1e293b;
   --color-surface-3: #27354b;
