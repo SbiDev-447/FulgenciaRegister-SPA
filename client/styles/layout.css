@@ -327,6 +327,12 @@
     font-weight: 700;
     color: var(--color-text-muted);
   }
+
+  .field__error {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-danger);
+  }
 }
 
 .input {
@@ -346,6 +352,15 @@
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px var(--color-primary-soft);
+  }
+}
+
+.input-error {
+  border-color: var(--color-danger);
+
+  &:focus {
+    border-color: var(--color-danger);
+    box-shadow: 0 0 0 3px var(--color-danger-soft);
   }
 }
 

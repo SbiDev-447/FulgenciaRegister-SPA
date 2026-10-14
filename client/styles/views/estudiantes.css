@@ -389,6 +389,15 @@
     gap: var(--space-3);
   }
 
+  .inscripcion__check.input-error {
+    color: var(--color-danger);
+
+    input {
+      outline: 2px solid var(--color-danger);
+      outline-offset: 2px;
+    }
+  }
+
   .inscripcion__hint {
     margin: 0;
     color: var(--color-text-muted);

@@ -194,6 +194,19 @@ export function openInscripcion({ opciones, onCreated }) {
     on: { click: () => close?.() },
   }, [h('span', { text: 'Cancelar' })])
 
+  const documentosSection = h('section', { class: 'inscripcion__section' }, [
+    h('h3', { class: 'inscripcion__section-title', text: 'Documentos consignados' }),
+    h('p', {
+      class: 'inscripcion__hint',
+      text: 'Los seis documentos son obligatorios para inscribir al alumno.',
+    }),
+    h('div', { class: 'inscripcion__docs' },
+      documentoInputs.map(({ label, input }) =>
+        h('label', { class: 'inscripcion__check' }, [input, h('span', { text: label })]),
+      ),
+    ),
+  ])
+
   const form = h('form', { id: 'inscripcion-form', class: 'inscripcion', novalidate: true, on: { submit: onSubmit } }, [
     errorBox,
     h('section', { class: 'inscripcion__section' }, [
@@ -241,18 +254,7 @@ export function openInscripcion({ opciones, onCreated }) {
       repsContainer,
       addRepButton,
     ]),
-    h('section', { class: 'inscripcion__section' }, [
-      h('h3', { class: 'inscripcion__section-title', text: 'Documentos consignados' }),
-      h('p', {
-        class: 'inscripcion__hint',
-        text: 'Los seis documentos son obligatorios para inscribir al alumno.',
-      }),
-      h('div', { class: 'inscripcion__docs' },
-        documentoInputs.map(({ label, input }) =>
-          h('label', { class: 'inscripcion__check' }, [input, h('span', { text: label })]),
-        ),
-      ),
-    ]),
+    documentosSection,
   ])
 
   let close = null
@@ -266,66 +268,147 @@ export function openInscripcion({ opciones, onCreated }) {
   /** Place the reps toolbar inside the reps section (append after rows). */
   repsContainer.append(repRow().row, addRepButton)
 
-  function setError(messages) {
+  /** Where the red mark is actually visible for a given control. */
+  function markTarget(node) {
+    return node.matches('input[type="checkbox"], input[type="radio"]')
+      ? node.closest('label') ?? node
+      : node
+  }
+
+  /**
+   * Show the summary box. Accepts validation errors (each tied to its control)
+   * or plain messages coming from the API.
+   */
+  function setError(errors, { title = 'Revisa los campos marcados:' } = {}) {
+    const messages = errors.map((entry) => (typeof entry === 'string' ? entry : entry.message))
     if (messages.length === 0) {
       errorBox.hidden = true
       errorBox.replaceChildren()
       return
     }
     errorBox.replaceChildren(
-      h('p', { text: 'Revisa los campos marcados:' }),
+      h('p', { text: title }),
       h('ul', {}, messages.map((message) => h('li', { text: message }))),
     )
     errorBox.hidden = false
   }
 
-  /** @returns {string[]} human-readable validation problems */
+  function clearFieldErrors() {
+    form.querySelectorAll('.input-error').forEach((node) => node.classList.remove('input-error'))
+    form.querySelectorAll('[aria-invalid]').forEach((node) => node.removeAttribute('aria-invalid'))
+    form.querySelectorAll('.field__error').forEach((node) => node.remove())
+  }
+
+  /** Paint every validation error next to the control it belongs to. */
+  function markFieldErrors(errors) {
+    clearFieldErrors()
+    for (const { nodes, message, host } of errors) {
+      for (const node of nodes) {
+        if (node.matches('input, select, textarea')) node.setAttribute('aria-invalid', 'true')
+        markTarget(node).classList.add('input-error')
+      }
+      const anchor = nodes[0]
+      const target = host ?? anchor?.closest('.field') ?? anchor?.parentElement
+      target?.append(h('span', { class: 'field__error', text: message }))
+    }
+  }
+
+  /**
+   * The panel scrolls internally, so an error rendered above the fold is
+   * invisible: bring the first offending control into view instead of leaving
+   * the user hunting for it.
+   */
+  function focusFirstError(errors) {
+    const target = errors.flatMap(({ nodes }) => nodes)[0]
+    if (!target) {
+      errorBox.scrollIntoView({ block: 'nearest' })
+      return
+    }
+    target.scrollIntoView({
+      block: 'center',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    })
+    target.focus({ preventScroll: true })
+  }
+
+  /** Drop the mark of a control the user just fixed, and any message it left behind. */
+  function onControlEdit(event) {
+    const node = event.target
+    if (!node) return
+    const marked = markTarget(node)
+    if (!marked.classList.contains('input-error')) return
+    marked.classList.remove('input-error')
+    if (node.matches('input, select, textarea')) node.removeAttribute('aria-invalid')
+    form.querySelectorAll('.field__error').forEach((message) => {
+      if (!message.parentElement?.querySelector('.input-error')) message.remove()
+    })
+    if (!form.querySelector('.input-error')) setError([])
+  }
+
+  form.addEventListener('input', onControlEdit)
+  form.addEventListener('change', onControlEdit)
+
+  /**
+   * Validate the form and tie every problem to the control that caused it, so
+   * the UI can mark it and jump to it.
+   * @returns {Array<{ nodes: HTMLElement[], message: string, host?: HTMLElement }>}
+   */
   function validate() {
     const errors = []
+    const add = (nodes, message, host) =>
+      errors.push({ nodes: nodes.filter(Boolean), message, host })
 
     const estudianteCi = normalizeCi(numeroCi.value)
     if (!estudianteCi || estudianteCi.length > CI_MAX_DIGITS) {
-      errors.push('La cédula del estudiante debe tener entre 1 y 12 dígitos.')
+      add([numeroCi], 'La cédula del estudiante debe tener entre 1 y 12 dígitos.')
     }
-    if (!primerNombre.value.trim()) errors.push('Falta el primer nombre del estudiante.')
-    if (!primerApellido.value.trim()) errors.push('Falta el primer apellido del estudiante.')
-    if (!fechaNacimiento.value) errors.push('Falta la fecha de nacimiento.')
-    if (!sexo.value) errors.push('Selecciona el sexo del estudiante.')
+    if (!primerNombre.value.trim()) add([primerNombre], 'Falta el primer nombre del estudiante.')
+    if (!primerApellido.value.trim()) add([primerApellido], 'Falta el primer apellido del estudiante.')
+    if (!fechaNacimiento.value) add([fechaNacimiento], 'Falta la fecha de nacimiento.')
+    if (!sexo.value) add([sexo], 'Selecciona el sexo del estudiante.')
     if (!anioSelect.value) {
-      errors.push('Selecciona el año de inscripción.')
+      add([anioSelect], 'Selecciona el año de inscripción.')
     } else if (!seccionSelect.value) {
-      errors.push(`Selecciona la sección para ${anioSelect.value}.`)
+      add([seccionSelect], `Selecciona la sección para ${anioSelect.value}.`)
     }
     if (!anioEscolar.value || !/^\d{4}-\d{4}$/.test(anioEscolar.value)) {
-      errors.push('El año escolar debe tener la forma YYYY-YYYY.')
+      add([anioEscolar], 'El año escolar debe tener la forma YYYY-YYYY.')
     }
-    if (!fechaInscripcion.value) errors.push('Falta la fecha de inscripción.')
+    if (!fechaInscripcion.value) add([fechaInscripcion], 'Falta la fecha de inscripción.')
 
-    const faltantes = documentoInputs.filter(({ input }) => !input.checked).map(({ label }) => label)
+    const faltantes = documentoInputs.filter(({ input }) => !input.checked)
     if (faltantes.length > 0) {
-      errors.push(`Todos los documentos son obligatorios para inscribir: falta ${faltantes.join(', ')}.`)
+      add(
+        faltantes.map(({ input }) => input),
+        `Todos los documentos son obligatorios para inscribir: falta ${faltantes
+          .map(({ label }) => label)
+          .join(', ')}.`,
+        documentosSection,
+      )
     }
 
     const repInputs = Array.from(repsContainer.querySelectorAll('.inscripcion__rep')).map((row) => ({
+      nombreEl: row.querySelector('input[placeholder="Nombre y apellido"]'),
+      ciEl: row.querySelector('.inscripcion__ci input'),
       nombre: row.querySelector('input[placeholder="Nombre y apellido"]')?.value ?? '',
       tipoCi: row.querySelector('.inscripcion__ci select')?.value ?? '',
       numeroCi: normalizeCi(row.querySelector('.inscripcion__ci input')?.value ?? ''),
     }))
 
     if (repInputs.length === 0) {
-      errors.push('Registra al menos un representante.')
+      add([], 'Registra al menos un representante.', repsContainer)
     }
     const seenCis = new Set()
     repInputs.forEach((rep, index) => {
       if (!rep.nombre.trim()) {
-        errors.push(`Falta el nombre del representante ${index + 1}.`)
+        add([rep.nombreEl], `Falta el nombre del representante ${index + 1}.`)
       }
       if (!rep.numeroCi || rep.numeroCi.length > CI_MAX_DIGITS) {
-        errors.push(`La cédula del representante ${index + 1} debe tener entre 1 y 12 dígitos.`)
+        add([rep.ciEl], `La cédula del representante ${index + 1} debe tener entre 1 y 12 dígitos.`)
       }
       const ciKey = `${rep.tipoCi}-${rep.numeroCi}`
       if (rep.numeroCi && seenCis.has(ciKey)) {
-        errors.push(`La cédula ${ciKey} está repetida entre los representantes.`)
+        add([rep.ciEl], `La cédula ${ciKey} está repetida entre los representantes.`)
       }
       if (rep.numeroCi) seenCis.add(ciKey)
     })
@@ -392,9 +475,12 @@ export function openInscripcion({ opciones, onCreated }) {
     const errors = validate()
     if (errors.length > 0) {
       setError(errors)
+      markFieldErrors(errors)
+      focusFirstError(errors)
       return
     }
     setError([])
+    clearFieldErrors()
 
     submitBtn.disabled = true
     submitBtn.replaceChildren(h('span', { text: 'Guardando…' }))
@@ -410,7 +496,8 @@ export function openInscripcion({ opciones, onCreated }) {
         const details = error && error.details
           ? Object.entries(error.details).map(([key, value]) => `${key}: ${value}`)
           : []
-        setError([message, ...details])
+        setError([message, ...details], { title: 'No se pudo guardar:' })
+        errorBox.scrollIntoView({ block: 'nearest' })
         submitBtn.disabled = false
         submitBtn.replaceChildren(h('span', { text: 'Guardar inscripción' }))
       })
