@@ -348,6 +348,84 @@ export function openInscripcion({ opciones, onCreated }) {
   form.addEventListener('input', onControlEdit)
   form.addEventListener('change', onControlEdit)
 
+  // --- API rejections ---------------------------------------------------------
+
+  /** Server `details` keys -> the controls that own them. */
+  const serverFieldNodes = {
+    tipo_ci: () => [tipoCi],
+    numero_ci: () => [numeroCi],
+    primer_nombre: () => [primerNombre],
+    primer_apellido: () => [primerApellido],
+    fecha_nacimiento: () => [fechaNacimiento],
+    sexo: () => [sexo],
+    anio: () => [anioSelect],
+    seccion: () => [seccionSelect],
+    anio_escolar: () => [anioEscolar],
+    fecha_inscripcion: () => [fechaInscripcion],
+    documentos: () => documentoInputs.filter(({ input }) => !input.checked).map(({ input }) => input),
+  }
+
+  /** Spanish name of each server field, for the per-field message. */
+  const serverFieldLabels = {
+    tipo_ci: 'Tipo de cédula',
+    numero_ci: 'Cédula',
+    primer_nombre: 'Primer nombre',
+    primer_apellido: 'Primer apellido',
+    fecha_nacimiento: 'Fecha de nacimiento',
+    sexo: 'Sexo',
+    anio: 'Año',
+    seccion: 'Sección',
+    anio_escolar: 'Año escolar',
+    fecha_inscripcion: 'Fecha de inscripción',
+    documentos: 'Documentos consignados',
+  }
+
+  /** The server validates in English; translate the reasons it can send. */
+  const serverReasons = {
+    'is required': 'es obligatorio.',
+    'must be V or E': 'debe ser V o E.',
+    'must be 1-12 digits': 'debe tener entre 1 y 12 dígitos.',
+    'must be a valid YYYY-MM-DD date': 'debe ser una fecha válida (AAAA-MM-DD).',
+    'must be M or F': 'debe ser M o F.',
+    'must match YYYY-YYYY': 'debe tener la forma AAAA-AAAA.',
+    'must be a known year label': 'no es un año conocido.',
+    'must be a boolean': 'debe ser verdadero o falso.',
+    'must be a positive integer': 'debe ser un entero positivo.',
+    'invalid section for the year': 'no corresponde a ese año.',
+  }
+
+  /**
+   * Turn an API rejection into the same shape local validation produces, so the
+   * user is taken to the offending field instead of reading a text list. Keys
+   * with no control in this form (docente_id, regular/repite, the individual
+   * document flags, the representative indexes) stay as summary lines.
+   */
+  function serverErrors(error) {
+    if (!error) return { fieldErrors: [], messages: [] }
+
+    // Every 400 the server can raise is already blocked by validate(), so a 409
+    // is the rejection a user can actually hit here: the (tipo_ci, numero_ci)
+    // pair already exists. Representatives are reused by CI, so the conflict is
+    // the student's pair.
+    if (error.status === 409) {
+      const message = 'La cédula del estudiante ya está registrada.'
+      return { fieldErrors: [{ nodes: [numeroCi], message }], messages: [message] }
+    }
+
+    const fieldErrors = []
+    const messages = []
+    for (const [key, value] of Object.entries(error.details ?? {})) {
+      const nodes = serverFieldNodes[key]?.() ?? []
+      const reason = serverReasons[value] ?? value
+      const text = serverFieldLabels[key] ? `${serverFieldLabels[key]} ${reason}` : `${key}: ${value}`
+      if (nodes.length > 0) {
+        fieldErrors.push({ nodes, message: text, host: key === 'documentos' ? documentosSection : undefined })
+      }
+      messages.push(text)
+    }
+    return { fieldErrors, messages }
+  }
+
   /**
    * Validate the form and tie every problem to the control that caused it, so
    * the UI can mark it and jump to it.
@@ -492,12 +570,15 @@ export function openInscripcion({ opciones, onCreated }) {
         onCreated()
       })
       .catch((error) => {
-        const message = error && error.message ? error.message : 'No se pudo guardar la inscripción.'
-        const details = error && error.details
-          ? Object.entries(error.details).map(([key, value]) => `${key}: ${value}`)
-          : []
-        setError([message, ...details], { title: 'No se pudo guardar:' })
-        errorBox.scrollIntoView({ block: 'nearest' })
+        const { fieldErrors, messages } = serverErrors(error)
+        const fallback = error && error.message ? error.message : 'No se pudo guardar la inscripción.'
+        setError(messages.length > 0 ? messages : [fallback], { title: 'No se pudo guardar:' })
+        markFieldErrors(fieldErrors)
+        if (fieldErrors.length > 0) {
+          focusFirstError(fieldErrors)
+        } else {
+          errorBox.scrollIntoView({ block: 'nearest' })
+        }
         submitBtn.disabled = false
         submitBtn.replaceChildren(h('span', { text: 'Guardar inscripción' }))
       })

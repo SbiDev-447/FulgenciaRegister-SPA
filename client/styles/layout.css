@@ -333,6 +333,10 @@
     font-weight: 600;
     color: var(--color-danger);
   }
+
+  &:has(.input-error) .field__label {
+    color: var(--color-danger);
+  }
 }
 
 .input {
