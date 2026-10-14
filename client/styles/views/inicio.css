@@ -8,16 +8,18 @@
   .inicio__hero {
     padding: var(--space-6);
     border-radius: var(--radius-lg);
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
-    color: var(--color-primary-contrast);
+    background: linear-gradient(135deg, var(--hero-from), var(--hero-to));
+    color: var(--hero-text);
     box-shadow: var(--shadow-md);
 
     h2 {
-      font-size: 1.4rem;
+      font-size: 1.75rem;
+      line-height: 1.25;
       margin-bottom: var(--space-2);
     }
 
     p {
+      font-size: 1.125rem;
       opacity: 0.9;
       max-width: 60ch;
     }

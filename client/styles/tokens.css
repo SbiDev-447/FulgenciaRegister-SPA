@@ -46,6 +46,12 @@
   --color-primary-strong: #1e3a8a;
   --color-primary-soft: #d6ddf5;
   --color-primary-contrast: #e9e0c3;
+  /* Hero surfaces: the brand gradient and the text over it. Kept as its own
+       token pair so the dark theme can change the surface without any
+       component redefining colors. */
+  --hero-from: #1e40af;
+  --hero-to: #1e3a8a;
+  --hero-text: #e9e0c3;
   /* Dark navy brand tone (login title, sidebar brand). */
   --color-navy: #263d56;
   --color-accent: #e0c15a;
@@ -104,6 +110,12 @@
   --color-primary-strong: #7d9cec;
   --color-primary-soft: #1a2440;
   --color-primary-contrast: #06080f;
+  /* The hero keeps light text in dark mode, so its surface goes deep instead
+       of going bright: cream on navy stays readable, unlike cream on the light
+       blue that the primary would give. */
+  --hero-from: #1a2440;
+  --hero-to: #27354b;
+  --hero-text: #e9e0c3;
   --color-accent: #e0c15a;
   --color-danger: #e07a6f;
   --color-danger-soft: #2a1414;
