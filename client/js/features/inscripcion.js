@@ -214,17 +214,17 @@ export function openInscripcion({ opciones, onCreated }) {
       h('div', { class: 'inscripcion__grid' }, [
         field('Cédula', h('div', { class: 'inscripcion__ci' }, [tipoCi, numeroCi])),
         field('Primer nombre *', primerNombre),
-        field('Segundo nombre', segundoNombre),
+        field('Segundo nombre *', segundoNombre),
         field('Primer apellido *', primerApellido),
-        field('Segundo apellido', segundoApellido),
+        field('Segundo apellido *', segundoApellido),
         field('Fecha de nacimiento *', fechaNacimiento),
         field('Sexo *', sexo),
-        field('Teléfono', telefono),
-        field('Correo', correo),
-        field('País de nacimiento', paisNacimiento),
-        field('Estado de nacimiento', estadoNacimiento),
-        field('Municipio de nacimiento', municipioNacimiento),
-        field('Lateralidad', lateralidad),
+        field('Teléfono *', telefono),
+        field('Correo *', correo),
+        field('País de nacimiento *', paisNacimiento),
+        field('Estado de nacimiento *', estadoNacimiento),
+        field('Municipio de nacimiento *', municipioNacimiento),
+        field('Lateralidad *', lateralidad),
         field('Talla (cm)', talla),
         field('Peso (kg)', peso),
         field('Camisa', camisa),
@@ -444,6 +444,14 @@ export function openInscripcion({ opciones, onCreated }) {
     if (!primerApellido.value.trim()) add([primerApellido], 'Falta el primer apellido del estudiante.')
     if (!fechaNacimiento.value) add([fechaNacimiento], 'Falta la fecha de nacimiento.')
     if (!sexo.value) add([sexo], 'Selecciona el sexo del estudiante.')
+    if (!segundoNombre.value.trim()) add([segundoNombre], 'Falta el segundo nombre del estudiante.')
+    if (!segundoApellido.value.trim()) add([segundoApellido], 'Falta el segundo apellido del estudiante.')
+    if (!telefono.value.trim()) add([telefono], 'Falta el teléfono del estudiante.')
+    if (!correo.value.trim()) add([correo], 'Falta el correo del estudiante.')
+    if (!paisNacimiento.value.trim()) add([paisNacimiento], 'Falta el país de nacimiento.')
+    if (!estadoNacimiento.value.trim()) add([estadoNacimiento], 'Falta el estado de nacimiento.')
+    if (!municipioNacimiento.value.trim()) add([municipioNacimiento], 'Falta el municipio de nacimiento.')
+    if (!lateralidad.value) add([lateralidad], 'Selecciona la lateralidad del estudiante.')
     if (!anioSelect.value) {
       add([anioSelect], 'Selecciona el año de inscripción.')
     } else if (!seccionSelect.value) {

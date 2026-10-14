@@ -25,6 +25,17 @@ function assertValidStudent(student, { partial = false } = {}) {
   check('primer_apellido', validators.isNonEmptyString, 'is required')
   check('fecha_nacimiento', validators.isValidDate, 'must be a valid YYYY-MM-DD date')
   check('sexo', validators.isValidSexo, 'must be M or F')
+  // Enrolling a student needs contact, place of birth and laterality on file,
+  // so they are required on create. On update they are only checked when the
+  // client actually sends them.
+  check('segundo_nombre', validators.isNonEmptyString, 'is required')
+  check('segundo_apellido', validators.isNonEmptyString, 'is required')
+  check('telefono', validators.isNonEmptyString, 'is required')
+  check('correo', validators.isNonEmptyString, 'is required')
+  check('pais_nacimiento', validators.isNonEmptyString, 'is required')
+  check('estado_nacimiento', validators.isNonEmptyString, 'is required')
+  check('municipio_nacimiento', validators.isNonEmptyString, 'is required')
+  check('lateralidad', validators.isNonEmptyString, 'is required')
 
   if (Object.keys(details).length > 0) {
     throw HttpError.badRequest('Invalid estudiante data', details)

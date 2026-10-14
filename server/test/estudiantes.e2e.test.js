@@ -49,6 +49,19 @@ const allDocumentos = {
   certificado_6to_grado: true,
 }
 
+// Every create requires these beyond the identity fields, so each payload
+// spreads them first and keeps its own case the only possible failure.
+const contactoObligatorio = {
+  segundo_nombre: 'Isabel',
+  segundo_apellido: 'Rojas',
+  telefono: '0412-5551234',
+  correo: 'correo@ejemplo.com',
+  pais_nacimiento: 'Venezuela',
+  estado_nacimiento: 'Miranda',
+  municipio_nacimiento: 'Sucre',
+  lateralidad: 'Derecha',
+}
+
 test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) => {
   if (!hasEnv) {
     return t.skip('Skipping estudiantes e2e: missing required env vars (.env at repo root)')
@@ -147,6 +160,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
   await t.test('rejects an invalid cédula with 400', async () => {
     const res = await api('POST', '/api/estudiantes', {
       estudiante: {
+        ...contactoObligatorio,
         tipo_ci: 'V',
         numero_ci: 'abc',
         primer_nombre: 'María',
@@ -168,6 +182,40 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     assert.equal(body.details.numero_ci, 'must be 1-12 digits')
   })
 
+  await t.test('rejects a student missing the required contact fields with 400', async () => {
+    const res = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        tipo_ci: 'V',
+        numero_ci: uniqueCi('66'),
+        primer_nombre: 'Sin',
+        primer_apellido: 'Contacto',
+        fecha_nacimiento: '2012-04-10',
+        sexo: 'F',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+      representantes: [{ tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' }],
+      documentos: { ...allDocumentos },
+    })
+    assert.equal(res.status, 400)
+    const body = await res.json()
+    assert.equal(body.code, 'bad_request')
+    assert.deepEqual(body.details, {
+      segundo_nombre: 'is required',
+      segundo_apellido: 'is required',
+      telefono: 'is required',
+      correo: 'is required',
+      pais_nacimiento: 'is required',
+      estado_nacimiento: 'is required',
+      municipio_nacimiento: 'is required',
+      lateralidad: 'is required',
+    })
+  })
+
   await t.test('creates a student with inscription, documents and representatives', async () => {
     const res = await api('POST', '/api/estudiantes', {
       estudiante: {
@@ -181,6 +229,10 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         sexo: 'F',
         telefono: '0412-5551234',
         correo: 'maria.perez@example.com',
+        pais_nacimiento: 'Venezuela',
+        estado_nacimiento: 'Miranda',
+        municipio_nacimiento: 'Sucre',
+        lateralidad: 'Derecha',
       },
       inscripcion: {
         anio_escolar: '2025-2026',
@@ -221,6 +273,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
   await t.test('rejects an enrollment that is missing consigned documents', async () => {
     const res = await api('POST', '/api/estudiantes', {
       estudiante: {
+        ...contactoObligatorio,
         tipo_ci: 'V',
         numero_ci: uniqueCi('55'),
         primer_nombre: 'Sin',
@@ -249,6 +302,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
   await t.test('rejects a duplicate cédula with 409', async () => {
     const res = await api('POST', '/api/estudiantes', {
       estudiante: {
+        ...contactoObligatorio,
         tipo_ci: 'V',
         numero_ci: estudianteCi,
         primer_nombre: 'Otro',
@@ -273,6 +327,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
   await t.test('rejects an invalid section for the year with 400', async () => {
     const res = await api('POST', '/api/estudiantes', {
       estudiante: {
+        ...contactoObligatorio,
         tipo_ci: 'E',
         numero_ci: uniqueCi('22'),
         primer_nombre: 'Sección',
@@ -325,6 +380,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     const sectionRepCi = uniqueCi('55')
     const create = await api('POST', '/api/estudiantes', {
       estudiante: {
+        ...contactoObligatorio,
         tipo_ci: 'V',
         numero_ci: sectionCi,
         primer_nombre: 'Sección',
@@ -409,6 +465,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
 
     const res = await api('POST', '/api/estudiantes', {
       estudiante: {
+        ...contactoObligatorio,
         tipo_ci: 'V',
         numero_ci: repeaterCi,
         primer_nombre: 'Luis',
