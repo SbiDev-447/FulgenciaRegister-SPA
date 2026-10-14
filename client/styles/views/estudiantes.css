@@ -352,7 +352,9 @@
     display: grid;
     grid-template-columns: 64px 1fr;
     gap: var(--space-2);
-    align-items: end;
+    /* Top alignment: a control with an error line is taller, and aligning by
+       the bottom would push the labels of the shorter ones out of line. */
+    align-items: start;
   }
 
   .inscripcion__reps {
@@ -364,7 +366,9 @@
   .inscripcion__rep {
     display: flex;
     flex-wrap: wrap;
-    align-items: end;
+    /* Labels first: an invalid field grows by its error line, and bottom
+       alignment dragged every shorter field's label down with it. */
+    align-items: start;
     gap: var(--space-3);
     padding: var(--space-4);
     border: 1px solid var(--color-border);
