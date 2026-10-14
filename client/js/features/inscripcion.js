@@ -146,10 +146,10 @@ export function openInscripcion({ opciones, onCreated }) {
     const repCorreo = h('input', { class: 'input', type: 'email', placeholder: 'Correo' })
 
     const row = h('div', { class: 'inscripcion__rep' }, [
-      field('Nombre y apellido', repNombre),
+      field('Nombre y apellido *', repNombre),
       h('div', { class: 'inscripcion__ci' }, [
         field('Tipo', repTipoCi),
-        field('Cédula', repNumeroCi),
+        field('Cédula *', repNumeroCi),
       ]),
       field('Parentesco', repParentesco),
       field('Teléfono', repTelefono),
@@ -212,7 +212,7 @@ export function openInscripcion({ opciones, onCreated }) {
     h('section', { class: 'inscripcion__section' }, [
       h('h3', { class: 'inscripcion__section-title', text: 'Datos del estudiante' }),
       h('div', { class: 'inscripcion__grid' }, [
-        field('Cédula', h('div', { class: 'inscripcion__ci' }, [tipoCi, numeroCi])),
+        field('Cédula *', h('div', { class: 'inscripcion__ci' }, [tipoCi, numeroCi])),
         field('Primer nombre *', primerNombre),
         field('Segundo nombre *', segundoNombre),
         field('Primer apellido *', primerApellido),
@@ -358,6 +358,14 @@ export function openInscripcion({ opciones, onCreated }) {
     primer_apellido: () => [primerApellido],
     fecha_nacimiento: () => [fechaNacimiento],
     sexo: () => [sexo],
+    segundo_nombre: () => [segundoNombre],
+    segundo_apellido: () => [segundoApellido],
+    telefono: () => [telefono],
+    correo: () => [correo],
+    pais_nacimiento: () => [paisNacimiento],
+    estado_nacimiento: () => [estadoNacimiento],
+    municipio_nacimiento: () => [municipioNacimiento],
+    lateralidad: () => [lateralidad],
     anio: () => [anioSelect],
     seccion: () => [seccionSelect],
     anio_escolar: () => [anioEscolar],
@@ -373,6 +381,14 @@ export function openInscripcion({ opciones, onCreated }) {
     primer_apellido: 'Primer apellido',
     fecha_nacimiento: 'Fecha de nacimiento',
     sexo: 'Sexo',
+    segundo_nombre: 'Segundo nombre',
+    segundo_apellido: 'Segundo apellido',
+    telefono: 'Teléfono',
+    correo: 'Correo',
+    pais_nacimiento: 'País de nacimiento',
+    estado_nacimiento: 'Estado de nacimiento',
+    municipio_nacimiento: 'Municipio de nacimiento',
+    lateralidad: 'Lateralidad',
     anio: 'Año',
     seccion: 'Sección',
     anio_escolar: 'Año escolar',
