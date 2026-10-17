@@ -695,19 +695,27 @@ export function openInscripcion({ opciones, onCreated }) {
       .catch((error) => {
         const { fieldErrors, messages } = serverErrors(error)
         const fallback = error && error.message ? error.message : 'No se pudo guardar la inscripción.'
+        const owner = fieldErrors.map(stepIndexOf).find((index) => index >= 0)
+        // The jump goes first, like the local path: marks become visible only on
+        // the step that is shown.
+        if (owner !== undefined) showStep(owner)
         setError(messages.length > 0 ? messages : [fallback], { title: 'No se pudo guardar:' })
         markFieldErrors(fieldErrors)
-        const owner = fieldErrors.map(stepIndexOf).find((index) => index >= 0)
+        submitBtn.disabled = false
+        // showStep owns the label and the type, so only restore them when the
+        // button is still the one that saves; a jump to step 1-3 already retyped
+        // it, and relabelling it here would offer "Guardar inscripción" on a
+        // button that just advances.
+        if (submitBtn.type === 'submit') {
+          submitBtn.replaceChildren(h('span', { text: 'Guardar inscripción' }))
+        }
         if (owner !== undefined) {
-          showStep(owner)
           focusFirstError(fieldErrors)
         } else {
           // Nothing to focus inside a step (an unmapped field, or a general
           // rejection): the summary at the top of the form carries the reason.
           errorBox.scrollIntoView({ block: 'nearest' })
         }
-        submitBtn.disabled = false
-        submitBtn.replaceChildren(h('span', { text: 'Guardar inscripción' }))
       })
   }
 }
