@@ -4,6 +4,7 @@
 import { ApiError } from '../api.js'
 import { login } from '../features/session.js'
 import { h, clear } from '../ui/dom.js'
+import { errorCopy } from '../ui/messages.js'
 
 /**
  * @param {HTMLElement} container
@@ -95,7 +96,14 @@ export function renderLogin(container, { onSuccess } = {}) {
       await login(usuario, password)
       onSuccess?.()
     } catch (error) {
-      showError(error instanceof ApiError ? error.message : 'No se pudo iniciar sesión.')
+      // A rejected sign-in always gets the same generic message: naming which
+      // half failed would reveal whether the account exists. `errorCopy`'s
+      // session wording is wrong here — this is not an expired session.
+      const copy =
+        error instanceof ApiError && error.status === 401
+          ? 'Usuario o contraseña incorrectos.'
+          : errorCopy(error, 'No se pudo iniciar sesión.')
+      showError(copy)
       setLoading(false)
       form.elements.password.value = ''
       form.elements.password.focus()

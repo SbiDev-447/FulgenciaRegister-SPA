@@ -4,6 +4,7 @@
 // (AGENTS/docs/ARQUITECTURA.md §6: no innerHTML with data).
 
 import { h, clear } from '../ui/dom.js'
+import { errorCopy } from '../ui/messages.js'
 import { api } from '../api.js'
 import { icon } from '../ui/icons.js'
 import { openModal } from '../ui/modal.js'
@@ -197,7 +198,7 @@ export function renderEstudiantes(container) {
   }
 
   function renderError(error) {
-    const message = error && error.message ? error.message : 'No se pudieron cargar los estudiantes.'
+    const message = errorCopy(error, 'No se pudieron cargar los estudiantes.')
     results.replaceChildren(
       h('div', { class: 'estudiantes__error' }, [
         h('p', { text: message }),
@@ -209,7 +210,7 @@ export function renderEstudiantes(container) {
   }
 
   function renderFiltersError(error) {
-    const message = error && error.message ? error.message : 'No se pudieron cargar los filtros.'
+    const message = errorCopy(error, 'No se pudieron cargar los filtros.')
     results.replaceChildren(
       h('div', { class: 'estudiantes__error' }, [
         h('p', { text: message }),
@@ -239,7 +240,7 @@ export function renderEstudiantes(container) {
         modal.element.querySelector('.modal__body')?.replaceChildren(renderFicha(record))
       })
       .catch((error) => {
-        const message = error && error.message ? error.message : 'No se pudo cargar la ficha.'
+        const message = errorCopy(error, 'No se pudo cargar la ficha.')
         modal.element.querySelector('.modal__body')?.replaceChildren(
           h('div', { class: 'alert alert--error', role: 'alert' }, [h('p', { text: message })]),
         )

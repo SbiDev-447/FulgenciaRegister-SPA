@@ -91,6 +91,7 @@ export function makeEl(tag) {
     nodeType: 1,
     children: [],
     attributes: {},
+    listeners: {},
     className: '',
     textContent: '',
     style: {},
@@ -164,8 +165,12 @@ export function makeEl(tag) {
     hasAttribute(key) {
       return key in el.attributes
     },
-    addEventListener() {},
-    removeEventListener() {},
+    addEventListener(type, handler) {
+      ;(el.listeners[type] ??= []).push(handler)
+    },
+    removeEventListener(type, handler) {
+      el.listeners[type] = (el.listeners[type] ?? []).filter((entry) => entry !== handler)
+    },
     focus() {},
     scrollIntoView() {},
     querySelectorAll(selector) {
@@ -186,10 +191,13 @@ export function makeEl(tag) {
     matches(selector) {
       return matchesSelector(el, selector)
     },
-    get elements() {
-      return new Proxy({}, { get: () => makeEl('input') })
-    },
   })
+
+  // A real form hands out the same control for a given name every time, so a
+  // test can set a value and have the submit handler read it back. Assigned
+  // here, not as a literal getter: Object.assign reads getters while copying.
+  el.elements = new Proxy({}, { get: (controls, name) => (controls[name] ??= makeEl('input')) })
+
   return el
 }
 
@@ -217,8 +225,35 @@ export function installDom() {
     innerWidth: 1280,
   }
   globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} }
-  // Pending forever: a view's own error handling never runs, so a smoke test
-  // only observes the synchronous render.
-  globalThis.fetch = () => new Promise(() => {})
+  // Pending forever by default: a view's own error handling never runs, so a
+  // smoke test only observes the synchronous render. A test that wants to see
+  // a rejection swaps it with `respondWith`.
+  globalThis.fetch = stalledFetch
   globalThis.requestAnimationFrame = (fn) => setTimeout(fn, 0)
+}
+
+/** A fetch that never settles. */
+function stalledFetch() {
+  return new Promise(() => {})
+}
+
+/** Replace the stubbed fetch, e.g. with a rejection the view has to show. */
+export function respondWith(impl) {
+  globalThis.fetch = impl
+}
+
+/** Put the never-settling fetch back, for the tests that follow. */
+export function stallFetch() {
+  globalThis.fetch = stalledFetch
+}
+
+/**
+ * Fire the listeners registered for `type` on `target`, in order, and resolve
+ * once every handler settles. Only the target is notified: the views under test
+ * listen on the element they own (the form, the button), never on an ancestor.
+ */
+export async function dispatch(target, type, event = {}) {
+  for (const handler of target.listeners?.[type] ?? []) {
+    await handler({ preventDefault() {}, stopPropagation() {}, target, ...event })
+  }
 }

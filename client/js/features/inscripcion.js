@@ -5,6 +5,7 @@
 // (AGENTS/docs/ARQUITECTURA.md §6).
 
 import { h } from '../ui/dom.js'
+import { errorCopy } from '../ui/messages.js'
 import { api } from '../api.js'
 import { icon } from '../ui/icons.js'
 import { openModal } from '../ui/modal.js'
@@ -694,7 +695,7 @@ export function openInscripcion({ opciones, onCreated }) {
       })
       .catch((error) => {
         const { fieldErrors, messages } = serverErrors(error)
-        const fallback = error && error.message ? error.message : 'No se pudo guardar la inscripción.'
+        const fallback = errorCopy(error, 'No se pudo guardar la inscripción.')
         const owner = fieldErrors.map(stepIndexOf).find((index) => index >= 0)
         // The jump goes first, like the local path: marks become visible only on
         // the step that is shown.

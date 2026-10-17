@@ -1,6 +1,9 @@
 // Thin API client for the Fulgencia backend. Every request is same-origin, so
 // the httpOnly auth cookie travels automatically. Errors are normalized into
-// ApiError using the backend envelope { code, message, details }.
+// ApiError using the backend envelope { code, message, details }, with Spanish
+// copy taken from `code` — never from the backend's English `message`.
+
+import { errorCopy } from './ui/messages.js'
 
 const API_BASE = '/api'
 
@@ -55,8 +58,12 @@ async function request(path, { method = 'GET', body } = {}) {
   }
 
   if (!response.ok) {
-    const message = (data && data.message) || `Error inesperado (${response.status})`
-    throw new ApiError(message, response.status, data?.code, data?.details)
+    // The api keeps its `message` in English for logs and tooling and expects
+    // the client to localize from `code`, so the rejection is built with Spanish
+    // copy here; a view that wants better wording calls `errorCopy` with its own
+    // fallback.
+    const code = data?.code
+    throw new ApiError(errorCopy({ status: response.status, code }), response.status, code, data?.details)
   }
 
   return data

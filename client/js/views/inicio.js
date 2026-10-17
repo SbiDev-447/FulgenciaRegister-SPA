@@ -5,6 +5,7 @@
 
 import { h, clear } from '../ui/dom.js'
 import { api } from '../api.js'
+import { errorCopy } from '../ui/messages.js'
 
 const fmt = new Intl.NumberFormat('es-VE')
 
@@ -104,7 +105,7 @@ export function renderInicio(container, { user } = {}) {
   }
 
   function renderError(error) {
-    const message = error && error.message ? error.message : 'No se pudieron cargar las estadísticas.'
+    const message = errorCopy(error, 'No se pudieron cargar las estadísticas.')
     results.replaceChildren(
       h('div', { class: 'inicio__error' }, [
         h('p', { text: message }),
@@ -186,7 +187,7 @@ export function renderInicio(container, { user } = {}) {
   }
 
   function renderFiltersError(error) {
-    const message = error && error.message ? error.message : 'No se pudieron cargar los filtros.'
+    const message = errorCopy(error, 'No se pudieron cargar los filtros.')
     results.replaceChildren(
       h('div', { class: 'inicio__error' }, [
         h('p', { text: message }),

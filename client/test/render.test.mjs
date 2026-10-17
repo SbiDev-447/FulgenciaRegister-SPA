@@ -7,7 +7,8 @@
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { installDom, makeEl, findAll, textOf } from './dom-stub.mjs'
+import { installDom, makeEl, findAll, textOf, dispatch, respondWith, stallFetch } from './dom-stub.mjs'
+import { errorCopy } from '../js/ui/messages.js'
 
 installDom()
 
@@ -74,4 +75,38 @@ test('the inscription modal opens as a 4-step wizard showing the first step', as
   assert.ok(footer.includes('Siguiente'), 'the primary button must offer the next step')
   assert.ok(footer.includes('Atrás'), 'the back button is missing')
   assert.ok(footer.includes('Cancelar'), 'the cancel button is missing')
+})
+
+test('the login shows a rejection in Spanish, never the api message', async () => {
+  const { renderLogin } = await import('../js/views/login.js')
+
+  respondWith(async () => ({
+    ok: false,
+    status: 401,
+    text: async () => JSON.stringify({ code: 'unauthorized', message: 'Invalid credentials' }),
+  }))
+
+  try {
+    const container = makeEl('div')
+    renderLogin(container, { onSuccess: () => {} })
+
+    const form = findAll(container, 'form')[0]
+    form.elements.usuario.value = 'admin'
+    form.elements.password.value = 'admin123'
+    await dispatch(form, 'submit')
+
+    const alert = findAll(container, '.alert')[0]
+    assert.equal(alert.hidden, false, 'the rejection was not shown')
+    assert.equal(textOf(alert), 'Usuario o contraseña incorrectos.')
+  } finally {
+    stallFetch()
+  }
+})
+
+test('errorCopy localizes by code, then by status, then falls back', () => {
+  assert.equal(errorCopy({ code: 'unauthorized', status: 401 }), 'Tu sesión no está activa. Vuelve a iniciar sesión.')
+  assert.equal(errorCopy({ code: 'not_found', status: 404 }), 'No se encontró el registro solicitado.')
+  assert.equal(errorCopy({ status: 500 }), 'Ocurrió un error en el servidor.')
+  assert.equal(errorCopy({ code: 'sin_nombre', status: 418 }, 'No se pudo cargar.'), 'No se pudo cargar.')
+  assert.equal(errorCopy(null, 'No se pudo cargar.'), 'No se pudo cargar.')
 })
