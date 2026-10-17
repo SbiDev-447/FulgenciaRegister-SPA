@@ -10,12 +10,14 @@
 
 | Componente | Estado |
 | ---------- | ------ |
-| Backend (API REST) | Listo — suite de pruebas en verde (74/74) |
+| Backend (API REST) | Listo — 80 pruebas en verde |
 | Base de datos (MariaDB) | Listo — esquema y datos semilla |
-| Frontend (SPA) | En desarrollo |
+| Frontend (SPA) | Inicio y Estudiantes listos — 17 pruebas en verde |
 
-El backend está completo y cubierto por pruebas. La interfaz (SPA) está en
-construcción: las vistas de la sección siguiente describen el alcance planificado.
+El backend está completo y cubierto por pruebas. En la SPA ya funcionan el shell,
+el router, los temas y las vistas de Inicio y Estudiantes (lista, búsqueda, ficha
+y wizard de inscripción); la vista de Documentos está en construcción, y la
+sección "Alcance" describe lo planificado.
 
 ## Alcance
 
@@ -40,21 +42,25 @@ construcción: las vistas de la sección siguiente describen el alcance planific
 
 ```text
 fulgenciaProject/
-├── client/                  # SPA vanilla JS (en construcción)
+├── client/                  # SPA vanilla JS
 │   ├── index.html
 │   ├── assets/              # tipografías e imágenes locales
 │   ├── styles/              # tokens.css, reset.css, layout.css, views/
-│   └── js/                  # main.js, router.js, api.js, views/, features/, ui/
-│       └── ui/              # helpers DOM (h, svgIcon) e iconos SVG
+│   ├── js/                  # main.js, routes.js, router.js, shell.js, api.js
+│   │   ├── views/           # una vista por ruta (login, inicio, estudiantes, ...)
+│   │   ├── features/        # sesión, tema e inscripción (el wizard de 4 pasos)
+│   │   └── ui/              # helpers DOM (h, clear, svgIcon), iconos, modal y copy de errores
+│   └── test/                # pruebas del cliente (node:test, sin navegador)
 ├── server/                  # API REST (Express + mysql-tab)
 │   ├── src/
+│   │   ├── config/          # variables de entorno y pool de MariaDB
 │   │   ├── modules/         # auth, estudiantes, documentos, estadisticas
 │   │   ├── middlewares/     # auth, error
 │   │   ├── constants/       # academico, auth, documentos
 │   │   └── utils/           # cedula, password, jwt, httpError
 │   ├── model/               # modelos tabla-model (esquema)
 │   ├── db/seed.js           # datos semilla
-│   └── test/                # pruebas (node:test)
+│   └── test/                # pruebas del servidor (node:test)
 ├── files/                   # recursos del repositorio (banner)
 ├── docker-compose.yml       # MariaDB 11
 └── package.json             # scripts raíz
@@ -120,6 +126,21 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 | POST | `/api/documentos/emitir` | Emitir un documento |
 | GET | `/api/estadisticas` | Estadísticas de inscripción |
 
+## Rutas de la SPA
+
+El enrutado es por hash: todo ocurre en la misma página, sin recargas.
+
+| Ruta | Vista |
+| ---- | ----- |
+| `#/` | Inicio — estadísticas de inscripción con filtros |
+| `#/estudiantes` | Listado con búsqueda y filtros, y ficha del estudiante |
+| `#/inscripcion` | Wizard de inscripción en 4 pasos |
+| `#/documentos` | Documentos (en construcción) |
+
+El wizard **no** tiene entrada en el menú lateral: se llega desde el botón "Nueva
+inscripción" de Estudiantes y, como carga sus propias opciones académicas, un
+enlace directo o una recarga funcionan igual.
+
 ## Scripts
 
 | Comando | Acción |
@@ -129,7 +150,18 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 | `pnpm db:up` / `pnpm db:down` | Levantar / detener MariaDB |
 | `pnpm db:reset` | Recrear la base de datos (borra los datos) |
 | `pnpm db:seed` | Crear tablas y datos semilla |
-| `pnpm test` | Ejecutar todas las pruebas |
+| `pnpm test` | Ejecutar todas las pruebas (servidor y cliente) |
+
+## Pruebas
+
+| Suite | Comando | Alcance |
+| ----- | ------- | ------- |
+| Servidor | `pnpm --filter @fulgencia/server test` | 80 pruebas con `node:test`. La suite e2e se salta si no hay `.env` o base de datos. |
+| Cliente | `pnpm --filter @fulgencia/client test` | 17 pruebas con `node:test` que ejecutan cada vista contra un DOM mínimo, **sin navegador**: comprueban que las vistas pintan y qué texto ve una persona ante un rechazo del API. |
+
+`pnpm test` corre las dos. Lo que las pruebas del cliente **no** cubren es el
+resultado visual: el layout se valida a mano en el navegador (`Ctrl+F5` en
+`http://localhost:3000`).
 
 ## Roadmap
 
@@ -137,6 +169,7 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 - [x] Autenticación (login, sesión, cierre)
 - [x] API de estudiantes (CRUD y representantes)
 - [x] API de documentos y estadísticas
-- [ ] Interfaz SPA (shell, router, temas)
-- [ ] Vistas de inicio, estudiantes y documentos
+- [x] Interfaz SPA (shell, router, temas)
+- [x] Vistas de inicio y estudiantes (lista, ficha y wizard de inscripción)
+- [ ] Vista de documentos
 - [ ] Generación e impresión de documentos
