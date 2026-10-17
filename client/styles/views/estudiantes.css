@@ -27,38 +27,36 @@
     }
   }
 
+  /* The search bar is one grid: the search owns the first row at full width and
+     the two filters share the second row with the primary action at its end.
+     A fixed two-row shape beats nested wrapping rows, which used to push the
+     action onto a ragged line of its own the moment the filters stopped
+     fitting. */
   .estudiantes__bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: var(--space-4);
-  }
-
-  .estudiantes__toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    align-items: end;
     gap: var(--space-4);
   }
 
   .estudiantes__search {
+    grid-column: 1 / -1;
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    flex: 1;
-    min-width: 240px;
-    max-width: 420px;
   }
 
+  /* `min-width: 0` lets the input shrink inside its column instead of forcing
+     the row wider than the viewport. */
   .estudiantes__search .input {
     flex: 1;
+    min-width: 0;
   }
 
   .estudiantes__field {
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: var(--space-2);
+    min-width: 0;
     color: var(--color-text-muted);
     font-size: 0.8rem;
     font-weight: 700;
@@ -66,8 +64,23 @@
     letter-spacing: 0.06em;
   }
 
+  /* Phones: the action drops to a full-width row of its own and the two
+     filters keep their columns, so nothing is left dangling at a random
+     width. */
+  @media (max-width: 520px) {
+    .estudiantes__bar {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .estudiantes__bar > .btn {
+      grid-column: 1 / -1;
+      width: 100%;
+    }
+  }
+
   .estudiantes__select {
-    min-width: 180px;
+    width: 100%;
+    min-width: 0;
     padding: var(--space-2) var(--space-3);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);

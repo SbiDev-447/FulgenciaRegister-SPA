@@ -33,19 +33,23 @@ for (const [name, file, exportName] of VIEWS) {
   })
 }
 
-test('estudiantes paints the toolbar with the search control', async () => {
+test('estudiantes paints the bar with the search, the filters and the action', async () => {
   const mod = await import(new URL('../js/views/estudiantes.js', import.meta.url))
   const container = makeEl('div')
   mod.renderEstudiantes(container, { user: USER })
 
   const root = container.children[0]
-  assert.equal(findAll(root, '.estudiantes__toolbar').length, 1, 'the toolbar form is missing')
-  assert.equal(findAll(root, '.estudiantes__search').length, 1, 'the search wrapper is missing')
-  assert.equal(findAll(root, '.estudiantes__toolbar input[type="search"]').length, 1, 'the search input is missing')
+  const bar = findAll(root, '.estudiantes__bar')[0]
+  assert.ok(bar, 'the bar is missing')
+  assert.equal(bar.tagName, 'FORM', 'the bar is the form, so Enter in the search submits it')
+  assert.equal(findAll(bar, '.estudiantes__search').length, 1, 'the search wrapper is missing')
+  assert.equal(findAll(bar, '.estudiantes__search input[type="search"]').length, 1, 'the search input is missing')
+  assert.equal(findAll(bar, '.estudiantes__field').length, 2, 'the two filters are missing')
+  assert.equal(findAll(bar, '.btn--primary').length, 1, 'the primary action belongs to the bar')
 
   const text = textOf(root)
   assert.ok(text.includes('Buscar'), 'the search button label is missing')
-  assert.ok(text.includes('Nueva inscripción'), 'the primary action is missing')
+  assert.ok(text.includes('Nueva inscripción'), 'the primary action label is missing')
 })
 
 test('the inscription modal opens as a 4-step wizard showing the first step', async () => {

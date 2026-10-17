@@ -82,7 +82,11 @@ export function renderEstudiantes(container) {
     openInscripcion({ opciones: options, onCreated: () => load() })
   })
 
-  const toolbar = h('form', { class: 'estudiantes__toolbar', on: { submit: (event) => { event.preventDefault(); load() } } }, [
+  // One grid: the search owns the first row and the two filters share the
+  // second with the primary action at its end, so the action can never be
+  // pushed onto a line of its own. The action stays `type="button"` inside the
+  // form: only "Buscar" (submit) reloads the list.
+  const bar = h('form', { class: 'estudiantes__bar', on: { submit: (event) => { event.preventDefault(); load() } } }, [
     h('div', { class: 'estudiantes__search' }, [qInput, searchBtn]),
     h('label', { class: 'estudiantes__field' }, [
       h('span', { text: 'Año' }),
@@ -92,6 +96,7 @@ export function renderEstudiantes(container) {
       h('span', { text: 'Sección' }),
       seccionSelect,
     ]),
+    nuevaBtn,
   ])
 
   const view = h('section', { class: 'estudiantes' }, [
@@ -101,10 +106,7 @@ export function renderEstudiantes(container) {
         text: 'Listado del registro: busca por nombre o cédula y filtra por año y sección.',
       }),
     ]),
-    h('div', { class: 'estudiantes__bar' }, [
-      toolbar,
-      nuevaBtn,
-    ]),
+    bar,
     results,
   ])
 
