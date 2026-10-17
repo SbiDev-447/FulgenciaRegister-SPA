@@ -101,6 +101,12 @@ function assertValidRepresentantes(representantes, { allowEmpty = false } = {}) 
     if (!validators.isValidNumeroCi(item.numero_ci)) {
       details.numero_ci = 'must be 1-12 digits'
     }
+    if (!validators.isNonEmptyString(item.telefono)) {
+      details.telefono = 'is required'
+    }
+    if (!validators.isNonEmptyString(item.correo)) {
+      details.correo = 'is required'
+    }
     if (Object.keys(details).length > 0) {
       throw HttpError.badRequest(`Invalid representative at index ${index}`, details)
     }

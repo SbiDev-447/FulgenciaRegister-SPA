@@ -60,7 +60,9 @@ const studentPayload = (numeroCi, nombre, repCi) => ({
     seccion: 'A',
     fecha_inscripcion: '2026-09-01',
   },
-  representantes: [{ tipo_ci: 'V', numero_ci: repCi, nombre: 'Rep Cero' }],
+  representantes: [
+    { tipo_ci: 'V', numero_ci: repCi, nombre: 'Rep Cero', telefono: '0414-5559876', correo: 'rep@ejemplo.com' },
+  ],
   documentos: {
     partida_nacimiento: true,
     copia_cedula: true,

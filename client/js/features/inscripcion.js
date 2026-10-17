@@ -152,8 +152,8 @@ export function openInscripcion({ opciones, onCreated }) {
         field('Cédula *', repNumeroCi),
       ]),
       field('Parentesco', repParentesco),
-      field('Teléfono', repTelefono),
-      field('Correo', repCorreo),
+      field('Teléfono *', repTelefono),
+      field('Correo *', repCorreo),
       h('button', { class: 'btn btn--ghost inscripcion__rep-remove', type: 'button' }, [
         h('span', { text: 'Quitar' }),
       ]),
@@ -492,9 +492,13 @@ export function openInscripcion({ opciones, onCreated }) {
     const repInputs = Array.from(repsContainer.querySelectorAll('.inscripcion__rep')).map((row) => ({
       nombreEl: row.querySelector('input[placeholder="Nombre y apellido"]'),
       ciEl: row.querySelector('.inscripcion__ci input'),
+      telefonoEl: row.querySelector('input[placeholder="Teléfono"]'),
+      correoEl: row.querySelector('input[placeholder="Correo"]'),
       nombre: row.querySelector('input[placeholder="Nombre y apellido"]')?.value ?? '',
       tipoCi: row.querySelector('.inscripcion__ci select')?.value ?? '',
       numeroCi: normalizeCi(row.querySelector('.inscripcion__ci input')?.value ?? ''),
+      telefono: row.querySelector('input[placeholder="Teléfono"]')?.value ?? '',
+      correo: row.querySelector('input[placeholder="Correo"]')?.value ?? '',
     }))
 
     if (repInputs.length === 0) {
@@ -507,6 +511,12 @@ export function openInscripcion({ opciones, onCreated }) {
       }
       if (!rep.numeroCi || rep.numeroCi.length > CI_MAX_DIGITS) {
         add([rep.ciEl], `La cédula del representante ${index + 1} debe tener entre 1 y 12 dígitos.`)
+      }
+      if (!rep.telefono.trim()) {
+        add([rep.telefonoEl], `Falta el teléfono del representante ${index + 1}.`)
+      }
+      if (!rep.correo.trim()) {
+        add([rep.correoEl], `Falta el correo del representante ${index + 1}.`)
       }
       const ciKey = `${rep.tipoCi}-${rep.numeroCi}`
       if (rep.numeroCi && seenCis.has(ciKey)) {

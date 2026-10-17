@@ -62,6 +62,13 @@ const contactoObligatorio = {
   lateralidad: 'Derecha',
 }
 
+// Every representative requires a phone and an email, so each payload spreads
+// these first and keeps its own case the only possible failure.
+const repObligatorio = {
+  telefono: '0414-5559876',
+  correo: 'representante@ejemplo.com',
+}
+
 test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) => {
   if (!hasEnv) {
     return t.skip('Skipping estudiantes e2e: missing required env vars (.env at repo root)')
@@ -174,7 +181,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         seccion: 'A',
         fecha_inscripcion: '2025-09-15',
       },
-      representantes: [{ tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' }],
+      representantes: [{ ...repObligatorio, tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' }],
     })
     assert.equal(res.status, 400)
     const body = await res.json()
@@ -198,7 +205,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         seccion: 'A',
         fecha_inscripcion: '2025-09-15',
       },
-      representantes: [{ tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' }],
+      representantes: [{ ...repObligatorio, tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' }],
       documentos: { ...allDocumentos },
     })
     assert.equal(res.status, 400)
@@ -214,6 +221,100 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
       municipio_nacimiento: 'is required',
       lateralidad: 'is required',
     })
+  })
+
+  await t.test('rejects a representative missing the phone with 400', async () => {
+    const repCi = uniqueCi('81')
+    const res = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        ...contactoObligatorio,
+        tipo_ci: 'V',
+        numero_ci: uniqueCi('77'),
+        primer_nombre: 'Rep',
+        primer_apellido: 'Sin Teléfono',
+        fecha_nacimiento: '2012-04-10',
+        sexo: 'F',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+      representantes: [
+        { tipo_ci: 'V', numero_ci: repCi, nombre: 'Ana Pérez', parentesco: 'Madre', correo: 'rep@ejemplo.com' },
+      ],
+      documentos: { ...allDocumentos },
+    })
+    const body = await res.json()
+    // Before the rule exists the record is created instead of rejected, so
+    // register it for cleanup first: a red run must not leave rows behind.
+    if (body.estudiante) {
+      extraStudentIds.push(body.estudiante.id)
+      createdRepCis.push(repCi)
+    }
+    assert.equal(res.status, 400)
+    assert.deepEqual(body.details, { telefono: 'is required' })
+  })
+
+  await t.test('rejects a representative missing the email with 400', async () => {
+    const repCi = uniqueCi('82')
+    const res = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        ...contactoObligatorio,
+        tipo_ci: 'V',
+        numero_ci: uniqueCi('78'),
+        primer_nombre: 'Rep',
+        primer_apellido: 'Sin Correo',
+        fecha_nacimiento: '2012-04-10',
+        sexo: 'F',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+      representantes: [
+        { tipo_ci: 'V', numero_ci: repCi, nombre: 'Ana Pérez', parentesco: 'Madre', telefono: '0414-5559876' },
+      ],
+      documentos: { ...allDocumentos },
+    })
+    const body = await res.json()
+    // See the note on the phone case above.
+    if (body.estudiante) {
+      extraStudentIds.push(body.estudiante.id)
+      createdRepCis.push(repCi)
+    }
+    assert.equal(res.status, 400)
+    assert.deepEqual(body.details, { correo: 'is required' })
+  })
+
+  await t.test('still accepts a representative without parentesco', async () => {
+    const repCi = uniqueCi('83')
+    const res = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        ...contactoObligatorio,
+        tipo_ci: 'V',
+        numero_ci: uniqueCi('79'),
+        primer_nombre: 'Rep',
+        primer_apellido: 'Sin Parentesco',
+        fecha_nacimiento: '2012-04-10',
+        sexo: 'F',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+      representantes: [{ ...repObligatorio, tipo_ci: 'V', numero_ci: repCi, nombre: 'Ana Pérez' }],
+      documentos: { ...allDocumentos },
+    })
+    assert.equal(res.status, 201)
+    const body = await res.json()
+    extraStudentIds.push(body.estudiante.id)
+    createdRepCis.push(repCi)
   })
 
   await t.test('creates a student with inscription, documents and representatives', async () => {
@@ -243,7 +344,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         repite: false,
       },
       representantes: [
-        { tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' },
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' },
       ],
       documentos: { ...allDocumentos },
     })
@@ -288,7 +389,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         fecha_inscripcion: '2025-09-17',
       },
       representantes: [
-        { tipo_ci: 'V', numero_ci: uniqueCi('56'), nombre: 'Rep Documentos', parentesco: 'Madre' },
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: uniqueCi('56'), nombre: 'Rep Documentos', parentesco: 'Madre' },
       ],
       documentos: { ...allDocumentos, boleta: false },
     })
@@ -316,7 +417,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         seccion: 'B',
         fecha_inscripcion: '2025-09-15',
       },
-      representantes: [{ tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' }],
+      representantes: [{ ...repObligatorio, tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' }],
       documentos: { ...allDocumentos },
     })
     assert.equal(res.status, 409)
@@ -341,7 +442,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         seccion: 'F',
         fecha_inscripcion: '2025-09-15',
       },
-      representantes: [{ tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' }],
+      representantes: [{ ...repObligatorio, tipo_ci: 'V', numero_ci: repCiPrimary, nombre: 'Ana Pérez', parentesco: 'Madre' }],
     })
     assert.equal(res.status, 400)
     const body = await res.json()
@@ -395,7 +496,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         fecha_inscripcion: '2025-09-15',
       },
       representantes: [
-        { tipo_ci: 'V', numero_ci: sectionRepCi, nombre: 'Rep Sección', parentesco: 'Madre' },
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: sectionRepCi, nombre: 'Rep Sección', parentesco: 'Madre' },
       ],
       documentos: { ...allDocumentos },
     })
@@ -480,7 +581,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
         fecha_inscripcion: '2025-09-16',
         repite: true,
       },
-      representantes: [{ tipo_ci: 'V', numero_ci: repCi, nombre: 'Eva Gómez', parentesco: 'Madre' }],
+      representantes: [{ ...repObligatorio, tipo_ci: 'V', numero_ci: repCi, nombre: 'Eva Gómez', parentesco: 'Madre' }],
       documentos: { ...allDocumentos },
     })
     assert.equal(res.status, 201)
@@ -509,7 +610,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     // Replace the primary representative with a secondary one.
     const res = await api('PUT', `/api/estudiantes/${createdId}`, {
       representantes: [
-        { tipo_ci: 'V', numero_ci: repCiSecondary, nombre: 'Pedro Pérez', parentesco: 'Padre' },
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: repCiSecondary, nombre: 'Pedro Pérez', parentesco: 'Padre' },
       ],
     })
     assert.equal(res.status, 200)
