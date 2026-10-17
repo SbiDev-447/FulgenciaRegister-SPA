@@ -2,8 +2,9 @@
 
 # FULGENCIA REGISTER - SPA
 
-**SPA de registro e inscripción estudiantil** para un liceo. Interfaz en JavaScript
-vanilla sin recarga de página, API REST en Express y base de datos MariaDB.
+**SPA de registro e inscripción estudiantil** para el Liceo Fulgencia Jiménez de Olmos, esta SPA se encargara de la administración de los datos de los estudiantes a la hora de la realización de las Inscripciones de los mismos, permitiendo una gestión fácil y segura, respaldando la información en una DB (MariaDB), asimismo, funcionara para la expedición automatizada de Documentos (Constancias y Cartas).
+
+> Interfaz en JavaScript vanilla sin recarga de página, API REST en Express y base de datos MariaDB en Docker.
 
 ## Estado del proyecto
 
