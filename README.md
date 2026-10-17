@@ -6,6 +6,12 @@
 
 > Interfaz en JavaScript vanilla sin recarga de página, API REST en Express y base de datos MariaDB en Docker.
 
+## 👥 Integrantes
+
+- Sebastian Briceño **C.I.:** 32.117.825
+- Claudia Montilla **C.I.:** 33.711.807
+- Ruthmar Verbel **C.I.:** 32.346.703
+
 ## Estado del proyecto
 
 | Componente | Estado |
