@@ -330,6 +330,67 @@
     gap: var(--space-3);
   }
 
+  /* A step that is not the current one has to really disappear: the class sets
+     `display: flex`, which beats the `hidden` attribute's own rule. */
+  .inscripcion__section[hidden] {
+    display: none;
+  }
+
+  /* Wizard stepper: numbered steps, the current one highlighted and the ones
+     already left behind marked as done. */
+  .inscripcion__steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    .inscripcion__step-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-pill);
+      background: var(--color-surface);
+      color: var(--color-text-muted);
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+    }
+
+    .inscripcion__step-num {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: var(--radius-pill);
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .inscripcion__step.is-current .inscripcion__step-btn {
+      border-color: var(--color-primary);
+      background: var(--color-primary-soft);
+      color: var(--color-text);
+      font-weight: 600;
+    }
+
+    .inscripcion__step.is-current .inscripcion__step-num,
+    .inscripcion__step.is-done .inscripcion__step-num {
+      background: var(--color-primary);
+      color: var(--color-primary-contrast);
+    }
+  }
+
   .inscripcion__section-title {
     font-size: 1rem;
     border-bottom: 1px solid var(--color-border);

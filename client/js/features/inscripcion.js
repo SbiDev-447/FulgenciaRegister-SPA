@@ -257,16 +257,101 @@ export function openInscripcion({ opciones, onCreated }) {
     documentosSection,
   ])
 
+  // --- Wizard -------------------------------------------------------------------
+  // One step per form section, showing only the step the user is standing on.
+  // Advancing checks that step alone; saving — or a rejection coming from the
+  // API — jumps back to the step that owns the first marked control.
+
+  const STEP_TITLES = ['Datos del estudiante', 'Inscripción', 'Representantes', 'Documentos']
+  const steps = Array.from(form.querySelectorAll('.inscripcion__section'))
+  const stepItems = steps.map((_section, index) =>
+    h('li', { class: 'inscripcion__step' }, [
+      h('button', { class: 'inscripcion__step-btn', type: 'button' }, [
+        h('span', { class: 'inscripcion__step-num', text: String(index + 1) }),
+        h('span', { class: 'inscripcion__step-label', text: STEP_TITLES[index] }),
+      ]),
+    ]),
+  )
+  const backBtn = h('button', { class: 'btn btn--ghost', type: 'button' }, [
+    h('span', { text: 'Atrás' }),
+  ])
+  form.prepend(h('ol', { class: 'inscripcion__steps' }, stepItems))
+
   let close = null
   const modal = openModal({
     title: 'Nueva inscripción',
     content: form,
-    footer: [cancelBtn, submitBtn],
+    footer: [cancelBtn, backBtn, submitBtn],
   })
   close = modal.close
 
   /** Place the reps toolbar inside the reps section (append after rows). */
   repsContainer.append(repRow().row, addRepButton)
+
+  let currentStep = 0
+
+  /** The step an error entry belongs to, resolved from its host or its first control. */
+  function stepIndexOf(error) {
+    const anchor = error.host ?? error.nodes[0]
+    return steps.indexOf(anchor?.closest?.('.inscripcion__section'))
+  }
+
+  /** Show one step and keep the stepper and the nav buttons in sync with it. */
+  function showStep(index) {
+    currentStep = Math.min(Math.max(index, 0), steps.length - 1)
+    steps.forEach((section, i) => {
+      section.hidden = i !== currentStep
+    })
+    stepItems.forEach((item, i) => {
+      const button = item.querySelector('button')
+      // Only steps already left behind are reachable again.
+      button.disabled = i > currentStep
+      item.classList.toggle('is-current', i === currentStep)
+      item.classList.toggle('is-done', i < currentStep)
+      if (i === currentStep) {
+        item.setAttribute('aria-current', 'step')
+      } else {
+        item.removeAttribute('aria-current')
+      }
+    })
+    backBtn.hidden = currentStep === 0
+    const isLast = currentStep === steps.length - 1
+    submitBtn.type = isLast ? 'submit' : 'button'
+    submitBtn.replaceChildren(h('span', { text: isLast ? 'Guardar inscripción' : 'Siguiente' }))
+    // The panel keeps its scroll offset, so a new step would open half-way down.
+    const scroller = form.closest('.modal__body')
+    if (scroller) scroller.scrollTop = 0
+  }
+
+  /** Advance one step, but only when the current one has nothing to complain about. */
+  function nextStep() {
+    // An error with no resolvable step is kept: never drop a problem silently.
+    const errors = validate().filter(
+      (error) => stepIndexOf(error) === currentStep || stepIndexOf(error) === -1,
+    )
+    if (errors.length > 0) {
+      setError(errors)
+      markFieldErrors(errors)
+      focusFirstError(errors)
+      return
+    }
+    setError([])
+    clearFieldErrors()
+    showStep(currentStep + 1)
+  }
+
+  stepItems.forEach((item, index) => {
+    item.querySelector('button').addEventListener('click', () => {
+      if (index < currentStep) showStep(index)
+    })
+  })
+  backBtn.addEventListener('click', () => showStep(currentStep - 1))
+  submitBtn.addEventListener('click', () => {
+    // On the last step the button submits; before that it only advances.
+    if (submitBtn.type !== 'submit') nextStep()
+  })
+
+  showStep(0)
 
   /** Where the red mark is actually visible for a given control. */
   function markTarget(node) {
@@ -586,6 +671,10 @@ export function openInscripcion({ opciones, onCreated }) {
     event.preventDefault()
     const errors = validate()
     if (errors.length > 0) {
+      // The wizard shows one step at a time: land on the step of the first
+      // problem before marking and focusing it, or the mark is invisible.
+      const owner = stepIndexOf(errors[0])
+      if (owner >= 0) showStep(owner)
       setError(errors)
       markFieldErrors(errors)
       focusFirstError(errors)
@@ -608,9 +697,13 @@ export function openInscripcion({ opciones, onCreated }) {
         const fallback = error && error.message ? error.message : 'No se pudo guardar la inscripción.'
         setError(messages.length > 0 ? messages : [fallback], { title: 'No se pudo guardar:' })
         markFieldErrors(fieldErrors)
-        if (fieldErrors.length > 0) {
+        const owner = fieldErrors.map(stepIndexOf).find((index) => index >= 0)
+        if (owner !== undefined) {
+          showStep(owner)
           focusFirstError(fieldErrors)
         } else {
+          // Nothing to focus inside a step (an unmapped field, or a general
+          // rejection): the summary at the top of the form carries the reason.
           errorBox.scrollIntoView({ block: 'nearest' })
         }
         submitBtn.disabled = false
