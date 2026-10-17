@@ -94,7 +94,7 @@ export function renderEstudiantes(container) {
     ]),
   ])
 
-  view = h('section', { class: 'estudiantes' }, [
+  const view = h('section', { class: 'estudiantes' }, [
     h('div', { class: 'estudiantes__hero' }, [
       h('h2', { text: 'Estudiantes' }),
       h('p', {
