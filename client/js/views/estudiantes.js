@@ -93,7 +93,20 @@ export function renderEstudiantes(container) {
       seccionSelect,
     ]),
   ])
-  view.replaceChild(toolbar, view.querySelector('.estudiantes__toolbar'))
+
+  view = h('section', { class: 'estudiantes' }, [
+    h('div', { class: 'estudiantes__hero' }, [
+      h('h2', { text: 'Estudiantes' }),
+      h('p', {
+        text: 'Listado del registro: busca por nombre o cédula y filtra por año y sección.',
+      }),
+    ]),
+    h('div', { class: 'estudiantes__bar' }, [
+      toolbar,
+      nuevaBtn,
+    ]),
+    results,
+  ])
 
   clear(container)
   container.append(view)
