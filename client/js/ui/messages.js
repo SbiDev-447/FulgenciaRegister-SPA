@@ -30,7 +30,12 @@ const BY_STATUS = {
  */
 export function errorCopy(error, fallback = 'Ocurrió un error inesperado.') {
   if (!error) return fallback
-  if (error.code && BY_CODE[error.code]) return BY_CODE[error.code]
-  if (error.status && BY_STATUS[error.status]) return BY_STATUS[error.status]
+  // `Object.hasOwn`: a plain object literal inherits `constructor`, `toString`
+  // and friends, so a rogue `code` would otherwise return a function instead of
+  // copy a person can read.
+  const code = error.code
+  if (typeof code === 'string' && Object.hasOwn(BY_CODE, code)) return BY_CODE[code]
+  const status = error.status
+  if (typeof status === 'number' && Object.hasOwn(BY_STATUS, status)) return BY_STATUS[status]
   return fallback
 }
