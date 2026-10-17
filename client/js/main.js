@@ -5,28 +5,16 @@ import { initTheme, getTheme, applyTheme } from './features/theme.js'
 import { getUser, isAuthenticated, loadSession, logout } from './features/session.js'
 import { createRouter } from './router.js'
 import { mountShell } from './shell.js'
+import { resolve } from './routes.js'
 import { renderLogin } from './views/login.js'
-import { renderInicio } from './views/inicio.js'
-import { renderEstudiantes } from './views/estudiantes.js'
-import { renderDocumentos } from './views/documentos.js'
 import { renderNotFound } from './views/notFound.js'
 
 const LOGIN_PATH = '/login'
-
-const ROUTES = [
-  { path: '/', title: 'Inicio', view: renderInicio },
-  { path: '/estudiantes', title: 'Estudiantes', view: renderEstudiantes },
-  { path: '/documentos', title: 'Documentos', view: renderDocumentos },
-]
 
 const app = document.getElementById('app')
 
 let shell = null
 let router = null
-
-function resolve(path) {
-  return ROUTES.find((route) => route.path === path) ?? null
-}
 
 async function handleLogout() {
   await logout()
@@ -67,7 +55,9 @@ function handleChange(match, path) {
     return
   }
 
-  shell.setActive(path)
+  // A route with no sidebar entry of its own (the inscription wizard) keeps its
+  // parent item highlighted instead of leaving the sidebar blank.
+  shell.setActive(match.activePath ?? path)
   shell.setTitle(match.title)
   match.view(shell.viewRoot, { user: getUser() })
 }

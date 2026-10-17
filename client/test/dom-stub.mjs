@@ -223,6 +223,7 @@ export function installDom() {
     removeEventListener() {},
     location: { hash: '' },
     innerWidth: 1280,
+    scrollTo() {},
   }
   globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} }
   // Pending forever by default: a view's own error handling never runs, so a

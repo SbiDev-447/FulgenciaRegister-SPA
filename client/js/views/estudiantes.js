@@ -8,7 +8,7 @@ import { errorCopy } from '../ui/messages.js'
 import { api } from '../api.js'
 import { icon } from '../ui/icons.js'
 import { openModal } from '../ui/modal.js'
-import { openInscripcion, DOC_LABELS } from '../features/inscripcion.js'
+import { DOC_LABELS } from '../features/inscripcion.js'
 
 const fmt = new Intl.NumberFormat('es-VE')
 
@@ -80,7 +80,10 @@ export function renderEstudiantes(container) {
     h('span', { text: 'Nueva inscripción' }),
   ])
   nuevaBtn.addEventListener('click', () => {
-    openInscripcion({ opciones: options, onCreated: () => load() })
+    // The inscription form is a page of its own (S22): navigate to it rather
+    // than opening a popup, so the browser's back button works and the form gets
+    // the full width.
+    window.location.hash = '/inscripcion'
   })
 
   // One grid: the search owns the first row and the two filters share the

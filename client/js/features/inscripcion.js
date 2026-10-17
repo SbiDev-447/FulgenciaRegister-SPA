@@ -1,14 +1,13 @@
-// Inscription feature: the "Nueva inscripción" modal. Collects the student
-// data, their first inscription, the representatives (dynamic rows) and the
-// consigned documents, mirrors the backend validators client-side and posts
-// to POST /api/estudiantes. Markup is built with h() and textContent only
-// (AGENTS/docs/ARQUITECTURA.md §6).
+// Inscription feature: the "Nueva inscripción" wizard, painted by the view at
+// `#/inscripcion` (S22). Collects the student data, their first inscription, the
+// representatives (dynamic rows) and the consigned documents, mirrors the
+// backend validators client-side and posts to POST /api/estudiantes. Markup is
+// built with h() and textContent only (AGENTS/docs/ARQUITECTURA.md §6).
 
-import { h } from '../ui/dom.js'
+import { h, clear } from '../ui/dom.js'
 import { errorCopy } from '../ui/messages.js'
 import { api } from '../api.js'
 import { icon } from '../ui/icons.js'
-import { openModal } from '../ui/modal.js'
 
 /** Labels for the consigned-document keys, shared with the ficha view. */
 export const DOC_LABELS = {
@@ -47,14 +46,17 @@ function textInput(props = {}) {
 }
 
 /**
- * Open the inscription modal.
+ * Build the inscription wizard into `container`.
+ * @param {HTMLElement} container - the view's mount point; it hosts the form and
+ *   the wizard's own footer.
  * @param {{
  *   opciones: { years: Array<{ label: string, sections: string[] }> },
- *   onCreated: () => void,
- * }} options - opciones comes from /api/academico/opciones; onCreated runs
- *   after a successful POST (e.g. reload the student list).
+ *   onExit: () => void,
+ * }} options - opciones comes from /api/academico/opciones; onExit runs when the
+ *   user leaves the wizard, whether by cancelling or by saving successfully (the
+ *   caller decides where that goes).
  */
-export function openInscripcion({ opciones, onCreated }) {
+export function renderInscripcionWizard(container, { opciones, onExit }) {
   const years = opciones?.years ?? []
   const now = new Date()
   const schoolYear = `${now.getFullYear()}-${now.getFullYear() + 1}`
@@ -192,7 +194,7 @@ export function openInscripcion({ opciones, onCreated }) {
   const cancelBtn = h('button', {
     class: 'btn btn--ghost',
     type: 'button',
-    on: { click: () => close?.() },
+    on: { click: () => onExit() },
   }, [h('span', { text: 'Cancelar' })])
 
   const documentosSection = h('section', { class: 'inscripcion__section' }, [
@@ -278,16 +280,16 @@ export function openInscripcion({ opciones, onCreated }) {
   ])
   form.prepend(h('ol', { class: 'inscripcion__steps' }, stepItems))
 
-  let close = null
-  const modal = openModal({
-    title: 'Nueva inscripción',
-    content: form,
-    footer: [cancelBtn, backBtn, submitBtn],
-  })
-  close = modal.close
+  // The wizard is the page now, so it carries its own action bar: the footer
+  // used to belong to the modal that hosted the form. The buttons stay outside
+  // the form and reach it through the `form` attribute.
+  const footer = h('footer', { class: 'inscripcion__footer' }, [cancelBtn, backBtn, submitBtn])
 
   /** Place the reps toolbar inside the reps section (append after rows). */
   repsContainer.append(repRow().row, addRepButton)
+
+  clear(container)
+  container.append(form, footer)
 
   let currentStep = 0
 
@@ -319,9 +321,9 @@ export function openInscripcion({ opciones, onCreated }) {
     const isLast = currentStep === steps.length - 1
     submitBtn.type = isLast ? 'submit' : 'button'
     submitBtn.replaceChildren(h('span', { text: isLast ? 'Guardar inscripción' : 'Siguiente' }))
-    // The panel keeps its scroll offset, so a new step would open half-way down.
-    const scroller = form.closest('.modal__body')
-    if (scroller) scroller.scrollTop = 0
+    // The page keeps its scroll offset, so a new step would open half-way down
+    // past the stepper the user needs to see.
+    window.scrollTo(0, 0)
   }
 
   /** Advance one step, but only when the current one has nothing to complain about. */
@@ -690,8 +692,7 @@ export function openInscripcion({ opciones, onCreated }) {
     api
       .crearEstudiante(collectPayload())
       .then(() => {
-        close()
-        onCreated()
+        onExit()
       })
       .catch((error) => {
         const { fieldErrors, messages } = serverErrors(error)

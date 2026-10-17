@@ -52,12 +52,15 @@ test('estudiantes paints the bar with the search, the filters and the action', a
   assert.ok(text.includes('Nueva inscripción'), 'the primary action label is missing')
 })
 
-test('the inscription modal opens as a 4-step wizard showing the first step', async () => {
+test('the inscription wizard shows one of its four steps at a time', async () => {
   const mod = await import(new URL('../js/features/inscripcion.js', import.meta.url))
-  mod.openInscripcion({ opciones: null, onCreated: () => {} })
+  const host = makeEl('div')
+  // The wizard is a page now (S22): it paints itself and its own footer into the
+  // container the view hands it, instead of opening a modal.
+  mod.renderInscripcionWizard(host, { opciones: null, onExit: () => {} })
 
-  const form = findAll(document.body, '.inscripcion')[0]
-  assert.ok(form, 'the wizard form did not mount into the document')
+  const form = findAll(host, '.inscripcion')[0]
+  assert.ok(form, 'the wizard form did not mount')
 
   const sections = findAll(form, '.inscripcion__section')
   assert.equal(sections.length, 4, 'the wizard must take its four steps from the four sections')
@@ -68,9 +71,9 @@ test('the inscription modal opens as a 4-step wizard showing the first step', as
 
   assert.equal(findAll(form, '.inscripcion__step').length, 4, 'the stepper needs one item per step')
 
-  // The footer (and therefore the primary button) is mounted by the modal,
-  // outside the form, so the wizard's own copy is what has to name the action.
-  const footer = textOf(findAll(document.body, '.modal__footer')[0])
+  // The buttons live in the wizard's own footer, outside the form, and reach it
+  // through the `form` attribute.
+  const footer = textOf(findAll(host, '.inscripcion__footer')[0])
   assert.ok(footer.includes('Siguiente'), 'the primary button must offer the next step')
   assert.ok(footer.includes('Atrás'), 'the back button is missing')
   assert.ok(footer.includes('Cancelar'), 'the cancel button is missing')
