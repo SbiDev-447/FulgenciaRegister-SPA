@@ -2,5 +2,9 @@
   "name": "@fulgencia/client",
   "version": "0.1.0",
   "private": true,
-  "description": "Fulgencia SPA (vanilla JS, no build step)"
+  "type": "module",
+  "description": "Fulgencia SPA (vanilla JS, no build step)",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
 }
