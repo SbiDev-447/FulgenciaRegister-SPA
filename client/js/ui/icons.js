@@ -42,6 +42,10 @@ const ICONS = {
     ['circle', { cx: '12', cy: '12', r: '9' }],
     ['path', { d: 'M15.5 8.5l-2 5-5 2 2-5z' }],
   ],
+  search: [
+    ['circle', { cx: '11', cy: '11', r: '7' }],
+    ['path', { d: 'M20 20l-3.8-3.8' }],
+  ],
 }
 
 export { ICONS }

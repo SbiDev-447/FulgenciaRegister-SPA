@@ -43,9 +43,16 @@
   }
 
   .estudiantes__search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
     flex: 1;
     min-width: 240px;
-    max-width: 360px;
+    max-width: 420px;
+  }
+
+  .estudiantes__search .input {
+    flex: 1;
   }
 
   .estudiantes__field {

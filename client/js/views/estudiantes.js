@@ -58,6 +58,10 @@ export function renderEstudiantes(container) {
     placeholder: 'Buscar por nombre o cédula…',
     'aria-label': 'Buscar estudiantes por nombre o cédula',
   })
+  const searchBtn = h('button', { class: 'btn btn--ghost', type: 'submit' }, [
+    icon('search'),
+    h('span', { text: 'Buscar' }),
+  ])
   const anioSelect = h('select', {
     class: 'estudiantes__select',
     'aria-label': 'Filtrar por año',
@@ -78,29 +82,18 @@ export function renderEstudiantes(container) {
     openInscripcion({ opciones: options, onCreated: () => load() })
   })
 
-  const view = h('section', { class: 'estudiantes' }, [
-    h('div', { class: 'estudiantes__hero' }, [
-      h('h2', { text: 'Estudiantes' }),
-      h('p', {
-        text: 'Listado del registro: busca por nombre o cédula y filtra por año y sección.',
-      }),
+  const toolbar = h('form', { class: 'estudiantes__toolbar', on: { submit: (event) => { event.preventDefault(); load() } } }, [
+    h('div', { class: 'estudiantes__search' }, [qInput, searchBtn]),
+    h('label', { class: 'estudiantes__field' }, [
+      h('span', { text: 'Año' }),
+      anioSelect,
     ]),
-    h('div', { class: 'estudiantes__bar' }, [
-      h('form', { class: 'estudiantes__toolbar', on: { submit: (event) => event.preventDefault() } }, [
-        h('div', { class: 'estudiantes__search' }, [qInput]),
-        h('label', { class: 'estudiantes__field' }, [
-          h('span', { text: 'Año' }),
-          anioSelect,
-        ]),
-        h('label', { class: 'estudiantes__field' }, [
-          h('span', { text: 'Sección' }),
-          seccionSelect,
-        ]),
-      ]),
-      nuevaBtn,
+    h('label', { class: 'estudiantes__field' }, [
+      h('span', { text: 'Sección' }),
+      seccionSelect,
     ]),
-    results,
   ])
+  view.replaceChild(toolbar, view.querySelector('.estudiantes__toolbar'))
 
   clear(container)
   container.append(view)
@@ -352,7 +345,10 @@ export function renderEstudiantes(container) {
   let searchTimer = null
   qInput.addEventListener('input', () => {
     clearTimeout(searchTimer)
-    searchTimer = setTimeout(load, 300)
+    // Search on Enter/submit; on every keystroke we only debounce to avoid
+    // flooding the DB with requests. The user may also press Enter or the
+    // "Buscar" button (both trigger the form submit). We do not fire on input
+    // anymore.
   })
 
   anioSelect.addEventListener('change', () => {
