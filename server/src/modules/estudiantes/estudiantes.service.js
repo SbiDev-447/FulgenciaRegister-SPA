@@ -474,17 +474,43 @@ async function reconcileRepresentantes(estudianteId, representantes) {
 
 /**
  * Hard delete: FKs cascade inscriptions, links and consigned documents. Shared
- * representatives survive because their rows are never touched.
+ * representatives survive because their rows are never touched; the ones left
+ * with no student at all are garbage nobody can reach, so they go too. The
+ * links must be read before the delete: the cascade erases them and with them
+ * the only evidence of which representatives were linked here.
  * @param {number} id
  * @returns {Promise<boolean>} false when the student does not exist
  */
 async function deleteEstudiante(id) {
-  const existing = await db.tabla('estudiantes').selectOne(null, null, { id })
-  if (!existing) {
-    return false
+  await db.beginTransaction()
+  try {
+    const existing = await db.tabla('estudiantes').selectOne(null, null, { id })
+    if (!existing) {
+      await db.rollback().catch(() => {})
+      return false
+    }
+
+    const links = await db
+      .tabla('estudiante_representante')
+      .select(null, null, { estudiante_id: id })
+
+    await db.tabla('estudiantes').delete({ id })
+
+    for (const { representante_id: representanteId } of links) {
+      const remaining = await db
+        .tabla('estudiante_representante')
+        .select(null, null, { representante_id: representanteId })
+      if (remaining.length === 0) {
+        await db.tabla('representantes').delete({ id: representanteId })
+      }
+    }
+
+    await db.commit()
+    return true
+  } catch (error) {
+    await db.rollback().catch(() => {})
+    throw error
   }
-  await db.tabla('estudiantes').delete({ id })
-  return true
 }
 
 module.exports = {

@@ -647,4 +647,132 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     const res = await api('GET', `/api/estudiantes/${deletedId}`)
     assert.equal(res.status, 404)
   })
+
+  // --- S3: leaving no representative behind ----------------------------------
+  // The bridge rows disappear with the student (FK CASCADE), so a representative
+  // linked only to the deleted student used to stay forever as unreachable
+  // garbage. The case that matters is the MIXED one — a student carrying an
+  // exclusive representative AND one shared with a sibling — because a cleanup
+  // that swept "everything that was linked here" would pass the separate cases
+  // and still corrupt the sibling's record.
+
+  const crearConRepresentantes = (estudianteCi, representantes) =>
+    api('POST', '/api/estudiantes', {
+      estudiante: {
+        ...contactoObligatorio,
+        tipo_ci: 'V',
+        numero_ci: estudianteCi,
+        primer_nombre: 'Higiene',
+        primer_apellido: 'De Datos',
+        fecha_nacimiento: '2012-04-10',
+        sexo: 'M',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+      representantes: representantes.map(({ ci, nombre, parentesco }) => ({
+        ...repObligatorio,
+        tipo_ci: 'V',
+        numero_ci: ci,
+        nombre,
+        parentesco,
+      })),
+      documentos: { ...allDocumentos },
+    })
+
+  const representantesPorCi = (ci) => db.tabla('representantes').select(null, null, { numero_ci: ci })
+  const enlacesDe = (estudianteId) =>
+    db.tabla('estudiante_representante').select(null, null, { estudiante_id: estudianteId })
+
+  // A carries an exclusive representative plus one shared with B.
+  const exclusiveCi = uniqueCi('41')
+  const sharedCi = uniqueCi('42')
+  createdRepCis.push(exclusiveCi, sharedCi)
+
+  const createdA = await crearConRepresentantes(uniqueCi('43'), [
+    { ci: exclusiveCi, nombre: 'Representante Exclusivo', parentesco: 'Madre' },
+    { ci: sharedCi, nombre: 'Representante Compartido', parentesco: 'Padre' },
+  ])
+  assert.equal(createdA.status, 201, 'the mixed case could not be created')
+  const mixedId = (await createdA.json()).estudiante.id
+  // A red run leaves rows behind, so register them for cleanup before any
+  // assertion can fail.
+  extraStudentIds.push(mixedId)
+
+  const createdB = await crearConRepresentantes(uniqueCi('44'), [
+    { ci: sharedCi, nombre: 'Representante Compartido', parentesco: 'Padre' },
+  ])
+  assert.equal(createdB.status, 201, 'the sibling could not be created')
+  const siblingId = (await createdB.json()).estudiante.id
+  extraStudentIds.push(siblingId)
+
+  const sharedRow = (await representantesPorCi(sharedCi))[0]
+
+  await t.test('a rejected delete of an unknown student changes nothing', async () => {
+    const snapshot = async () => ({
+      mezclado: (await db.tabla('estudiantes').select(null, null, { id: mixedId })).length,
+      exclusivo: (await representantesPorCi(exclusiveCi)).length,
+      compartido: (await representantesPorCi(sharedCi)).length,
+      enlacesMezclado: (await enlacesDe(mixedId)).length,
+      enlacesHermano: (await enlacesDe(siblingId)).length,
+    })
+    // Scoped to this file's own rows on purpose: other e2e files run in parallel
+    // against the same database, so a table-wide count would flake.
+    const before = await snapshot()
+
+    const res = await api('DELETE', '/api/estudiantes/999999999')
+    assert.equal(res.status, 404, 'an unknown student must stay a 404')
+    assert.equal((await res.json()).code, 'not_found')
+    assert.deepEqual(await snapshot(), before, 'a rejected delete must not alter stored data')
+  })
+
+  await t.test('the exclusive representative goes and the shared one stays linked', async () => {
+    const del = await api('DELETE', `/api/estudiantes/${mixedId}`)
+    assert.equal(del.status, 200)
+    assert.deepEqual(await del.json(), { ok: true })
+
+    assert.equal(
+      (await representantesPorCi(exclusiveCi)).length,
+      0,
+      'the representative left with no student must be gone',
+    )
+
+    const survivor = (await representantesPorCi(sharedCi))[0]
+    assert.ok(survivor, 'the representative a sibling still uses must survive')
+    assert.equal(survivor.id, sharedRow.id, 'the survivor must be the very same row, not a re-created one')
+
+    const sibling = await api('GET', `/api/estudiantes/${siblingId}`)
+    assert.equal(sibling.status, 200)
+    assert.equal((await sibling.json()).representantes[0].numero_ci, sharedCi)
+  })
+
+  await t.test('a student with no linked representative still deletes cleanly', async () => {
+    // Reaching the delete with zero links takes an earlier unlink: the sweep is
+    // scoped to the delete, so a representative unlinked before it is not its
+    // business (a separate decision, see odd/tasks/higiene-datos.md).
+    const unlinkedCi = uniqueCi('45')
+    const created = await crearConRepresentantes(uniqueCi('46'), [
+      { ci: unlinkedCi, nombre: 'Representante Desvinculado', parentesco: 'Madre' },
+    ])
+    assert.equal(created.status, 201)
+    const unlinkedStudentId = (await created.json()).estudiante.id
+    extraStudentIds.push(unlinkedStudentId)
+
+    const unlink = await api('PUT', `/api/estudiantes/${unlinkedStudentId}`, { representantes: [] })
+    assert.equal(unlink.status, 200)
+    assert.equal((await unlink.json()).representantes.length, 0)
+
+    const del = await api('DELETE', `/api/estudiantes/${unlinkedStudentId}`)
+    assert.equal(del.status, 200)
+    assert.deepEqual(await del.json(), { ok: true })
+    assert.equal((await db.tabla('estudiantes').select(null, null, { id: unlinkedStudentId })).length, 0)
+    assert.equal(
+      (await representantesPorCi(unlinkedCi)).length,
+      1,
+      'the sweep must not touch a representative that was not linked at delete time',
+    )
+  })
 })

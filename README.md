@@ -127,7 +127,7 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 | POST | `/api/estudiantes` | Registrar estudiante |
 | GET | `/api/estudiantes/:id` | Ver estudiante |
 | PUT | `/api/estudiantes/:id` | Editar estudiante |
-| DELETE | `/api/estudiantes/:id` | Eliminar estudiante |
+| DELETE | `/api/estudiantes/:id` | Eliminar estudiante (y los representantes que se queden sin ninguno) |
 | GET | `/api/documentos/verificar/:cedula` | Verificar una cédula |
 | POST | `/api/documentos/emitir` | Emitir un documento |
 | GET | `/api/estadisticas` | Estadísticas de inscripción |
@@ -162,7 +162,7 @@ enlace directo o una recarga funcionan igual.
 
 | Suite | Comando | Alcance |
 | ----- | ------- | ------- |
-| Servidor | `pnpm --filter @fulgencia/server test` | 80 pruebas con `node:test`. La suite e2e se salta si no hay `.env` o base de datos. |
+| Servidor | `pnpm --filter @fulgencia/server test` | 84 pruebas con `node:test`. La suite e2e se salta si no hay `.env` o base de datos. |
 | Cliente | `pnpm --filter @fulgencia/client test` | 26 pruebas con `node:test` que ejecutan cada vista contra un DOM mínimo, **sin navegador**: comprueban que las vistas pintan, qué texto ve una persona ante un rechazo del API y que el wizard rechaza un correo o un teléfono con formato inválido. |
 
 `pnpm test` corre las dos. Lo que las pruebas del cliente **no** cubren es el
