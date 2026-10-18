@@ -16,13 +16,13 @@
 
 | Componente | Estado |
 | ---------- | ------ |
-| Backend (API REST) | Listo — 88 pruebas en verde |
+| Backend (API REST) | Listo — 90 pruebas en verde |
 | Base de datos (MariaDB) | Listo — esquema y datos semilla |
-| Frontend (SPA) | Inicio y Estudiantes listos — 26 pruebas en verde |
+| Frontend (SPA) | Inicio y Estudiantes listos — 55 pruebas en verde |
 
 El backend está completo y cubierto por pruebas. En la SPA ya funcionan el shell,
-el router, los temas y las vistas de Inicio y Estudiantes (lista, búsqueda, ficha
-y wizard de inscripción); la vista de Documentos está en construcción, y la
+el router, los temas y las vistas de Inicio y Estudiantes (lista, búsqueda, ficha,
+edición y borrado con confirmación); la vista de Documentos está en construcción, y la
 sección "Alcance" describe lo planificado.
 
 ## Alcance
@@ -139,7 +139,7 @@ El enrutado es por hash: todo ocurre en la misma página, sin recargas.
 | Ruta | Vista |
 | ---- | ----- |
 | `#/` | Inicio — estadísticas de inscripción con filtros |
-| `#/estudiantes` | Listado con búsqueda y filtros, y ficha del estudiante |
+| `#/estudiantes` | Listado con búsqueda y filtros, ficha del estudiante, y acciones Ver / Editar / Borrar |
 | `#/inscripcion` | Wizard de inscripción en 4 pasos |
 | `#/documentos` | Documentos (en construcción) |
 
@@ -157,7 +157,39 @@ enlace directo o una recarga funcionan igual.
 | `pnpm db:reset` | Recrear la base de datos (borra los datos) |
 | `pnpm db:seed` | Crear tablas y datos semilla |
 | `pnpm db:purge-orphans` | Borrar representantes que quedaron sin ningún estudiante (ver abajo) |
+| `pnpm db:repair-schema` | Ensanchar columnas que quedaron demasiado pequeñas (ver abajo) |
 | `pnpm test` | Ejecutar todas las pruebas (servidor y cliente) |
+
+### Columnas demasiado pequeñas
+
+Las tablas se crean **una sola vez**, la primera vez que arranca la API, y después el
+modelo (`server/model/*.js`) no se vuelve a aplicar. Si una columna resulta ser más
+estrecha de lo que la aplicación necesita, el código queda bien y las bases de datos
+creadas antes del arreglo quedan mal: siguen rechazando datos válidos y nadie lo nota
+hasta que alguien prueba ese valor.
+
+Le pasó a `estudiantes.lateralidad`: era `varchar(10)` y el formulario ofrece
+`Ambidiestro`, que tiene 11 letras. El `INSERT` moría con `ER_DATA_TOO_LONG` y el usuario
+solo veía «Ocurrió un error en el servidor».
+
+```bash
+pnpm db:repair-schema           # muestra qué falta; no toca nada
+pnpm db:repair-schema --apply   # ensancha exactamente esas columnas
+```
+
+El comando **solo ensancha** y se niega a hacer cualquier otra cosa: una columna `varchar`
+más ancha no puede truncar nada, mientras que estrecharla sí puede destruir datos. Es
+idempotente, así que correrlo dos veces no hace nada la segunda vez, y al terminar vuelve
+a leer la base de datos para informar lo que de verdad quedó, no lo que intentó.
+
+Ensanchar la columna no cierra la clase, solo el caso conocido: cualquier valor que no quepa
+en su columna —un nombre de 61 letras, un peso de 1234,56 en `decimal(5,2)`— seguía llegando
+a MySQL y volvía como «Ocurrió un error en el servidor», un callejón sin salida que no dice
+qué campo arreglar. La API ahora traduce los rechazos del driver (`ER_DATA_TOO_LONG`,
+`ER_WARN_DATA_OUT_OF_RANGE`, `ER_TRUNCATED_WRONG_VALUE_FOR_FIELD`) a un **400 que nombra el
+campo**, reusando el mismo vocabulario que la validación normal, así que el formulario lo
+marca y lo dice en español. Lo que el driver no sabe nombrar sigue siendo un 500: adivinar
+el campo mandaría al usuario a un control que no es el problema.
 
 ### Representantes sin estudiante
 
@@ -180,12 +212,38 @@ vacía **desvincula** pero no borra: ese representante puede seguir siendo de ot
 estudiante, y una edición no debería borrar datos de terceros. Esos casos los resuelve
 el comando, que nunca toca un representante que conserve algún enlace.
 
+El formulario de edición de la SPA edita **solo la ficha del propio estudiante**: no
+envía representantes ni inscripciones, que tienen sus propias pantallas. La cédula se
+muestra pero no se envía — el servidor la rechaza como inmutable.
+
+Un campo opcional que se deja en blanco se envía como `null`, nunca como `""`:
+`peso` es `decimal(5,2)` y una cadena vacía responde 500. Por lo mismo, los campos que
+el servidor valida (nombres, fecha, contacto, lugar de nacimiento, lateralidad) siguen
+siendo obligatorios en el formulario y no se pueden vaciar.
+
+Las fechas se escriben y se muestran siempre como `dd/mm/aaaa` y viajan al API como
+`aaaa-mm-dd`. Los campos son de texto y no `input[type=date]` a propósito: el orden que
+muestra el control nativo lo decide el idioma del navegador, no la página, así que la
+misma fecha de nacimiento se leía `04/03/2010` en la ficha y `03/04/2010` en el campo que
+la editaba. La conversión vive en `client/js/ui/format.js` (`parseLatamDate` /
+`formatLatamDate`) y la comparten el wizard, el formulario de edición y la ficha. Una
+fecha que no existe (`31/02/2010`) se rechaza en el cliente con un mensaje que indica la
+forma esperada.
+
+Los campos de fecha **escriben sus propias barras**: basta teclear los ocho dígitos y el
+`/` aparece donde corresponde (`autoSeparateDate` en `client/js/ui/dom.js`). No es adorno:
+el teclado numérico de un teléfono solo ofrece los dígitos 0–9, así que sin esto la fecha
+sería imposible de escribir en un móvil. La regla del separador solo **añade** y solo sobre
+un valor que creció (`maskDateInput`), de modo que el retroceso siempre funciona — la barra
+no vuelve a aparecer — y una edición en medio del texto nunca se reescribe en silencio.
+Al pegar, `parseLatamDate` acepta además `04-03-2010`, `4.3.2010` y `04032010`.
+
 ## Pruebas
 
 | Suite | Comando | Alcance |
 | ----- | ------- | ------- |
-| Servidor | `pnpm --filter @fulgencia/server test` | 88 pruebas con `node:test`. La suite e2e se salta si no hay `.env` o base de datos. |
-| Cliente | `pnpm --filter @fulgencia/client test` | 26 pruebas con `node:test` que ejecutan cada vista contra un DOM mínimo, **sin navegador**: comprueban que las vistas pintan, qué texto ve una persona ante un rechazo del API y que el wizard rechaza un correo o un teléfono con formato inválido. |
+| Servidor | `pnpm --filter @fulgencia/server test` | 90 pruebas con `node:test`. La suite e2e se salta si no hay `.env` o base de datos. |
+| Cliente | `pnpm --filter @fulgencia/client test` | 55 pruebas con `node:test` que ejecutan cada vista contra un DOM mínimo, **sin navegador**: comprueban que las vistas pintan, qué texto ve una persona ante un rechazo del API, que el wizard rechaza un correo, un teléfono o una fecha imposible, que las fechas se leen `dd/mm/aaaa` y viajan como ISO, y que la tabla de Estudiantes edita, borra con confirmación y no envía la cédula. |
 
 `pnpm test` corre las dos. Lo que las pruebas del cliente **no** cubren es el
 resultado visual: el layout se valida a mano en el navegador (`Ctrl+F5` en
@@ -198,6 +256,6 @@ resultado visual: el layout se valida a mano en el navegador (`Ctrl+F5` en
 - [x] API de estudiantes (CRUD y representantes)
 - [x] API de documentos y estadísticas
 - [x] Interfaz SPA (shell, router, temas)
-- [x] Vistas de inicio y estudiantes (lista, ficha y wizard de inscripción)
+- [x] Vistas de inicio y estudiantes (lista, ficha, edición, borrado y wizard de inscripción)
 - [ ] Vista de documentos
 - [ ] Generación e impresión de documentos
