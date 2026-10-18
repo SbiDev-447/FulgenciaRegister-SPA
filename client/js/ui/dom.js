@@ -2,6 +2,8 @@
 // with innerHTML + user data; construct nodes with `h()` and set text with
 // `textContent` instead (XSS-safe by construction).
 
+import { maskDateInput } from './format.js'
+
 /**
  * Create an element with props and children.
  * - `class`/`className`, `text`, `dataset`, `style` get special handling.
@@ -19,6 +21,26 @@ export function h(tag, props = {}, children = []) {
 
 export function clear(el) {
   el.replaceChildren()
+}
+
+/**
+ * Make a written-date field place its own `/` while it is typed, so nobody has
+ * to reach for that key (a phone's numeric keypad does not even have one).
+ *
+ * The previous value is kept here, in the closure, because the decision belongs
+ * to `maskDateInput` in ui/format.js: it needs to know whether the field grew or
+ * shrank, and only the listener knows the value from before the keystroke.
+ * @param {HTMLInputElement} input
+ */
+export function autoSeparateDate(input) {
+  let previous = String(input.value ?? '')
+  input.addEventListener('input', () => {
+    const next = maskDateInput(previous, String(input.value ?? ''))
+    if (next !== input.value) {
+      input.value = next
+    }
+    previous = input.value
+  })
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg'

@@ -3,8 +3,15 @@
 // and /api/academico/opciones. Markup is built with h() and textContent only
 // (AGENTS/docs/ARQUITECTURA.md §6: no innerHTML with data).
 
-import { h, clear } from '../ui/dom.js'
+import { h, clear, autoSeparateDate } from '../ui/dom.js'
 import { errorCopy } from '../ui/messages.js'
+import {
+  isValidEmail,
+  isValidPhone,
+  parseLatamDate,
+  formatLatamDate,
+  DATE_FIELD_LENGTH,
+} from '../ui/format.js'
 import { api } from '../api.js'
 import { icon } from '../ui/icons.js'
 import { openModal } from '../ui/modal.js'
@@ -30,12 +37,93 @@ const STUDENT_DETAIL_LABELS = {
   enfermedades_padecidas: 'Enfermedades',
 }
 
-/** Format a YYYY-MM-DD value as a short Spanish date without TZ shifts. */
+/** Select options shared with the inscription wizard, so stored values match. */
+const SEXO_OPTIONS = [
+  { value: '', label: 'Selecciona…' },
+  { value: 'F', label: 'Femenino' },
+  { value: 'M', label: 'Masculino' },
+]
+
+const LATERALIDAD_OPTIONS = [
+  { value: '', label: 'Selecciona…' },
+  { value: 'Derecha', label: 'Derecha' },
+  { value: 'Izquierda', label: 'Izquierda' },
+  { value: 'Ambidiestro', label: 'Ambidiestro' },
+]
+
+/**
+ * The student's own fields, in form order, with the label the form shows.
+ *
+ * `required` mirrors the API, verified against it: a partial update validates
+ * every field it receives, so a validated field answers 400 to an empty string.
+ * The form keeps those required rather than dropping the edit silently.
+ *
+ * The optional fields may be blanked, and they are cleared with `null`: an empty
+ * string is a 500 on the decimal `peso` column, while `null` is safe for all of
+ * them.
+ *
+ * `format` names the extra check a field needs on top of "not empty".
+ */
+const EDIT_FIELDS = [
+  { name: 'primer_nombre', label: 'Primer nombre *', required: true },
+  { name: 'segundo_nombre', label: 'Segundo nombre *', required: true },
+  { name: 'primer_apellido', label: 'Primer apellido *', required: true },
+  { name: 'segundo_apellido', label: 'Segundo apellido *', required: true },
+  {
+    name: 'fecha_nacimiento',
+    label: 'Fecha de nacimiento *',
+    required: true,
+    inputmode: 'numeric',
+    placeholder: 'dd/mm/aaaa',
+    format: 'date',
+  },
+  { name: 'sexo', label: 'Sexo *', required: true, options: SEXO_OPTIONS },
+  {
+    name: 'telefono',
+    label: 'Teléfono *',
+    required: true,
+    inputmode: 'tel',
+    placeholder: '0414-1234567',
+    format: 'phone',
+  },
+  {
+    name: 'correo',
+    label: 'Correo *',
+    required: true,
+    type: 'email',
+    placeholder: 'correo@ejemplo.com',
+    format: 'email',
+  },
+  { name: 'pais_nacimiento', label: 'País de nacimiento *', required: true, placeholder: 'Venezuela' },
+  { name: 'estado_nacimiento', label: 'Estado de nacimiento *', required: true, placeholder: 'Estado' },
+  { name: 'municipio_nacimiento', label: 'Municipio de nacimiento *', required: true, placeholder: 'Municipio' },
+  { name: 'lateralidad', label: 'Lateralidad *', required: true, options: LATERALIDAD_OPTIONS },
+  { name: 'talla', label: 'Talla (cm)', placeholder: 'cm' },
+  { name: 'peso', label: 'Peso (kg)', placeholder: 'kg', format: 'decimal' },
+  { name: 'camisa', label: 'Camisa', placeholder: 'Ej: S, M, L…' },
+  { name: 'pantalon', label: 'Pantalón', placeholder: 'Ej: 30, 32…' },
+  { name: 'zapatos', label: 'Zapatos', placeholder: 'Ej: 34, 36…' },
+  { name: 'alergico_a', label: 'Alérgico a', placeholder: 'Alimentos, medicamentos…' },
+  { name: 'enfermedades_padecidas', label: 'Enfermedades padecidas', placeholder: 'Cuales padece…', full: true },
+  { name: 'direccion_habitacion', label: 'Dirección de habitación', placeholder: 'Sector, calle, casa…', full: true },
+]
+
+/** Shared by the edit form and the submit button that lives in the modal footer. */
+const EDIT_FORM_ID = 'estudiante-edit-form'
+
+/**
+ * Format a stored date as `dd/mm/yyyy`, the order a Latin American reader
+ * expects, and never through the browser locale.
+ *
+ * The API answers ISO datetimes (`2014-08-20T04:30:00.000Z`). The old version
+ * appended a time to that whole string, produced an Invalid Date, and returned a
+ * dash — which the ficha then filtered out, so the birth date disappeared from
+ * the header without anyone noticing. The rule now lives in ui/format.js, shared
+ * with the edit field and the wizard so all three read a date the same way; the
+ * dash here is this view's way of showing a missing date.
+ */
 function formatFecha(value) {
-  if (!value) return '—'
-  const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })
+  return formatLatamDate(value) || '—'
 }
 
 function nombreCompleto(estudiante) {
@@ -164,6 +252,7 @@ export function renderEstudiantes(container) {
             h('th', { scope: 'col', text: 'Año' }),
             h('th', { scope: 'col', text: 'Sección' }),
             h('th', { scope: 'col', text: 'Año escolar' }),
+            h('th', { scope: 'col', text: 'Acciones' }),
           ]),
         ]),
         h('tbody', {},
@@ -177,6 +266,11 @@ export function renderEstudiantes(container) {
               on: {
                 click: () => openFicha(student.id),
                 keydown: (event) => {
+                  // Enter/space inside the actions column belongs to the button
+                  // that has focus, never to the row underneath it.
+                  if (event.target?.closest?.('.estudiantes__actions')) {
+                    return
+                  }
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault()
                     openFicha(student.id)
@@ -191,6 +285,13 @@ export function renderEstudiantes(container) {
               h('td', { text: student.anio || '—' }),
               h('td', { text: student.seccion || '—' }),
               h('td', { text: student.anio_escolar || '—' }),
+              h('td', { class: 'estudiantes__actions' }, [
+                h('div', { class: 'estudiantes__actions-row' }, [
+                  rowAction('Ver', 'ver', name, () => openFicha(student.id)),
+                  rowAction('Editar', 'editar', name, () => openEditForm(student.id)),
+                  rowAction('Borrar', 'borrar', name, () => confirmDelete(student), 'btn--danger'),
+                ]),
+              ]),
             ])
           }),
         ),
@@ -345,6 +446,325 @@ export function renderEstudiantes(container) {
     return chips.length > 0
       ? chips
       : [h('span', { class: 'ficha__docs-empty', text: 'Sin documentos consignados' })]
+  }
+
+  /**
+   * One button of the actions column. The row itself opens the ficha, so the
+   * button stops the click from bubbling: one press must do one thing.
+   */
+  function rowAction(label, kind, name, onClick, extra = '') {
+    const classes = ['btn', 'btn--ghost', 'btn--sm', `estudiantes__action--${kind}`]
+    if (extra) {
+      classes.push(extra)
+    }
+    return h('button', {
+      class: classes.join(' '),
+      type: 'button',
+      'aria-label': `${label}: ${name}`,
+      on: {
+        click: (event) => {
+          event.stopPropagation()
+          onClick()
+        },
+      },
+    }, [h('span', { text: label })])
+  }
+
+  /** A labelled control, with the same field markup the wizard uses. */
+  function editField(label, control, { full = false } = {}) {
+    return h('label', { class: full ? 'field field--full' : 'field' }, [
+      h('span', { class: 'field__label', text: label }),
+      control,
+    ])
+  }
+
+  /** The control for one editable field, pre-filled with the stored value. */
+  function editControl(field, value) {
+    const raw = value === null || value === undefined ? '' : String(value)
+
+    if (field.options) {
+      const select = h('select', { class: 'input', name: field.name })
+      select.append(
+        ...field.options.map((option) => h('option', { value: option.value, text: option.label })),
+      )
+      select.value = raw
+      return select
+    }
+
+    const props = {
+      class: 'input',
+      name: field.name,
+      type: field.type ?? 'text',
+      // A stored date is re-written as dd/mm/aaaa instead of being handed to a
+      // native picker, whose shown order follows the browser (see format.js).
+      value: field.format === 'date' ? formatLatamDate(raw) : raw,
+      placeholder: field.placeholder,
+    }
+    if (field.inputmode) {
+      props.inputmode = field.inputmode
+    }
+    if (field.format === 'date') {
+      // Long enough for dd/mm/aaaa and nothing else: the extra character also
+      // stops an insertion in the middle from pushing past ten.
+      props.maxlength = DATE_FIELD_LENGTH
+    }
+    const control = h('input', props)
+    if (field.format === 'date') {
+      autoSeparateDate(control)
+    }
+    return control
+  }
+
+  /**
+   * Edit the student's own record (PUT /estudiantes/:id). The cédula pair is
+   * immutable — shown, never sent — and inscriptions, representatives and
+   * consigned documents keep their own flows, so they are out of this form.
+   */
+  function openEditForm(id) {
+    const status = h('p', { class: 'estudiantes__status', text: 'Cargando datos…' })
+
+    let closeEdit = null
+    const cancelBtn = h('button', {
+      class: 'btn btn--ghost',
+      type: 'button',
+      on: { click: () => closeEdit?.() },
+    }, [h('span', { text: 'Cancelar' })])
+    const saveBtn = h('button', {
+      class: 'btn btn--primary',
+      type: 'submit',
+      form: EDIT_FORM_ID,
+      disabled: true,
+    }, [h('span', { text: 'Guardar cambios' })])
+    const modal = openModal({ title: 'Editar estudiante', content: status, footer: [cancelBtn, saveBtn] })
+    closeEdit = modal.close
+
+    api
+      .estudiante(id)
+      .then((record) => {
+        saveBtn.disabled = false
+        modal.element.querySelector('.modal__body')?.replaceChildren(
+          renderEditForm(record, {
+            saveBtn,
+            onSaved: () => {
+              modal.close()
+              load()
+            },
+          }),
+        )
+      })
+      .catch((error) => {
+        const message = errorCopy(error, 'No se pudieron cargar los datos del estudiante.')
+        modal.element.querySelector('.modal__body')?.replaceChildren(
+          h('div', { class: 'alert alert--error', role: 'alert' }, [h('p', { text: message })]),
+        )
+      })
+  }
+
+  /** The edit form, filled from GET /estudiantes/:id. */
+  function renderEditForm(record, { saveBtn, onSaved }) {
+    const { estudiante } = record
+    const errorHost = h('div', { class: 'ficha-form__errors' })
+    const controls = new Map()
+
+    const ciType = h('select', {
+      class: 'input',
+      name: 'tipo_ci',
+      disabled: true,
+      'aria-label': 'Tipo de cédula (no editable)',
+    }, [h('option', { value: 'V', text: 'V' }), h('option', { value: 'E', text: 'E' })])
+    ciType.value = estudiante.tipo_ci ?? 'V'
+
+    const ciNumber = h('input', {
+      class: 'input',
+      name: 'numero_ci',
+      type: 'text',
+      value: estudiante.numero_ci ?? '',
+      readonly: true,
+      'aria-label': 'Cédula del estudiante (no editable)',
+    })
+
+    const grid = h('div', { class: 'ficha-form__grid' }, [
+      editField('Cédula', h('div', { class: 'ficha-form__ci' }, [ciType, ciNumber]), { full: true }),
+      ...EDIT_FIELDS.map((field) => {
+        const control = editControl(field, estudiante[field.name])
+        controls.set(field.name, control)
+        return editField(field.label, control, { full: field.full })
+      }),
+    ])
+
+    function clearProblems() {
+      errorHost.replaceChildren()
+      for (const control of controls.values()) {
+        control.classList.remove('input-error')
+      }
+    }
+
+    function showProblems(problems) {
+      for (const { control } of problems) {
+        control.classList.add('input-error')
+      }
+      errorHost.replaceChildren(
+        h('div', { class: 'alert alert--error', role: 'alert' }, [
+          h('p', { text: 'Revisa los campos marcados:' }),
+          h('ul', {}, problems.map((problem) => h('li', { text: problem.message }))),
+        ]),
+      )
+      problems[0]?.control.focus()
+    }
+
+    function validate() {
+      const problems = []
+      for (const field of EDIT_FIELDS) {
+        const control = controls.get(field.name)
+        const value = String(control.value ?? '').trim()
+        const label = field.label.replace(' *', '')
+
+        if (field.required && value === '') {
+          problems.push({ control, message: `${label} es obligatorio.` })
+          continue
+        }
+        if (value === '') {
+          continue
+        }
+        if (field.format === 'email' && !isValidEmail(value)) {
+          problems.push({ control, message: 'El correo del estudiante no tiene un formato válido.' })
+        }
+        if (field.format === 'phone' && !isValidPhone(value)) {
+          problems.push({ control, message: 'El teléfono del estudiante no tiene un formato válido.' })
+        }
+        if (field.format === 'decimal' && !/^\d+([.,]\d+)?$/.test(value)) {
+          problems.push({ control, message: 'El peso debe ser un número (ej: 55.5).' })
+        }
+        if (field.format === 'date' && !parseLatamDate(value)) {
+          problems.push({
+            control,
+            message: `${label} debe tener la forma dd/mm/aaaa (ej: 04/03/2010).`,
+          })
+        }
+      }
+      return problems
+    }
+
+    /**
+     * The PUT payload. A blanked optional field is `null`, never "": an empty
+     * string is a 500 on the decimal `peso` column, and for the validated fields
+     * it is a 400 — which is why those stay required. `peso` also takes the
+     * comma people type here, and a written date goes back to ISO, which is what
+     * the API stores (validate() already refused anything unreadable).
+     */
+    function collect() {
+      const patch = {}
+      for (const field of EDIT_FIELDS) {
+        const value = String(controls.get(field.name).value ?? '').trim()
+        if (value === '') {
+          patch[field.name] = null
+        } else if (field.format === 'decimal') {
+          patch[field.name] = value.replace(',', '.')
+        } else if (field.format === 'date') {
+          patch[field.name] = parseLatamDate(value)
+        } else {
+          patch[field.name] = value
+        }
+      }
+      return { estudiante: patch }
+    }
+
+    function onSubmit(event) {
+      event.preventDefault()
+      clearProblems()
+
+      const problems = validate()
+      if (problems.length > 0) {
+        showProblems(problems)
+        return
+      }
+
+      saveBtn.disabled = true
+      saveBtn.replaceChildren(h('span', { text: 'Guardando…' }))
+
+      api
+        .actualizarEstudiante(estudiante.id, collect())
+        .then(() => onSaved())
+        .catch((error) => {
+          errorHost.replaceChildren(
+            h('div', { class: 'alert alert--error', role: 'alert' }, [
+              h('p', { text: errorCopy(error, 'No se pudieron guardar los cambios.') }),
+            ]),
+          )
+          saveBtn.disabled = false
+          saveBtn.replaceChildren(h('span', { text: 'Guardar cambios' }))
+        })
+    }
+
+    return h('form', {
+      id: EDIT_FORM_ID,
+      class: 'ficha-form',
+      novalidate: true,
+      on: { submit: onSubmit },
+    }, [
+      h('p', {
+        class: 'ficha-form__hint',
+        text: 'La cédula identifica al estudiante y no se puede cambiar. Las inscripciones, los representantes y los documentos se gestionan en sus propias pantallas.',
+      }),
+      errorHost,
+      grid,
+    ])
+  }
+
+  /**
+   * Confirm before deleting. DELETE hard-deletes the student, cascades their
+   * inscriptions and consigned documents, and sweeps the representatives left
+   * with no student at all: there is nothing to undo afterwards.
+   */
+  function confirmDelete(student) {
+    const name = `${student.primer_nombre} ${student.primer_apellido}`
+    const errorHost = h('div', { class: 'ficha-form__errors' })
+
+    let closeConfirm = null
+    const cancelBtn = h('button', {
+      class: 'btn btn--ghost',
+      type: 'button',
+      on: { click: () => closeConfirm?.() },
+    }, [h('span', { text: 'Cancelar' })])
+    const confirmBtn = h('button', { class: 'btn btn--danger', type: 'button' }, [
+      h('span', { text: 'Borrar' }),
+    ])
+
+    const body = h('div', { class: 'confirm' }, [
+      h('p', {
+        class: 'confirm__question',
+        text: `¿Borrar a ${name} (${student.tipo_ci}-${student.numero_ci})?`,
+      }),
+      h('p', {
+        class: 'confirm__hint',
+        text: 'Se borran también sus inscripciones, los documentos consignados y sus vínculos con representantes. No se puede deshacer.',
+      }),
+      errorHost,
+    ])
+
+    const modal = openModal({ title: 'Borrar estudiante', content: body, footer: [cancelBtn, confirmBtn] })
+    closeConfirm = modal.close
+
+    confirmBtn.addEventListener('click', () => {
+      confirmBtn.disabled = true
+      confirmBtn.replaceChildren(h('span', { text: 'Borrando…' }))
+
+      api
+        .eliminarEstudiante(student.id)
+        .then(() => {
+          modal.close()
+          load()
+        })
+        .catch((error) => {
+          errorHost.replaceChildren(
+            h('div', { class: 'alert alert--error', role: 'alert' }, [
+              h('p', { text: errorCopy(error, 'No se pudo borrar el estudiante.') }),
+            ]),
+          )
+          confirmBtn.disabled = false
+          confirmBtn.replaceChildren(h('span', { text: 'Borrar' }))
+        })
+    })
   }
 
   function load() {

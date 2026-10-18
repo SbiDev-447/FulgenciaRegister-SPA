@@ -18,18 +18,24 @@ function matchesCompound(el, part) {
   if (!el || !part) return false
   let any = false
 
-  const tag = /^[a-zA-Z][\w-]*/.exec(part)
+  // Attributes are read from their own groups and then removed from the rest:
+  // a `.` or a word inside a quoted value is data, not a class name, so
+  // `[placeholder="correo@ejemplo.com"]` must not be read as "…and class `com`".
+  const attributeParts = [...part.matchAll(/\[([\w-]+)(?:=["']?([^\]"']*)["']?)?\]/g)]
+  const bare = part.replace(/\[[^\]]*\]/g, '')
+
+  const tag = /^[a-zA-Z][\w-]*/.exec(bare)
   if (tag) {
     any = true
     if (el.tagName !== tag[0].toUpperCase()) return false
   }
 
-  for (const [, cls] of part.matchAll(/\.([\w-]+)/g)) {
+  for (const [, cls] of bare.matchAll(/\.([\w-]+)/g)) {
     any = true
     if (!el.classList.contains(cls)) return false
   }
 
-  for (const [, name, value] of part.matchAll(/\[([\w-]+)(?:=["']?([^\]"']*)["']?)?\]/g)) {
+  for (const [, name, value] of attributeParts) {
     any = true
     if (!(name in el.attributes)) return false
     if (value !== undefined && el.attributes[name] !== value) return false
@@ -38,12 +44,39 @@ function matchesCompound(el, part) {
   return any
 }
 
+/**
+ * Split a selector into its combinator steps, keeping the spaces that live
+ * inside `[...]`: `[placeholder="Primer nombre"]` is ONE step, the way a real
+ * parser reads it, not two.
+ * @param {string} combinator
+ * @returns {string[]}
+ */
+function splitCombinator(combinator) {
+  const steps = []
+  let current = ''
+  let depth = 0
+
+  for (const char of combinator) {
+    if (char === '[') depth += 1
+    else if (char === ']') depth = Math.max(0, depth - 1)
+
+    if (depth === 0 && /\s/.test(char)) {
+      if (current) steps.push(current)
+      current = ''
+      continue
+    }
+    current += char
+  }
+  if (current) steps.push(current)
+  return steps
+}
+
 /** Match a full selector, including `A B` descendant combinators and `a, b`. */
 function matchesSelector(el, selector) {
   return String(selector)
     .split(',')
     .some((combinator) => {
-      const steps = combinator.trim().split(/\s+/).filter(Boolean)
+      const steps = splitCombinator(combinator.trim())
       if (steps.length === 0) return false
       if (!matchesCompound(el, steps[steps.length - 1])) return false
 
@@ -76,6 +109,33 @@ export function findAll(root, selector) {
   }
   visit(root)
   return out
+}
+
+/**
+ * The form a button is associated with, the way a browser resolves it: the
+ * nearest form ancestor, or the one named by its `form` attribute (the wizard's
+ * footer sits outside the form it saves).
+ * @param {object} button
+ * @returns {object|null}
+ */
+function formOf(button) {
+  const ancestor = button.closest('form')
+  if (ancestor) return ancestor
+
+  const id = button.getAttribute('form')
+  if (!id) return null
+
+  // Walk out through the ancestors looking for the named form as a sibling:
+  // the footer and the form are both children of whatever hosts the view.
+  let scope = button.parentElement
+  while (scope) {
+    const found = scope.children.find(
+      (child) => child.tagName === 'FORM' && child.getAttribute('id') === id,
+    )
+    if (found) return found
+    scope = scope.parentElement
+  }
+  return null
 }
 
 /** Visible text of a subtree (what a user would read). */
@@ -191,12 +251,56 @@ export function makeEl(tag) {
     matches(selector) {
       return matchesSelector(el, selector)
     },
+    // The standard way to say "save this form": a view that wants to submit
+    // without a real submit button calls this. Returns the pending work so a
+    // test awaiting the click also awaits the submit it started.
+    requestSubmit() {
+      return dispatch(el, 'submit')
+    },
   })
 
   // A real form hands out the same control for a given name every time, so a
   // test can set a value and have the submit handler read it back. Assigned
   // here, not as a literal getter: Object.assign reads getters while copying.
   el.elements = new Proxy({}, { get: (controls, name) => (controls[name] ??= makeEl('input')) })
+
+  // A button's `type` reflects its attribute and defaults to "submit" — the rule
+  // that makes a button without one dangerous inside a form, and the one the
+  // wizard walked into. Reading `button.type` here gives what a browser would
+  // use, whether the view set the attribute through `h()` or the property later.
+  if (el.tagName === 'BUTTON') {
+    Object.defineProperty(el, 'type', {
+      get: () => el.attributes.type ?? 'submit',
+      set: (value) => {
+        el.attributes.type = String(value)
+      },
+      enumerable: true,
+      configurable: true,
+    })
+  }
+
+  // A real `<select>` answers `value` with the option a browser would have
+  // picked — the one marked `selected`, else the first — and only an explicit
+  // assignment overrides it. A plain string property made every select nobody
+  // touched read as empty, so a form looked invalid for a reason that does not
+  // exist in a browser.
+  if (el.tagName === 'SELECT') {
+    Object.defineProperty(el, 'value', {
+      get: () => {
+        if (el.assignedValue !== undefined) return el.assignedValue
+        const options = findAll(el, 'option')
+        if (options.length === 0) return ''
+        const chosen = options.find((option) => 'selected' in option.attributes) ?? options[0]
+        return chosen.value ?? ''
+      },
+      set: (value) => {
+        el.assignedValue = String(value)
+      },
+      enumerable: true,
+      configurable: true,
+    })
+    el.assignedValue = undefined
+  }
 
   return el
 }
@@ -252,9 +356,24 @@ export function stallFetch() {
  * Fire the listeners registered for `type` on `target`, in order, and resolve
  * once every handler settles. Only the target is notified: the views under test
  * listen on the element they own (the form, the button), never on an ancestor.
+ *
+ * A click on a submit button also submits its form, modelled because leaving it
+ * out hid a real bug: a browser runs a button's activation behavior *after* its
+ * listeners, reading the button as it is by then. The wizard made "Siguiente"
+ * into "Guardar inscripción" inside its own click handler, so reaching the last
+ * step submitted the form and showed an error the user had not asked for.
+ * Nothing here reacts to a form that no submit button points at, and only a
+ * click is modelled — the stub is still not a browser.
  */
 export async function dispatch(target, type, event = {}) {
   for (const handler of target.listeners?.[type] ?? []) {
     await handler({ preventDefault() {}, stopPropagation() {}, target, ...event })
+  }
+
+  // `type` as it stands now, not as it was when the click arrived.
+  const buttonType = target.type ?? target.getAttribute?.('type')
+  if (type === 'click' && target.tagName === 'BUTTON' && buttonType === 'submit' && !target.disabled) {
+    const form = formOf(target)
+    if (form) await dispatch(form, 'submit')
   }
 }

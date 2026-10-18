@@ -292,6 +292,25 @@
     }
   }
 
+  /* Destructive action: reads as a ghost button until it is hovered. */
+  &.btn--danger {
+    background: transparent;
+    border-color: color-mix(in srgb, var(--color-danger) 40%, transparent);
+    color: var(--color-danger);
+
+    &:not(:disabled):hover {
+      background: var(--color-danger-soft);
+      border-color: var(--color-danger);
+    }
+  }
+
+  /* Compact variant, for a button that lives inside a table row. */
+  &.btn--sm {
+    padding: var(--space-1) var(--space-3);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
   &.btn--block {
     width: 100%;
   }

@@ -61,6 +61,8 @@
   --color-accent: #e0c15a;
   --color-danger: #a13a3a;
   --color-danger-soft: #f0dcd8;
+  /* Text over a solid danger fill (a hovered "Borrar"). */
+  --color-danger-contrast: #e9e0c3;
   --color-success: #0e7c5a;
   --color-success-soft: #d5ece1;
   /* Input fields: slightly deeper than surfaces so the card reads as the
@@ -124,6 +126,7 @@
   --color-accent: #e0c15a;
   --color-danger: #e07a6f;
   --color-danger-soft: #2a1414;
+  --color-danger-contrast: #06080f;
   --color-success: #3fbf92;
   --color-success-soft: #0f2b22;
   --color-input: #1e293b;

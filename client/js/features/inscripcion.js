@@ -4,8 +4,14 @@
 // backend validators client-side and posts to POST /api/estudiantes. Markup is
 // built with h() and textContent only (AGENTS/docs/ARQUITECTURA.md §6).
 
-import { h, clear } from '../ui/dom.js'
-import { isValidEmail, isValidPhone } from '../ui/format.js'
+import { h, clear, autoSeparateDate } from '../ui/dom.js'
+import {
+  isValidEmail,
+  isValidPhone,
+  parseLatamDate,
+  formatLatamDate,
+  DATE_FIELD_LENGTH,
+} from '../ui/format.js'
 import { errorCopy } from '../ui/messages.js'
 import { api } from '../api.js'
 import { icon } from '../ui/icons.js'
@@ -77,7 +83,18 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
   const segundoNombre = textInput({ placeholder: 'Segundo nombre' })
   const primerApellido = textInput({ placeholder: 'Primer apellido' })
   const segundoApellido = textInput({ placeholder: 'Segundo apellido' })
-  const fechaNacimiento = h('input', { class: 'input', type: 'date' })
+  // Written dd/mm/aaaa on purpose: a native date picker shows the browser's
+  // order, so the same date read differently from the ficha beside it.
+  // `maxlength` fits `dd/mm/aaaa` exactly, and `autoSeparateDate` places the
+  // slashes: the numeric keypad of a phone has no slash key of its own.
+  const fechaNacimiento = h('input', {
+    class: 'input',
+    type: 'text',
+    inputmode: 'numeric',
+    placeholder: 'dd/mm/aaaa',
+    maxlength: DATE_FIELD_LENGTH,
+  })
+  autoSeparateDate(fechaNacimiento)
   const sexo = h('select', { class: 'input' }, [
     h('option', { value: '', text: 'Selecciona…' }),
     h('option', { value: 'F', text: 'Femenino' }),
@@ -116,7 +133,15 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     h('option', { value: `${now.getFullYear() - 1}-${now.getFullYear()}`, text: `${now.getFullYear() - 1}-${now.getFullYear()}` }),
     h('option', { value: schoolYear, text: schoolYear, selected: true }),
   ])
-  const fechaInscripcion = h('input', { class: 'input', type: 'date', value: localDateIso(now) })
+  const fechaInscripcion = h('input', {
+    class: 'input',
+    type: 'text',
+    inputmode: 'numeric',
+    placeholder: 'dd/mm/aaaa',
+    maxlength: DATE_FIELD_LENGTH,
+    value: formatLatamDate(localDateIso(now)),
+  })
+  autoSeparateDate(fechaInscripcion)
   // Mutually exclusive by domain: a regular registration is a new admission or
   // a promotion to the next year; the only alternative is repeating the year.
   // Native radios sharing a name make the pair exclusive, so the third
@@ -187,11 +212,16 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
 
   const errorBox = h('div', { class: 'alert alert--error inscripcion__error', role: 'alert', hidden: true })
 
+  // A plain button on purpose, and it stays one. A browser runs a button's
+  // activation behavior AFTER its click handlers, reading the button as it is by
+  // then — so handing this one `type="submit"` while the wizard shows the last
+  // step made arriving there submit the form by itself, error summary included.
+  // Saving is asked for explicitly instead, in the click handler below.
   const submitBtn = h('button', {
     class: 'btn btn--primary',
-    type: 'submit',
+    type: 'button',
     form: 'inscripcion-form',
-  }, [h('span', { text: 'Guardar inscripción' })])
+  }, [h('span', { text: 'Siguiente' })])
   const cancelBtn = h('button', {
     class: 'btn btn--ghost',
     type: 'button',
@@ -283,7 +313,8 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
 
   // The wizard is the page now, so it carries its own action bar: the footer
   // used to belong to the modal that hosted the form. The buttons stay outside
-  // the form and reach it through the `form` attribute.
+  // the form; `form` keeps them associated with it for assistive tech, and the
+  // save button asks the form to submit through it explicitly.
   const footer = h('footer', { class: 'inscripcion__footer' }, [cancelBtn, backBtn, submitBtn])
 
   /** Place the reps toolbar inside the reps section (append after rows). */
@@ -320,7 +351,7 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     })
     backBtn.hidden = currentStep === 0
     const isLast = currentStep === steps.length - 1
-    submitBtn.type = isLast ? 'submit' : 'button'
+    // Only the wording changes; the type never does (see the click handler).
     submitBtn.replaceChildren(h('span', { text: isLast ? 'Guardar inscripción' : 'Siguiente' }))
     // The page keeps its scroll offset, so a new step would open half-way down
     // past the stepper the user needs to see.
@@ -351,8 +382,13 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
   })
   backBtn.addEventListener('click', () => showStep(currentStep - 1))
   submitBtn.addEventListener('click', () => {
-    // On the last step the button submits; before that it only advances.
-    if (submitBtn.type !== 'submit') nextStep()
+    // On the last step this saves; before that it only advances. The saving is
+    // this call and not the button's type, so nothing is ever submitted by the
+    // mere act of walking the wizard to its end.
+    if (currentStep === steps.length - 1) {
+      return form.requestSubmit()
+    }
+    return nextStep()
   })
 
   showStep(0)
@@ -455,6 +491,14 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     estado_nacimiento: () => [estadoNacimiento],
     municipio_nacimiento: () => [municipioNacimiento],
     lateralidad: () => [lateralidad],
+    talla: () => [talla],
+    peso: () => [peso],
+    camisa: () => [camisa],
+    pantalon: () => [pantalon],
+    zapatos: () => [zapatos],
+    direccion_habitacion: () => [direccion],
+    alergico_a: () => [alergicoA],
+    enfermedades_padecidas: () => [enfermedades],
     anio: () => [anioSelect],
     seccion: () => [seccionSelect],
     anio_escolar: () => [anioEscolar],
@@ -478,6 +522,14 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     estado_nacimiento: 'Estado de nacimiento',
     municipio_nacimiento: 'Municipio de nacimiento',
     lateralidad: 'Lateralidad',
+    talla: 'Talla',
+    peso: 'Peso',
+    camisa: 'Camisa',
+    pantalon: 'Pantalón',
+    zapatos: 'Zapatos',
+    direccion_habitacion: 'Dirección de habitación',
+    alergico_a: 'Alérgico a',
+    enfermedades_padecidas: 'Enfermedades padecidas',
     anio: 'Año',
     seccion: 'Sección',
     anio_escolar: 'Año escolar',
@@ -497,6 +549,13 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     'must be a boolean': 'debe ser verdadero o falso.',
     'must be a positive integer': 'debe ser un entero positivo.',
     'invalid section for the year': 'no corresponde a ese año.',
+    // The API answers 400 when a value does not fit the column the database
+    // stores it in (too long, out of range, wrong type) — the field is named by
+    // the driver itself, so these names have to exist here or the person reads
+    // the raw English reason.
+    'is too long': 'es demasiado largo.',
+    'is out of range': 'está fuera de rango.',
+    'is invalid': 'no es válido.',
   }
 
   /**
@@ -522,7 +581,7 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     for (const [key, value] of Object.entries(error.details ?? {})) {
       const nodes = serverFieldNodes[key]?.() ?? []
       const reason = serverReasons[value] ?? value
-      const text = serverFieldLabels[key] ? `${serverFieldLabels[key]} ${reason}` : `${key}: ${value}`
+      const text = serverFieldLabels[key] ? `${serverFieldLabels[key]} ${reason}` : `${key}: ${reason}`
       if (nodes.length > 0) {
         fieldErrors.push({ nodes, message: text, host: key === 'documentos' ? documentosSection : undefined })
       }
@@ -547,7 +606,12 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     }
     if (!primerNombre.value.trim()) add([primerNombre], 'Falta el primer nombre del estudiante.')
     if (!primerApellido.value.trim()) add([primerApellido], 'Falta el primer apellido del estudiante.')
-    if (!fechaNacimiento.value) add([fechaNacimiento], 'Falta la fecha de nacimiento.')
+    if (!fechaNacimiento.value.trim()) {
+      add([fechaNacimiento], 'Falta la fecha de nacimiento.')
+    } else if (!parseLatamDate(fechaNacimiento.value)) {
+      // A text field no longer rejects this by itself the way a date picker did.
+      add([fechaNacimiento], 'La fecha de nacimiento debe tener la forma dd/mm/aaaa (ej: 04/03/2010).')
+    }
     if (!sexo.value) add([sexo], 'Selecciona el sexo del estudiante.')
     if (!segundoNombre.value.trim()) add([segundoNombre], 'Falta el segundo nombre del estudiante.')
     if (!segundoApellido.value.trim()) add([segundoApellido], 'Falta el segundo apellido del estudiante.')
@@ -573,7 +637,11 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     if (!anioEscolar.value || !/^\d{4}-\d{4}$/.test(anioEscolar.value)) {
       add([anioEscolar], 'El año escolar debe tener la forma YYYY-YYYY.')
     }
-    if (!fechaInscripcion.value) add([fechaInscripcion], 'Falta la fecha de inscripción.')
+    if (!fechaInscripcion.value.trim()) {
+      add([fechaInscripcion], 'Falta la fecha de inscripción.')
+    } else if (!parseLatamDate(fechaInscripcion.value)) {
+      add([fechaInscripcion], 'La fecha de inscripción debe tener la forma dd/mm/aaaa (ej: 04/03/2010).')
+    }
 
     const faltantes = documentoInputs.filter(({ input }) => !input.checked)
     if (faltantes.length > 0) {
@@ -637,7 +705,7 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
       segundo_nombre: segundoNombre.value.trim() || undefined,
       primer_apellido: primerApellido.value.trim(),
       segundo_apellido: segundoApellido.value.trim() || undefined,
-      fecha_nacimiento: fechaNacimiento.value,
+      fecha_nacimiento: parseLatamDate(fechaNacimiento.value),
       sexo: sexo.value,
       telefono: telefono.value.trim() || undefined,
       correo: correo.value.trim() || undefined,
@@ -674,7 +742,7 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
         anio: anioSelect.value,
         seccion: seccionSelect.value,
         anio_escolar: anioEscolar.value,
-        fecha_inscripcion: fechaInscripcion.value,
+        fecha_inscripcion: parseLatamDate(fechaInscripcion.value),
         regular: regular.checked,
         repite: repite.checked,
       },
@@ -717,11 +785,11 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
         setError(messages.length > 0 ? messages : [fallback], { title: 'No se pudo guardar:' })
         markFieldErrors(fieldErrors)
         submitBtn.disabled = false
-        // showStep owns the label and the type, so only restore them when the
-        // button is still the one that saves; a jump to step 1-3 already retyped
-        // it, and relabelling it here would offer "Guardar inscripción" on a
-        // button that just advances.
-        if (submitBtn.type === 'submit') {
+        // showStep owns the label, so only restore it when the wizard stayed on
+        // the step that saves; a jump to step 1-3 relabelled it "Siguiente", and
+        // calling it "Guardar inscripción" again would promise a save a click
+        // no longer performs.
+        if (currentStep === steps.length - 1) {
           submitBtn.replaceChildren(h('span', { text: 'Guardar inscripción' }))
         }
         if (owner !== undefined) {

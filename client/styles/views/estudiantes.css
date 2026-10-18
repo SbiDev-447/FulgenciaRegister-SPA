@@ -205,6 +205,128 @@
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
     }
+
+    /* `width: 1%` is the table idiom for "shrink to content": without it the
+       cell would claim a share of the width the actions do not need. */
+    .estudiantes__actions {
+      width: 1%;
+      white-space: nowrap;
+    }
+
+    .estudiantes__actions-row {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    /* The row itself is clickable, so its buttons must read as clickable too. */
+    .estudiantes__actions .btn {
+      cursor: pointer;
+      transition: background var(--transition-fast), border-color var(--transition-fast),
+        color var(--transition-fast), transform var(--transition-fast),
+        box-shadow var(--transition-fast);
+    }
+
+    /* Why the actions need a hover of their own: the row lights up with
+       --color-surface-2 and so did the ghost button, so on a hovered row the
+       background change was invisible and only the text darkened. Each action
+       fills with its own color instead, and lifts a little. */
+    .estudiantes__actions .btn:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .estudiantes__actions .btn:not(:disabled):active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    /* Ver / Editar: the brand color, filled. */
+    .estudiantes__action--ver:not(:disabled):hover,
+    .estudiantes__action--editar:not(:disabled):hover {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-primary-contrast);
+    }
+
+    .estudiantes__action--ver:not(:disabled):active,
+    .estudiantes__action--editar:not(:disabled):active {
+      background: color-mix(in srgb, var(--color-primary) 85%, black);
+      border-color: color-mix(in srgb, var(--color-primary) 85%, black);
+    }
+
+    /* Borrar: the destructive action is the loudest one, and it sits apart from
+       Ver/Editar. The extra gap is the cheap half of the same guard as the
+       confirmation dialog: a finger aiming at "Editar" must not land here. */
+    .estudiantes__actions-row .estudiantes__action--borrar {
+      margin-left: var(--space-3);
+    }
+
+    .estudiantes__action--borrar:not(:disabled):hover {
+      background: var(--color-danger);
+      border-color: var(--color-danger);
+      color: var(--color-danger-contrast);
+    }
+
+    .estudiantes__action--borrar:not(:disabled):active {
+      background: color-mix(in srgb, var(--color-danger) 85%, black);
+      border-color: color-mix(in srgb, var(--color-danger) 85%, black);
+    }
+  }
+}
+
+/* --- Edit form (the student's own record) ------------------------------------ */
+
+.ficha-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+
+  .ficha-form__hint {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    max-width: 70ch;
+  }
+
+  /* The error slot is always in the markup so a submit has somewhere to write;
+     while it is empty it must not claim a flex gap of its own. */
+  .ficha-form__errors:empty {
+    display: none;
+  }
+
+  .ficha-form__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: var(--space-4);
+
+    .field--full {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* Same two-column shape as the inscription wizard: a fixed narrow type box
+     and the number taking the rest. */
+  .ficha-form__ci {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+}
+
+/* --- Delete confirmation ----------------------------------------------------- */
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+
+  .confirm__question {
+    font-weight: 700;
+  }
+
+  .confirm__hint {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    max-width: 60ch;
   }
 }
 

@@ -109,6 +109,21 @@ export const api = {
    * @param {{ estudiante: object, inscripcion: object, representantes: Array, documentos?: object }} payload
    */
   crearEstudiante: (payload) => request('/estudiantes', { method: 'POST', body: payload }),
+  /**
+   * Update a student's record. Partial: only the blocks present are touched.
+   * `estudiante.tipo_ci`/`numero_ci` are immutable server-side (a different
+   * value is a 400), so callers never send them.
+   * @param {number} id
+   * @param {{ estudiante?: object, inscripcion?: object, representantes?: Array, documentos?: object }} payload
+   */
+  actualizarEstudiante: (id, payload) => request(`/estudiantes/${id}`, { method: 'PUT', body: payload }),
+  /**
+   * Hard delete. The API cascades the inscriptions, their consigned documents
+   * and the representative links, and sweeps the representatives left with no
+   * student at all.
+   * @param {number} id
+   */
+  eliminarEstudiante: (id) => request(`/estudiantes/${id}`, { method: 'DELETE' }),
 }
 
 /**
