@@ -2,6 +2,7 @@ ARQUITECTURE.md
 CONTEXT.md
 STRUCTURE.md
 
+.opencode/
 .AGENTS/
 AGENTS/
 docs/
@@ -15,6 +16,9 @@ node_modules/
 # Environment
 .env
 .env.local
+
+# Database backups (real student data — never commit)
+backups/
 
 # Logs
 *.log
