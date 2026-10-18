@@ -16,9 +16,9 @@
 
 | Componente | Estado |
 | ---------- | ------ |
-| Backend (API REST) | Listo — 80 pruebas en verde |
+| Backend (API REST) | Listo — 88 pruebas en verde |
 | Base de datos (MariaDB) | Listo — esquema y datos semilla |
-| Frontend (SPA) | Inicio y Estudiantes listos — 17 pruebas en verde |
+| Frontend (SPA) | Inicio y Estudiantes listos — 26 pruebas en verde |
 
 El backend está completo y cubierto por pruebas. En la SPA ya funcionan el shell,
 el router, los temas y las vistas de Inicio y Estudiantes (lista, búsqueda, ficha
