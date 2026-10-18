@@ -9,6 +9,7 @@
     "dev": "node --env-file-if-exists=../.env --watch src/index.js",
     "start": "node --env-file-if-exists=../.env src/index.js",
     "db:seed": "node --env-file-if-exists=../.env db/seed.js",
+    "db:purge-orphans": "node --env-file-if-exists=../.env db/purge-orphan-representantes.js",
     "test": "node --test"
   },
   "dependencies": {

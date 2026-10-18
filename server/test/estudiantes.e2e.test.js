@@ -760,6 +760,9 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     assert.equal(created.status, 201)
     const unlinkedStudentId = (await created.json()).estudiante.id
     extraStudentIds.push(unlinkedStudentId)
+    // Registered before any assertion: this row deliberately outlives the delete
+    // below, and an unregistered fixture would pile up in the database run after run.
+    createdRepCis.push(unlinkedCi)
 
     const unlink = await api('PUT', `/api/estudiantes/${unlinkedStudentId}`, { representantes: [] })
     assert.equal(unlink.status, 200)
@@ -774,5 +777,85 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
       1,
       'the sweep must not touch a representative that was not linked at delete time',
     )
+  })
+
+  // The sweep above is forward-only and scoped to the delete, so an unlink that
+  // leaves a representative with no student stays as garbage. That is what the
+  // explicit purge is for: one auditable command instead of a destructive side
+  // effect inside every unlink path.
+  await t.test('the explicit purge sweeps representatives with no student, and a dry run does not', async () => {
+    const purge = require('../db/purge-orphan-representantes')
+
+    // Reaching "no student" takes the other unlink door (`PUT {representantes:[]}`),
+    // which deliberately does not sweep.
+    const orphanCi = uniqueCi('47')
+    const created = await crearConRepresentantes(uniqueCi('48'), [
+      { ci: orphanCi, nombre: 'Huerfano Explicito', parentesco: 'Madre' },
+    ])
+    assert.equal(created.status, 201)
+    const orphanStudentId = (await created.json()).estudiante.id
+    extraStudentIds.push(orphanStudentId)
+    const unlink = await api('PUT', `/api/estudiantes/${orphanStudentId}`, { representantes: [] })
+    assert.equal(unlink.status, 200)
+
+    // A representative another student keeps must survive the purge.
+    const keepCi = uniqueCi('49')
+    const kept = await crearConRepresentantes(uniqueCi('50'), [
+      { ci: keepCi, nombre: 'Sigue Enlazado', parentesco: 'Padre' },
+    ])
+    assert.equal(kept.status, 201)
+    const keptStudentId = (await kept.json()).estudiante.id
+    extraStudentIds.push(keptStudentId)
+
+    // A second orphan the purge is NOT scoped to: reporting it is fine, deleting
+    // it is not, because nobody approved that row yet.
+    const decoyCi = uniqueCi('51')
+    const decoy = await crearConRepresentantes(uniqueCi('52'), [
+      { ci: decoyCi, nombre: 'Huerfano Fuera De Alcance', parentesco: 'Madre' },
+    ])
+    assert.equal(decoy.status, 201)
+    const decoyStudentId = (await decoy.json()).estudiante.id
+    extraStudentIds.push(decoyStudentId)
+    const decoyUnlink = await api('PUT', `/api/estudiantes/${decoyStudentId}`, { representantes: [] })
+    assert.equal(decoyUnlink.status, 200)
+    createdRepCis.push(orphanCi, keepCi, decoyCi)
+
+    const orphanRow = (await representantesPorCi(orphanCi))[0]
+    assert.ok(orphanRow, 'the fixture must be reachable before the purge')
+
+    // Scoped to this file's own row: other databases may hold orphans nobody
+    // has approved for deletion yet, and a test must not decide that.
+    const dry = await purge.purgeOrphanRepresentantes({ apply: false, ids: [orphanRow.id] })
+    assert.ok(
+      dry.found.some((rep) => rep.id === orphanRow.id),
+      'a dry run must report the representative it would delete',
+    )
+    assert.equal(dry.deleted.length, 0, 'a dry run must delete nothing')
+    assert.ok(
+      dry.found.every((rep) => rep.id === orphanRow.id),
+      'a scoped run must report only the rows it is scoped to (the decoy orphan is out of scope)',
+    )
+    assert.equal((await representantesPorCi(orphanCi)).length, 1, 'the dry run must leave the row alone')
+
+    const applied = await purge.purgeOrphanRepresentantes({ apply: true, ids: [orphanRow.id] })
+    assert.ok(
+      applied.deleted.some((rep) => rep.id === orphanRow.id),
+      'the purge must delete the representative left with no student',
+    )
+    assert.equal((await representantesPorCi(orphanCi)).length, 0)
+    assert.equal(
+      (await representantesPorCi(decoyCi)).length,
+      1,
+      'the purge must not touch a representative outside its scope',
+    )
+
+    assert.equal(
+      (await representantesPorCi(keepCi)).length,
+      1,
+      'a representative a student still links must survive the purge',
+    )
+    const stillLinked = await api('GET', `/api/estudiantes/${keptStudentId}`)
+    assert.equal(stillLinked.status, 200)
+    assert.equal((await stillLinked.json()).representantes[0].numero_ci, keepCi)
   })
 })

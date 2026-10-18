@@ -156,13 +156,35 @@ enlace directo o una recarga funcionan igual.
 | `pnpm db:up` / `pnpm db:down` | Levantar / detener MariaDB |
 | `pnpm db:reset` | Recrear la base de datos (borra los datos) |
 | `pnpm db:seed` | Crear tablas y datos semilla |
+| `pnpm db:purge-orphans` | Borrar representantes que quedaron sin ningún estudiante (ver abajo) |
 | `pnpm test` | Ejecutar todas las pruebas (servidor y cliente) |
+
+### Representantes sin estudiante
+
+Un representante es una fila **compartida**: su identidad es la cédula
+(`tipo_ci` + `numero_ci`), así que varios hermanos pueden apuntar al mismo registro.
+Por eso solo se borra cuando el **último** estudiante lo suelta, y hay dos momentos
+para eso:
+
+- **Al eliminar un estudiante** (`DELETE /api/estudiantes/:id`) la limpieza es
+  automática, en la misma transacción del borrado.
+- **Para lo que ya quedó atrás**, el comando explícito:
+
+```bash
+pnpm db:purge-orphans           # muestra qué borraría; no toca nada
+pnpm db:purge-orphans --apply   # borra exactamente esos representantes
+```
+
+Editar un estudiante (`PUT /api/estudiantes/:id`) y enviar la lista de representantes
+vacía **desvincula** pero no borra: ese representante puede seguir siendo de otro
+estudiante, y una edición no debería borrar datos de terceros. Esos casos los resuelve
+el comando, que nunca toca un representante que conserve algún enlace.
 
 ## Pruebas
 
 | Suite | Comando | Alcance |
 | ----- | ------- | ------- |
-| Servidor | `pnpm --filter @fulgencia/server test` | 84 pruebas con `node:test`. La suite e2e se salta si no hay `.env` o base de datos. |
+| Servidor | `pnpm --filter @fulgencia/server test` | 88 pruebas con `node:test`. La suite e2e se salta si no hay `.env` o base de datos. |
 | Cliente | `pnpm --filter @fulgencia/client test` | 26 pruebas con `node:test` que ejecutan cada vista contra un DOM mínimo, **sin navegador**: comprueban que las vistas pintan, qué texto ve una persona ante un rechazo del API y que el wizard rechaza un correo o un teléfono con formato inválido. |
 
 `pnpm test` corre las dos. Lo que las pruebas del cliente **no** cubren es el
