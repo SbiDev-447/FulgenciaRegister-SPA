@@ -11,6 +11,8 @@
     "db:seed": "node --env-file-if-exists=../.env db/seed.js",
     "db:purge-orphans": "node --env-file-if-exists=../.env db/purge-orphan-representantes.js",
     "db:repair-schema": "node --env-file-if-exists=../.env db/repair-schema.js",
+    "db:dump": "node db/dump.js",
+    "db:restore": "node db/restore.js",
     "test": "node --test"
   },
   "dependencies": {

@@ -16,7 +16,7 @@
 
 | Componente | Estado |
 | ---------- | ------ |
-| Backend (API REST) | Listo — 90 pruebas en verde |
+| Backend (API REST) | Listo — 99 pruebas en verde |
 | Base de datos (MariaDB) | Listo — esquema y datos semilla |
 | Frontend (SPA) | Inicio y Estudiantes listos — 55 pruebas en verde |
 
@@ -95,8 +95,10 @@ pnpm dev               # http://localhost:3000
 El seed crea el usuario administrador `admin` / `admin123` para desarrollo.
 Cámbialo antes de cualquier despliegue.
 
-Para detener la base de datos usa `pnpm db:down`. Para recrearla desde cero (borra
-los datos) usa `pnpm db:reset && pnpm db:seed`.
+Para detener la base de datos usa `pnpm db:down`. Para recrearla desde cero usa
+`pnpm db:reset && pnpm db:seed` — ojo: `db:reset` hace `docker compose down -v`, así que
+**borra el volumen con todos los datos**. Si hay algo que conservar, `pnpm db:dump` antes
+(ver [Respaldos](#respaldos-y-mover-el-proyecto-a-otro-equipo)).
 
 ### Variables de entorno
 
@@ -158,7 +160,49 @@ enlace directo o una recarga funcionan igual.
 | `pnpm db:seed` | Crear tablas y datos semilla |
 | `pnpm db:purge-orphans` | Borrar representantes que quedaron sin ningún estudiante (ver abajo) |
 | `pnpm db:repair-schema` | Ensanchar columnas que quedaron demasiado pequeñas (ver abajo) |
+| `pnpm db:dump` | Guardar una copia de la base de datos en `backups/` (ver abajo) |
+| `pnpm db:restore` | Devolver una copia: sin `--apply` solo dice qué haría (ver abajo) |
 | `pnpm test` | Ejecutar todas las pruebas (servidor y cliente) |
+
+### Respaldos y mover el proyecto a otro equipo
+
+La carpeta del proyecto lleva la **receta** de la base de datos —`docker-compose.yml`, los
+modelos, el seed— y nunca su **contenido**. Copiar la carpeta a otro equipo da la aplicación
+funcionando con una escuela vacía; para llevarse los datos hay que llevarse un respaldo.
+
+```bash
+pnpm db:dump                      # guarda backups/<base>-<fecha>.sql
+pnpm db:restore                   # dice qué haría con el respaldo más nuevo; no escribe
+pnpm db:restore backups/x.sql --apply   # lo restaura de verdad
+```
+
+`db:dump` corre `mariadb-dump` **dentro del contenedor**, con las credenciales y el nombre
+de la base que el propio contenedor tiene (`MARIADB_*`, los de `docker-compose.yml`), no con
+los de `.env`: el servicio que está corriendo es la fuente de verdad de lo que puede volcar,
+y así el respaldo funciona en un equipo recién clonado, donde `.env` todavía no existe. Usa
+`--single-transaction`, así que el volcado es una foto consistente: una fila escrita a mitad
+del respaldo no puede quedar partida.
+
+Un respaldo que falla **no deja archivo**. Si `mariadb-dump` corta a medio camino, el
+comando borra el `.sql` y termina con error; si el archivo sale vacío o con un mensaje de
+error en vez de tablas, también. Un archivo de 0 bytes en `backups/` es peor que no tener
+respaldo: parece uno hasta el día que hace falta.
+
+`db:restore` **no escribe sin `--apply`** — es el único comando del repositorio que puede
+reemplazar todas las filas de un colegio, así que por defecto solo imprime lo que está en
+juego: qué tablas trae el respaldo, y cuántas tablas y cuántos estudiantes hay ahora. Además
+te dice cómo conservar lo de ahora antes de seguir (`pnpm db:dump`). Restaura las tablas que
+el respaldo contiene y **no borra** las que no estén en él. Con `--database <nombre>` se
+puede restaurar en otra base —para inspeccionar un respaldo sin tocar la real— y ese es
+también el camino con el que se verificó que la restauración funciona sin arriesgar datos
+reales: se volcó la base viva, se restauró en una base desechable y los `CHECKSUM TABLE` de
+las siete tablas coincidieron con los de la base viva.
+
+`backups/` está en `.gitignore`: **contiene datos reales de estudiantes y no se commitea.**
+
+Para pasar el proyecto a otro equipo: `pnpm db:dump` en este, copiar el `.sql` y el `.env`
+(a mano, por un pendrive o donde corresponda), y en el otro `pnpm db:up && pnpm db:restore
+<archivo>.sql --apply`.
 
 ### Columnas demasiado pequeñas
 
@@ -242,7 +286,7 @@ Al pegar, `parseLatamDate` acepta además `04-03-2010`, `4.3.2010` y `04032010`.
 
 | Suite | Comando | Alcance |
 | ----- | ------- | ------- |
-| Servidor | `pnpm --filter @fulgencia/server test` | 90 pruebas con `node:test`. La suite e2e se salta si no hay `.env` o base de datos. |
+| Servidor | `pnpm --filter @fulgencia/server test` | 99 pruebas con `node:test`. La suite e2e y las pruebas de `db:dump`/`db:restore` que necesitan la base se saltan si no hay `.env` o contenedor. |
 | Cliente | `pnpm --filter @fulgencia/client test` | 55 pruebas con `node:test` que ejecutan cada vista contra un DOM mínimo, **sin navegador**: comprueban que las vistas pintan, qué texto ve una persona ante un rechazo del API, que el wizard rechaza un correo, un teléfono o una fecha imposible, que las fechas se leen `dd/mm/aaaa` y viajan como ISO, y que la tabla de Estudiantes edita, borra con confirmación y no envía la cédula. |
 
 `pnpm test` corre las dos. Lo que las pruebas del cliente **no** cubren es el

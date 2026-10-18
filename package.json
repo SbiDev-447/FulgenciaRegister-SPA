@@ -16,6 +16,8 @@
     "db:seed": "pnpm --filter @fulgencia/server db:seed",
     "db:purge-orphans": "pnpm --filter @fulgencia/server db:purge-orphans",
     "db:repair-schema": "pnpm --filter @fulgencia/server db:repair-schema",
+    "db:dump": "pnpm --filter @fulgencia/server db:dump",
+    "db:restore": "pnpm --filter @fulgencia/server db:restore",
     "test": "pnpm -r test"
   }
 }
