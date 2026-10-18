@@ -55,7 +55,7 @@ fulgenciaProject/
 │   ├── js/                  # main.js, routes.js, router.js, shell.js, api.js
 │   │   ├── views/           # una vista por ruta (login, inicio, estudiantes, ...)
 │   │   ├── features/        # sesión, tema e inscripción (el wizard de 4 pasos)
-│   │   └── ui/              # helpers DOM (h, clear, svgIcon), iconos, modal y copy de errores
+│   │   └── ui/              # helpers DOM (h, clear, svgIcon), iconos, modal, copy de errores y formato de contacto
 │   └── test/                # pruebas del cliente (node:test, sin navegador)
 ├── server/                  # API REST (Express + mysql-tab)
 │   ├── src/
@@ -163,7 +163,7 @@ enlace directo o una recarga funcionan igual.
 | Suite | Comando | Alcance |
 | ----- | ------- | ------- |
 | Servidor | `pnpm --filter @fulgencia/server test` | 80 pruebas con `node:test`. La suite e2e se salta si no hay `.env` o base de datos. |
-| Cliente | `pnpm --filter @fulgencia/client test` | 17 pruebas con `node:test` que ejecutan cada vista contra un DOM mínimo, **sin navegador**: comprueban que las vistas pintan y qué texto ve una persona ante un rechazo del API. |
+| Cliente | `pnpm --filter @fulgencia/client test` | 26 pruebas con `node:test` que ejecutan cada vista contra un DOM mínimo, **sin navegador**: comprueban que las vistas pintan, qué texto ve una persona ante un rechazo del API y que el wizard rechaza un correo o un teléfono con formato inválido. |
 
 `pnpm test` corre las dos. Lo que las pruebas del cliente **no** cubren es el
 resultado visual: el layout se valida a mano en el navegador (`Ctrl+F5` en

@@ -5,6 +5,7 @@
 // built with h() and textContent only (AGENTS/docs/ARQUITECTURA.md §6).
 
 import { h, clear } from '../ui/dom.js'
+import { isValidEmail, isValidPhone } from '../ui/format.js'
 import { errorCopy } from '../ui/messages.js'
 import { api } from '../api.js'
 import { icon } from '../ui/icons.js'
@@ -550,8 +551,16 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     if (!sexo.value) add([sexo], 'Selecciona el sexo del estudiante.')
     if (!segundoNombre.value.trim()) add([segundoNombre], 'Falta el segundo nombre del estudiante.')
     if (!segundoApellido.value.trim()) add([segundoApellido], 'Falta el segundo apellido del estudiante.')
-    if (!telefono.value.trim()) add([telefono], 'Falta el teléfono del estudiante.')
-    if (!correo.value.trim()) add([correo], 'Falta el correo del estudiante.')
+    if (!telefono.value.trim()) {
+      add([telefono], 'Falta el teléfono del estudiante.')
+    } else if (!isValidPhone(telefono.value)) {
+      add([telefono], 'El teléfono del estudiante no tiene un formato válido.')
+    }
+    if (!correo.value.trim()) {
+      add([correo], 'Falta el correo del estudiante.')
+    } else if (!isValidEmail(correo.value)) {
+      add([correo], 'El correo del estudiante no tiene un formato válido.')
+    }
     if (!paisNacimiento.value.trim()) add([paisNacimiento], 'Falta el país de nacimiento.')
     if (!estadoNacimiento.value.trim()) add([estadoNacimiento], 'Falta el estado de nacimiento.')
     if (!municipioNacimiento.value.trim()) add([municipioNacimiento], 'Falta el municipio de nacimiento.')
@@ -602,9 +611,13 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
       }
       if (!rep.telefono.trim()) {
         add([rep.telefonoEl], `Falta el teléfono del representante ${index + 1}.`)
+      } else if (!isValidPhone(rep.telefono)) {
+        add([rep.telefonoEl], `El teléfono del representante ${index + 1} no tiene un formato válido.`)
       }
       if (!rep.correo.trim()) {
         add([rep.correoEl], `Falta el correo del representante ${index + 1}.`)
+      } else if (!isValidEmail(rep.correo)) {
+        add([rep.correoEl], `El correo del representante ${index + 1} no tiene un formato válido.`)
       }
       const ciKey = `${rep.tipoCi}-${rep.numeroCi}`
       if (rep.numeroCi && seenCis.has(ciKey)) {
