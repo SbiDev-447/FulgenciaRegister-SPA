@@ -1,6 +1,7 @@
 'use strict'
 
 const { HttpError } = require('../utils/httpError')
+const { columnRejection } = require('../utils/mysqlErrors')
 
 function notFound(req, res) {
   res.status(404).json({
@@ -17,6 +18,18 @@ function errorHandler(err, req, res, next) {
       code: err.code,
       message: err.message,
       details: err.details,
+    })
+  }
+
+  // A value the column cannot hold is the client's mistake, not ours: answer
+  // the 400 the form knows how to render, naming the field, instead of the 500
+  // that tells the user nothing.
+  const rejection = columnRejection(err)
+  if (rejection) {
+    return res.status(400).json({
+      code: 'bad_request',
+      message: 'A value does not fit its column',
+      details: { [rejection.field]: rejection.reason },
     })
   }
 

@@ -371,6 +371,95 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     assert.equal(body.representantes[0].parentesco, 'Madre')
   })
 
+  await t.test('stores every lateralidad the form offers', async () => {
+    // The wizard offers three values and each one has to fit the column. It did
+    // not: 'Ambidiestro' (11 characters) overflowed varchar(10), the INSERT died
+    // with ER_DATA_TOO_LONG, and the user saw only "un error en el servidor" —
+    // every other test in this suite used 'Derecha', which fits.
+    const opciones = ['Derecha', 'Izquierda', 'Ambidiestro']
+    const offsets = ['91', '92', '93']
+
+    for (const [index, lateralidad] of opciones.entries()) {
+      const repCi = uniqueCi(offsets[index])
+      const res = await api('POST', '/api/estudiantes', {
+        estudiante: {
+          ...contactoObligatorio,
+          lateralidad,
+          tipo_ci: 'V',
+          numero_ci: uniqueCi(`7${index}`),
+          primer_nombre: 'Lateral',
+          primer_apellido: 'Prueba',
+          fecha_nacimiento: '2012-04-10',
+          sexo: 'F',
+        },
+        inscripcion: {
+          anio_escolar: '2025-2026',
+          anio: '1er Año',
+          seccion: 'A',
+          fecha_inscripcion: '2025-09-15',
+        },
+        representantes: [
+          { ...repObligatorio, tipo_ci: 'V', numero_ci: repCi, nombre: 'Ana Pérez', parentesco: 'Madre' },
+        ],
+        documentos: { ...allDocumentos },
+      })
+
+      const body = await res.json()
+      assert.equal(res.status, 201, `"${lateralidad}" must be storable: ${JSON.stringify(body)}`)
+      assert.equal(body.estudiante.lateralidad, lateralidad)
+      extraStudentIds.push(body.estudiante.id)
+      createdRepCis.push(repCi)
+    }
+  })
+
+  await t.test('names the field when a value does not fit its column', async () => {
+    // The class behind the lateralidad bug: a value the column cannot hold
+    // reaches MySQL, and the API answers 500 'internal_error' — a dead end that
+    // names nothing. The driver knows which column it refused; the API has to
+    // pass that on as a 400, or the user cannot tell what to fix.
+    const cases = [
+      { field: 'lateralidad', value: 'D'.repeat(21), reason: 'is too long' }, // varchar(20)
+      { field: 'peso', value: '1234.56', reason: 'is out of range' }, // decimal(5,2), max 999.99
+      { field: 'peso', value: 'gordo', reason: 'is invalid' }, // the column is numeric
+    ]
+
+    for (const [index, { field, value, reason }] of cases.entries()) {
+      const repCi = uniqueCi(`9${index}4`)
+      const res = await api('POST', '/api/estudiantes', {
+        estudiante: {
+          ...contactoObligatorio,
+          tipo_ci: 'V',
+          numero_ci: uniqueCi(`8${index}4`),
+          primer_nombre: 'Columna',
+          primer_apellido: 'Estrecha',
+          fecha_nacimiento: '2012-04-10',
+          sexo: 'F',
+          [field]: value,
+        },
+        inscripcion: {
+          anio_escolar: '2025-2026',
+          anio: '1er Año',
+          seccion: 'A',
+          fecha_inscripcion: '2025-09-15',
+        },
+        representantes: [
+          { ...repObligatorio, tipo_ci: 'V', numero_ci: repCi, nombre: 'Ana Pérez', parentesco: 'Madre' },
+        ],
+        documentos: { ...allDocumentos },
+      })
+
+      const body = await res.json()
+      // Register first: a red run must not leave the rejected value stored.
+      if (body.estudiante) {
+        extraStudentIds.push(body.estudiante.id)
+        createdRepCis.push(repCi)
+      }
+      assert.equal(res.status, 400, `${field}: ${JSON.stringify(body)}`)
+      assert.equal(body.code, 'bad_request')
+      assert.equal(body.details[field], reason)
+    }
+  })
+
   await t.test('rejects an enrollment that is missing consigned documents', async () => {
     const res = await api('POST', '/api/estudiantes', {
       estudiante: {

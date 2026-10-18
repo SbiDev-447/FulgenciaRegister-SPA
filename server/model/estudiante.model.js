@@ -20,7 +20,7 @@ module.exports = new Model('estudiantes', {
     { name: 'municipio_nacimiento', type: 'varchar(60)', default: "'Miranda'" },
     { name: 'correo', type: 'varchar(120)' },
     { name: 'telefono', type: 'varchar(20)' },
-    { name: 'lateralidad', type: 'varchar(10)' },
+    { name: 'lateralidad', type: 'varchar(20)' },
     { name: 'talla', type: 'varchar(10)' },
     { name: 'peso', type: 'decimal(5,2)' },
     { name: 'camisa', type: 'varchar(10)' },
