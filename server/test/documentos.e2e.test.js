@@ -67,6 +67,8 @@ test('documentos endpoints (require MariaDB and a configured .env)', async (t) =
   let studentId = null
   let emittedId = null
   let adminId = null
+  let repId = null
+  let repCi = null
   const ci = uniqueCi()
 
   t.after(async () => {
@@ -82,6 +84,13 @@ test('documentos endpoints (require MariaDB and a configured .env)', async (t) =
     if (emittedId !== null) {
       try {
         await db.tabla('documentos_emitidos').delete({ id: emittedId })
+      } catch {
+        // Best-effort cleanup.
+      }
+    }
+    if (repId !== null) {
+      try {
+        await db.tabla('representantes').delete({ id: repId })
       } catch {
         // Best-effort cleanup.
       }
@@ -128,9 +137,13 @@ test('documentos endpoints (require MariaDB and a configured .env)', async (t) =
       tipo_ci: 'V',
       numero_ci: ci,
       primer_nombre: 'Ana',
+      segundo_nombre: 'María',
       primer_apellido: 'Pérez',
+      segundo_apellido: 'López',
       fecha_nacimiento: '2012-04-10',
       sexo: 'F',
+      municipio_nacimiento: 'Miranda',
+      estado_nacimiento: 'Trujillo',
     })
     studentId = insert.insertId
     await db.tabla('inscripciones').insert({
@@ -139,6 +152,21 @@ test('documentos endpoints (require MariaDB and a configured .env)', async (t) =
       anio: '4to Año',
       seccion: 'B',
       fecha_inscripcion: '2026-09-15',
+    })
+  })
+
+  await t.test('seeds a representative linked to the student', async () => {
+    repCi = String(Number(ci) + 1).padStart(9, '0')
+    const insert = await db.tabla('representantes').insert({
+      tipo_ci: 'V',
+      numero_ci: repCi,
+      nombre: 'María Pérez',
+    })
+    repId = insert.insertId
+    await db.tabla('estudiante_representante').insert({
+      estudiante_id: studentId,
+      representante_id: repId,
+      parentesco: 'madre',
     })
   })
 
@@ -152,10 +180,19 @@ test('documentos endpoints (require MariaDB and a configured .env)', async (t) =
       numero_ci: ci,
       primer_nombre: 'Ana',
       primer_apellido: 'Pérez',
-      nombre_completo: 'Ana Pérez',
+      nombre_completo: 'Pérez López Ana María',
+      fecha_nacimiento: '2012-04-10',
+      municipio_nacimiento: 'Miranda',
+      estado_nacimiento: 'Trujillo',
       anio: '4to Año',
       seccion: 'B',
       anio_escolar: '2026-2027',
+      representante: {
+        tipo_ci: 'V',
+        numero_ci: repCi,
+        nombre_completo: 'María Pérez',
+        parentesco: 'madre',
+      },
     })
   })
 
@@ -165,6 +202,27 @@ test('documentos endpoints (require MariaDB and a configured .env)', async (t) =
     const body = await res.json()
     assert.equal(body.estudiante.id, studentId)
     assert.equal(body.estudiante.numero_ci, ci)
+  })
+
+  await t.test('reports a null representative for a student without one', async () => {
+    const lonelyCi = String(Number(ci) + 2).padStart(9, '0')
+    const insert = await db.tabla('estudiantes').insert({
+      tipo_ci: 'V',
+      numero_ci: lonelyCi,
+      primer_nombre: 'Luis',
+      primer_apellido: 'Gómez',
+      fecha_nacimiento: '2013-01-20',
+      sexo: 'M',
+    })
+    const lonelyId = insert.insertId
+    try {
+      const res = await api('GET', `/api/documentos/verificar/V-${lonelyCi}`)
+      assert.equal(res.status, 200)
+      const body = await res.json()
+      assert.equal(body.estudiante.representante, null)
+    } finally {
+      await db.tabla('estudiantes').delete({ id: lonelyId })
+    }
   })
 
   await t.test('returns 404 for an unknown cédula', async () => {
@@ -196,7 +254,7 @@ test('documentos endpoints (require MariaDB and a configured .env)', async (t) =
     assert.ok(body.documento.fecha_emision, 'expected a DB-provided fecha_emision')
 
     assert.equal(body.estudiante.id, studentId)
-    assert.equal(body.estudiante.nombre_completo, 'Ana Pérez')
+    assert.equal(body.estudiante.nombre_completo, 'Pérez López Ana María')
     assert.equal(body.estudiante.anio_escolar, '2026-2027')
 
     const row = await db.tabla('documentos_emitidos').selectOne(null, null, { id: body.documento.id })

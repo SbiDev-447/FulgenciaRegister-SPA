@@ -5,9 +5,60 @@ const { HttpError } = require('../../utils/httpError')
 const { parseCedula, cedulaWhere } = require('../../utils/cedula')
 
 /**
- * Printable student summary shared by verify and emit: identity, full name and
- * the data of the most recent inscription (MAX anio_escolar). Students without
- * inscriptions report null academic fields.
+ * Representative summary for the printed letter, or null when the student has
+ * none. Business rule: one representative per student. The bridge table still
+ * allows several, so the lowest representante_id wins deterministically.
+ * @param {number} studentId
+ * @returns {Promise<object|null>}
+ */
+async function buildRepresentante(studentId) {
+  const links = await db
+    .tabla('estudiante_representante')
+    .select(null, null, { estudiante_id: studentId }, null, null, 'representante_id ASC')
+  const link = links[0]
+  if (!link) {
+    return null
+  }
+
+  const rep = await db
+    .tabla('representantes')
+    .selectOne(null, null, { id: link.representante_id })
+  if (!rep) {
+    return null
+  }
+
+  return {
+    tipo_ci: rep.tipo_ci,
+    numero_ci: rep.numero_ci,
+    nombre_completo: rep.nombre,
+    parentesco: link.parentesco ?? null,
+  }
+}
+
+/**
+ * Format a DB date as a plain calendar date (`YYYY-MM-DD`), the shape the
+ * client formats for display. The driver hands back a Date built from local
+ * midnight, so a naive toISOString() would shift the day.
+ * @param {Date|string|null|undefined} value
+ * @returns {string|null}
+ */
+function toDateOnly(value) {
+  if (value === null || value === undefined) {
+    return null
+  }
+  if (typeof value === 'string') {
+    return value.slice(0, 10)
+  }
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${value.getFullYear()}-${month}-${day}`
+}
+
+/**
+ * Printable student summary shared by verify and emit: identity, full name
+ * (surnames first, as printed on the letters) and the data of the most recent
+ * inscription (MAX anio_escolar). Students without inscriptions report null
+ * academic fields.
  * @param {object} student
  * @returns {Promise<object>}
  */
@@ -16,7 +67,14 @@ async function buildStudentSummary(student) {
     .tabla('inscripciones')
     .select(null, null, { estudiante_id: student.id }, null, null, 'anio_escolar DESC')
   const latest = inscriptions[0] ?? null
-  const nombreCompleto = `${student.primer_nombre ?? ''} ${student.primer_apellido ?? ''}`.trim()
+  const nombreCompleto = [
+    student.primer_apellido,
+    student.segundo_apellido,
+    student.primer_nombre,
+    student.segundo_nombre,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return {
     id: student.id,
@@ -25,9 +83,13 @@ async function buildStudentSummary(student) {
     primer_nombre: student.primer_nombre,
     primer_apellido: student.primer_apellido,
     nombre_completo: nombreCompleto,
+    fecha_nacimiento: toDateOnly(student.fecha_nacimiento),
+    municipio_nacimiento: student.municipio_nacimiento,
+    estado_nacimiento: student.estado_nacimiento,
     anio: latest ? latest.anio : null,
     seccion: latest ? latest.seccion : null,
     anio_escolar: latest ? latest.anio_escolar : null,
+    representante: await buildRepresentante(student.id),
   }
 }
 
