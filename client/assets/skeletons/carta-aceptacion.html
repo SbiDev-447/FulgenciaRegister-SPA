@@ -1,0 +1,95 @@
+<!doctype html>
+<!--
+  Carta de Aceptación, option A: a real DOM sheet + print CSS. Structure copied from
+  constancia-estudio.html; the wording belongs to the school.
+
+  The style lives next door in carta.css, shared by the four letter skeletons.
+
+  Holes (`[like this]`) map to data the API returns from
+  GET /api/documentos/verificar/:cedula:
+    [Apellidos y Nombres del Estudiante] -> estudiante.nombre_completo
+    [Cedula del Estudiante]            -> estudiante.tipo_ci + numero_ci
+    [Año de Estudio]                   -> estudiante.anio ("4to Año")
+    [Año Escolar]                      -> estudiante.anio_escolar
+    [día] [mes] [año]                  -> issue date (fecha_emision)
+  Logos are the real files (LogoMinisterio-To-Left.webp and
+  Shield-to-Right.webp). The director block mirrors client/js/institution.js and
+  keeps its placeholder.
+
+  Open this file directly in a browser. The button (screen only) calls
+  window.print(); the @page rule in the CSS decides the paper size.
+-->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Carta de Aceptación</title>
+    <link rel="stylesheet" href="./carta.css" />
+  </head>
+  <body>
+    <div class="toolbar">
+      <button type="button" onclick="window.print()">
+        Imprimir / Guardar como PDF
+      </button>
+      <p>
+        Formato de la carta de aceptación: la estructura (membrete, título y
+        firma) ya está; el texto del cuerpo lo reemplaza el colegio. Los datos
+        entre
+        <span class="hole">[corchetes]</span> se rellenan desde la ficha del
+        estudiante. Sale en tamaño carta; si usan oficio, se cambia solo la
+        línea <code>@page</code>.
+      </p>
+    </div>
+
+    <main class="sheet">
+      <header class="letterhead">
+        <!-- Logos: ministry on the left, school shield on the right. -->
+        <img src="./LogoMinisterio-To-Left.webp" alt="Logo del Ministerio" />
+        <div class="school">
+          <span>REPÚBLICA BOLIVARIANA DE VENEZUELA</span>
+          <span>MINISTERIO DEL PODER POPULAR PARA LA EDUCACIÓN </span>
+          <span>LICEO "FULGENCIA JIMENEZ DE OLMOS" </span>
+          <span>RIF J-30768682-0 </span>
+          <span>EL DIVIDIVE - MUNICIPIO MIRANDA </span>
+          <span>ESTADO TRUJILLO</span>
+        </div>
+        <img src="./Shield-to-Right.webp" alt="Escudo del liceo" />
+      </header>
+
+      <h1 class="title">Carta de Aceptación</h1>
+      <!-- The director block (PROF., cédula and the signature below) is filled
+           from client/js/institution.js when this view is wired. -->
+      <div class="letter-body">
+        <p>
+          El suscrito,
+          <strong>PROF. Persona de Prueba</strong>, portador de la cédula de
+          identidad <strong>N°V-00000000 Director (E)</strong> del Liceo
+          <strong>"Fulgencia Jiménez de Olmos"</strong>, en uso de sus
+          atribuciones legales conferidas por la Ley y su reglamento. Hace
+          constar que (el) (la) Ciudadano(a):
+          <span class="hole">[Apellidos y Nombres del Estudiante]</span>,
+          titular de la Cédula de Identidad N°
+          <span class="hole">[Cedula del Estudiante]</span>, tiene cupo para
+          cursar el <span class="hole">[Año de Estudio]</span> de Educación
+          Media General, correspondiente al Año Escolar
+          <strong><span class="hole">[Año Escolar]</span></strong>.
+        </p>
+        <p>
+          Constancia que se expide a petición de la parte interesada y para
+          fines legales que solo a él le competen, en El Dividive a los
+          <span class="hole">[día]</span> días del mes de
+          <span class="hole">[mes]</span> del <span class="hole">[año]</span>.
+        </p>
+        <p>Atentamente.</p>
+      </div>
+
+      <footer class="signature">
+        <div class="rule"></div>
+        <div>Lcdo. Persona de Prueba</div>
+        <div>C.I. V-00.000.000</div>
+        <div class="role">Director</div>
+      </footer>
+    </main>
+  </body>
+</html>
