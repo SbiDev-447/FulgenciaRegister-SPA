@@ -1,0 +1,192 @@
+/* Skeleton sheet for the printable constancia (option A: DOM + print CSS).
+ *
+ * Self-contained on purpose: no build step, no framework, no bundled font.
+ * Arial is a system font: real Arial on the school's Windows machine, and
+ * metric-compatible with Helvetica / Liberation Sans everywhere else, so the
+ * layout does not shift between machines.
+ *
+ * Placeholders are highlighted on screen and print as plain text, so the
+ * layout can be judged fairly. Change `size` in @page if the school uses
+ * oficio instead of letter.
+ */
+
+:root {
+  --ink: #16181d;
+  --muted: #5b6270;
+  --desk: #e9ebef;
+  --accent: #7c1f2b;
+  --hole-bg: #fff3c4;
+  --hole-ink: #6d5200;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px 16px 64px;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+strong {
+  text-decoration: underline;
+}
+
+/* ---- screen-only chrome ---- */
+.toolbar {
+  max-width: 216mm;
+  margin: 0 auto 18px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+
+.toolbar button {
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.toolbar p {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ---- the sheet: what prints ---- */
+.sheet {
+  position: relative;
+  width: 216mm;
+  min-height: 279mm;
+  margin: 0 auto;
+  padding: 22mm 22mm 26mm;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(20, 24, 32, 0.16);
+  display: flex;
+  flex-direction: column;
+  font-size: 12pt;
+  line-height: 1.75;
+}
+
+.letterhead {
+  text-align: center;
+  padding-bottom: 10px;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+}
+
+.letterhead img {
+  width: 30mm;
+  height: 30mm;
+  object-fit: contain;
+}
+
+.school {
+  margin-top: 2mm;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  display: flex;
+  flex-flow: column nowrap;
+}
+
+.letterhead .sub {
+  font-size: 9pt;
+  color: var(--muted);
+}
+
+.place-date {
+  margin: 26px 0 0;
+  text-align: right;
+}
+
+.title {
+  margin: 26px 0 18px;
+  text-align: center;
+  font-size: 15pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-decoration: underline;
+}
+
+.letter-body {
+  flex: 1;
+}
+
+.letter-body p {
+  margin: 0 0 14px;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.hole {
+  padding: 0 2px;
+  border-radius: 2px;
+  background: var(--hole-bg);
+  color: var(--hole-ink);
+  font-weight: 700;
+}
+
+.signature {
+  margin-top: 120px;
+  text-align: center;
+  font-size: 12pt;
+  line-height: 1.2;
+}
+
+.signature .rule {
+  width: 60mm;
+  margin: 0 auto 8px;
+  border-top: 2px solid var(--ink);
+}
+
+/* ---- print ---- */
+@page {
+  size: letter;
+  margin: 0;
+}
+
+@media print {
+  body {
+    padding: 0;
+    background: #fff;
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .sheet {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    box-shadow: none;
+  }
+
+  /* Placeholders print as plain text, so the layout can be judged fairly. */
+  .hole {
+    background: none;
+    color: inherit;
+    padding: 0;
+  }
+
+  .letterhead,
+  .title,
+  .signature {
+    break-inside: avoid;
+  }
+}
