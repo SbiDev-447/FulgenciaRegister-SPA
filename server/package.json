@@ -13,7 +13,8 @@
     "db:repair-schema": "node --env-file-if-exists=../.env db/repair-schema.js",
     "db:dump": "node db/dump.js",
     "db:restore": "node db/restore.js",
-    "test": "node --test"
+    "test": "node --test",
+    "db:demo": "node --env-file-if-exists=../.env db/seed-demo.js"
   },
   "dependencies": {
     "cookie-parser": "1.4.7",
