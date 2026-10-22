@@ -21,14 +21,7 @@ import { renderDocumentos } from './views/documentos.js'
 export const ROUTES = [
   { path: '/', title: 'Inicio', view: renderInicio },
   { path: '/estudiantes', title: 'Estudiantes', view: renderEstudiantes },
-  {
-    path: '/inscripcion',
-    title: 'Nueva inscripción',
-    view: renderInscripcion,
-    // The wizard has no sidebar entry of its own: it is a step of Estudiantes,
-    // so that item stays highlighted for as long as the form is open.
-    activePath: '/estudiantes',
-  },
+  { path: '/inscripcion', title: 'Nueva inscripción', view: renderInscripcion },
   { path: '/documentos', title: 'Documentos', view: renderDocumentos },
 ]
 

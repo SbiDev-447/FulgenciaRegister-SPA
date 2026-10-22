@@ -8,6 +8,8 @@ import { icon } from './ui/icons.js'
 const NAV_ITEMS = [
   { path: '/', label: 'Inicio', iconName: 'inicio' },
   { path: '/estudiantes', label: 'Estudiantes', iconName: 'estudiantes' },
+  // Right below the roster: the enrolment flow starts by scanning it.
+  { path: '/inscripcion', label: 'Nueva inscripción', iconName: 'plus' },
   { path: '/documentos', label: 'Documentos', iconName: 'documentos' },
 ]
 

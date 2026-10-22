@@ -446,7 +446,7 @@ test('a value the column cannot hold reaches the user in Spanish and marks its f
   }
 })
 
-test('the route table wires /inscripcion and keeps Estudiantes highlighted', async () => {
+test('the route table wires /inscripcion to its own sidebar entry', async () => {
   const { resolve } = await import('../js/routes.js')
 
   const match = resolve('/inscripcion')
@@ -454,7 +454,7 @@ test('the route table wires /inscripcion and keeps Estudiantes highlighted', asy
   assert.equal(match.title, 'Nueva inscripción')
   assert.equal(
     match.activePath,
-    '/estudiantes',
-    'the sidebar has no entry for the wizard: Estudiantes stays highlighted',
+    undefined,
+    'the wizard has its own nav entry now, so it highlights itself',
   )
 })
