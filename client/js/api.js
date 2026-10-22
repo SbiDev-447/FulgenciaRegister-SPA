@@ -124,6 +124,17 @@ export const api = {
    * @param {number} id
    */
   eliminarEstudiante: (id) => request(`/estudiantes/${id}`, { method: 'DELETE' }),
+  /**
+   * Printable summary of a student by cédula. 404 when nobody matches.
+   * @param {string} cedula - human format, e.g. `V-12345678`
+   */
+  verificarDocumento: (cedula) => request(`/documentos/verificar/${encodeURIComponent(cedula)}`),
+  /**
+   * Record an emitted document and get the printable summary back.
+   * @param {{ tipo: string, estudiante_id: number }} payload
+   */
+  emitirDocumento: ({ tipo, estudiante_id }) =>
+    request('/documentos/emitir', { method: 'POST', body: { tipo, estudiante_id } }),
 }
 
 /**

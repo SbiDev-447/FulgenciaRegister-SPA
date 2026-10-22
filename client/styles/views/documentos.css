@@ -1,0 +1,186 @@
+/* Documentos: verify a cédula, emit and print.
+ *
+ * The letter itself is styled by assets/skeletons/carta.css (the school's own
+ * sheet); this file only styles the working screen and decides what the printer
+ * sees. On paper nothing but the filled letter survives.
+ *
+ * Tokens come from styles/tokens.css: --space-*, --radius-*, --color-*.
+ */
+
+/* The working column is narrower than .content on purpose (a cédula form does
+   not want 1100px of line length), and centers inside it instead of sitting
+   against the left edge of a wide main. */
+.documentos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 72ch;
+  margin-inline: auto;
+}
+
+.documentos__hero h2 {
+  margin: 0 0 var(--space-1);
+}
+
+.documentos__hero p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.documentos__form {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.documentos__cedula {
+  min-width: 0;
+  flex: 1 1 20ch;
+  max-width: 30ch;
+}
+
+/* Reserve the line while "Verificando…" / "Emitiendo…" sits there, so pressing
+   a button never nudges the card underneath it. */
+.documentos__status {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+/* "Missing representative" is a heads-up, not an error: a quiet surface with an
+   accent edge, so it reads the same in both themes. */
+.documentos__warning {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border-inline-start: 3px solid var(--color-border-strong);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.documentos__error {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.documentos__error p {
+  margin: 0;
+}
+
+.documentos__student {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.documentos__student-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  justify-content: space-between;
+}
+
+.documentos__student-head h3 {
+  margin: 0;
+}
+
+.documentos__student-ci {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.documentos__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+}
+
+.documentos__facts dt {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.documentos__facts dd {
+  margin: 0;
+}
+
+.documentos__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.documentos__group-title {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Four documents of very different label lengths: a 2×2 grid of equal cells
+   reads as a menu, instead of a ragged row that wraps unevenly. */
+.documentos__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.documentos__actions .btn {
+  justify-content: flex-start;
+  min-height: 48px;
+  padding-inline: var(--space-4);
+  text-align: left;
+}
+
+/* "Carta de Aceptación" is the longest label; let it break inside its cell
+   rather than overflow it on a narrow screen. */
+.documentos__actions .btn span {
+  overflow-wrap: anywhere;
+}
+
+.documentos__actions .btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .documentos__actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- print: only the filled letter survives ---- */
+.documentos__print {
+  display: none;
+}
+
+@media print {
+  /* `visibility` instead of `display` keeps the app's layout from collapsing
+     around the letter while it is measured. */
+  body * {
+    visibility: hidden;
+  }
+
+  .documentos__print,
+  .documentos__print * {
+    visibility: visible;
+  }
+
+  .documentos__print {
+    display: block;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+}
