@@ -113,10 +113,16 @@
   --color-text-muted: #9aa7bd;
   --color-text-subtle: #748098;
 
-  --color-primary: #587fe0;
-  --color-primary-strong: #7d9cec;
+  /* Primary buttons carry cream text in both themes. On a dark screen that
+     means the fill has to sit deeper than the light-theme tint did: #587fe0
+     only reached 2.88:1 against cream, while #3559b8 reaches 4.86:1 and the
+     hover #2e4ea3 reaches 5.82:1. The token is only ever a fill or a ring
+     here — primary text uses --color-primary-contrast — so darkening it
+     costs no legibility elsewhere. */
+  --color-primary: #3559b8;
+  --color-primary-strong: #2e4ea3;
   --color-primary-soft: #1a2440;
-  --color-primary-contrast: #06080f;
+  --color-primary-contrast: #e9e0c3;
   /* The hero keeps light text in dark mode, so its surface goes deep instead
        of going bright: cream on navy stays readable, unlike cream on the light
        blue that the primary would give. */

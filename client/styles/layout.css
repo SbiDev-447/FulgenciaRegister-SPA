@@ -120,9 +120,11 @@
           color: var(--color-text);
         }
 
+        /* Text on the soft tint needs a text token: --color-primary-strong is a
+         * fill here, and using it as ink put dark-on-dark in the dark theme. */
         &.is-active {
           background: var(--color-primary-soft);
-          color: var(--color-primary-strong);
+          color: var(--color-navy);
           font-weight: 700;
         }
 
@@ -412,7 +414,7 @@
   padding: 2px var(--space-3);
   border-radius: var(--radius-pill);
   background: var(--color-primary-soft);
-  color: var(--color-primary-strong);
+  color: var(--color-navy);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.04em;
