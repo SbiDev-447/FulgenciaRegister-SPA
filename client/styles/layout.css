@@ -358,6 +358,50 @@
   &:has(.input-error) .field__label {
     color: var(--color-danger);
   }
+
+  /* Wraps an input with a control that sits over it (the password reveal).
+     The input keeps the full width; the overlay lives inside the padding. */
+  .field__control {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .input {
+      /* Reserve the toggle's width so long passwords never slide under it. */
+      padding-inline-end: calc(var(--space-4) + 2.25rem);
+    }
+  }
+
+  .field__toggle {
+    position: absolute;
+    inset-inline-end: var(--space-1);
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover {
+      color: var(--color-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      color: var(--color-text);
+      box-shadow: 0 0 0 3px var(--color-primary-soft);
+    }
+  }
 }
 
 .input {
