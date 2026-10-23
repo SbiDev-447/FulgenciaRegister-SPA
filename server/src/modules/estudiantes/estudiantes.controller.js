@@ -155,8 +155,8 @@ function parseId(raw) {
 
 async function list(req, res, next) {
   try {
-    const { q, anio, seccion } = req.query ?? {}
-    const result = await service.listEstudiantes({ q, anio, seccion })
+    const { q, anio, seccion, page, pageSize } = req.query ?? {}
+    const result = await service.listEstudiantes({ q, anio, seccion, page, pageSize })
     res.json(result)
   } catch (error) {
     next(error)

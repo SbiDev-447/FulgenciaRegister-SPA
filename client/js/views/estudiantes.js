@@ -178,7 +178,7 @@ export function renderEstudiantes(container) {
   // second with the primary action at its end, so the action can never be
   // pushed onto a line of its own. The action stays `type="button"` inside the
   // form: only "Buscar" (submit) reloads the list.
-  const bar = h('form', { class: 'estudiantes__bar', on: { submit: (event) => { event.preventDefault(); load() } } }, [
+  const bar = h('form', { class: 'estudiantes__bar', on: { submit: (event) => { event.preventDefault(); load({ resetPage: true }) } } }, [
     h('div', { class: 'estudiantes__search' }, [qInput, searchBtn]),
     h('label', { class: 'estudiantes__field' }, [
       h('span', { text: 'Año' }),
@@ -209,6 +209,11 @@ export function renderEstudiantes(container) {
   // newer one after the user changed search terms or filters.
   let seq = 0
 
+  // 1-based page of the current query. The server owns the paging; the view only
+  // remembers which page it asked for and resets it whenever the query changes,
+  // because page 4 of a different filter is not a place anyone meant to go.
+  let page = 1
+
   // Options from /api/academico/opciones; kept so the year change handler can
   // resolve the sections of the selected year without another fetch.
   let options = null
@@ -223,14 +228,22 @@ export function renderEstudiantes(container) {
 
   function renderList(data) {
     const { estudiantes } = data
-    const count = estudiantes.length
+    const total = data.total ?? estudiantes.length
+    const pageSize = data.pageSize ?? Math.max(estudiantes.length, 1)
+    const pages = data.pages ?? 1
+    const current = data.page ?? page
 
     const summary = h('p', {
       class: 'estudiantes__count',
-      text: `${fmt.format(count)} estudiante${count === 1 ? '' : 's'}`,
+      text:
+        pages > 1
+          ? `Mostrando ${fmt.format((current - 1) * pageSize + 1)}–${fmt.format(
+              (current - 1) * pageSize + estudiantes.length,
+            )} de ${fmt.format(total)} estudiantes`
+          : `${fmt.format(total)} estudiante${total === 1 ? '' : 's'}`,
     })
 
-    if (count === 0) {
+    if (estudiantes.length === 0) {
       results.replaceChildren(
         summary,
         h('div', { class: 'estudiantes__empty' }, [
@@ -299,6 +312,49 @@ export function renderEstudiantes(container) {
     ])
 
     results.replaceChildren(summary, table)
+    if (pages > 1) {
+      results.append(renderPager(current, pages))
+    }
+  }
+
+  /**
+   * Previous / next navigation, the same shape as the enrolment wizard: the page
+   * number is the state, and both ends are disabled instead of wrapping around.
+   * `disabled` is set as a property, not the attribute, so a browser and the
+   * test stub agree on what `button.disabled` reports.
+   */
+  function renderPager(current, pages) {
+    const prev = h('button', {
+      class: 'btn btn--ghost',
+      type: 'button',
+      'aria-label': 'Página anterior',
+      text: 'Anterior',
+    })
+    prev.disabled = current <= 1
+    prev.addEventListener('click', () => goToPage(current - 1))
+
+    const next = h('button', {
+      class: 'btn btn--ghost',
+      type: 'button',
+      'aria-label': 'Página siguiente',
+      text: 'Siguiente',
+    })
+    next.disabled = current >= pages
+    next.addEventListener('click', () => goToPage(current + 1))
+
+    return h('nav', { class: 'estudiantes__pager', 'aria-label': 'Paginación de estudiantes' }, [
+      prev,
+      h('span', { class: 'estudiantes__pager-info', text: `Página ${current} de ${pages}` }),
+      next,
+    ])
+  }
+
+  function goToPage(target) {
+    page = target
+    load()
+    // The table is taller than the viewport: without this the person lands on
+    // the footer of a list they have not started reading.
+    results.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
   }
 
   function renderError(error) {
@@ -767,11 +823,19 @@ export function renderEstudiantes(container) {
     })
   }
 
-  function load() {
+  function load({ resetPage = false } = {}) {
+    if (resetPage) {
+      page = 1
+    }
     const id = ++seq
     results.replaceChildren(h('p', { class: 'estudiantes__status', text: 'Cargando estudiantes…' }))
     api
-      .estudiantes({ q: qInput.value, anio: anioSelect.value, seccion: seccionSelect.value })
+      .estudiantes({
+        q: qInput.value,
+        anio: anioSelect.value,
+        seccion: seccionSelect.value,
+        page,
+      })
       .then((data) => {
         if (id === seq) renderList(data)
       })
@@ -797,9 +861,9 @@ export function renderEstudiantes(container) {
     if (!sections.includes(seccionSelect.value)) {
       seccionSelect.value = ''
     }
-    load()
+    load({ resetPage: true })
   })
-  seccionSelect.addEventListener('change', load)
+  seccionSelect.addEventListener('change', () => load({ resetPage: true }))
 
   /** Union of every section label across all years, in first-seen order. */
   function collectSections(years) {

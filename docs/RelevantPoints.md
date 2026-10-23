@@ -141,3 +141,25 @@ un valor que creció (`maskDateInput`), de modo que el retroceso siempre funcion
 no vuelve a aparecer — y una edición en medio del texto nunca se reescribe en silencio.
 Al pegar, `parseLatamDate` acepta además `04-03-2010`, `4.3.2010` y `04032010`.
 
+
+### Paginación del listado de estudiantes
+
+`GET /api/estudiantes` devuelve **una página**, no la tabla entera:
+
+```json
+{ "estudiantes": [], "total": 57, "page": 1, "pageSize": 20, "pages": 3 }
+```
+
+- `page` es 1-based; `pageSize` tiene techo de **100** y por defecto 20. Valores
+  basura (`page=abc`) caen al default en vez de fallar: un marcador viejo tiene que
+  seguir mostrando filas.
+- `total` cuenta **el conjunto filtrado**, no la tabla: es el mismo predicado SQL que
+  elige las filas, para que el resumen nunca contradiga la tabla.
+- Una `page` fuera de rango se sirve como la última, y la respuesta informa la página
+  que realmente sirvió.
+- `anio`/`seccion` se resuelven con `EXISTS` en SQL y **antes** del `LIMIT`. Filtrar
+  después de limitar dejaría páginas cortas o vacías — es la razón por la que la
+  versión anterior (cruzar todo en memoria) no podía paginar.
+- El orden es total (`primer_apellido`, `primer_nombre`, `id`). Con un orden que
+  empata, MySQL puede contestar cada página en un orden distinto y repetir una fila
+  mientras salta otra.

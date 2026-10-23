@@ -113,6 +113,23 @@
     font-size: 0.9rem;
   }
 
+  /* Wizard-style pager: the page number sits between the two ends, so the
+     reading order matches what a person sees ("Anterior · Página 2 de 3 ·
+     Siguiente"). */
+  .estudiantes__pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+  }
+
+  .estudiantes__pager-info {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
   .estudiantes__status {
     padding: var(--space-5) 0;
     color: var(--color-text-muted);

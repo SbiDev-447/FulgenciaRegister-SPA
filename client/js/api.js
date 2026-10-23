@@ -89,16 +89,18 @@ export const api = {
     return request(`/estadisticas${qs ? `?${qs}` : ''}`)
   },
   /**
-   * Student list with optional filters.
-   * @param {{ q?: string, anio?: string, seccion?: string }} [filters] - q is a
-   *   free-text match over names and cédula; anio/seccion restrict to students
-   *   with a matching inscription.
+   * One page of the student list with optional filters.
+   * @param {{ q?: string, anio?: string, seccion?: string, page?: number }} [filters]
+   *   q is a free-text match over names and cédula; anio/seccion restrict to
+   *   students with a matching inscription; page is 1-based and the first page
+   *   is sent without the parameter.
    */
-  estudiantes: ({ q, anio, seccion } = {}) => {
+  estudiantes: ({ q, anio, seccion, page } = {}) => {
     const params = new URLSearchParams()
     if (q && q.trim()) params.set('q', q.trim())
     if (anio) params.set('anio', anio)
     if (seccion) params.set('seccion', seccion)
+    if (page && page > 1) params.set('page', String(page))
     const qs = params.toString()
     return request(`/estudiantes${qs ? `?${qs}` : ''}`)
   },

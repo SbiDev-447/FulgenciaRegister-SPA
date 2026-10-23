@@ -175,64 +175,140 @@ async function getFullRecord(studentId) {
 }
 
 /**
- * Build the WHERE object for the free-text filter over the student's name and
- * cédula columns. `anio`/`seccion` filters join against inscripciones later.
- * @param {string|undefined} q
- * @returns {object|undefined} undefined when there is nothing to filter on
+ * Page size when the caller does not ask for one, and the ceiling a caller may
+ * ask for. Without a ceiling, `pageSize=99999` would rebuild the response this
+ * exists to avoid.
  */
-function buildSearchWhere(q) {
-  if (q === undefined || q === null || typeof q !== 'string' || q.trim() === '') {
-    return undefined
+const DEFAULT_PAGE_SIZE = 20
+const MAX_PAGE_SIZE = 100
+
+/**
+ * The SQL predicate shared by the count and the page query, so the number in
+ * the summary can never disagree with the rows.
+ *
+ * It has to run in the database: the previous version loaded every student and
+ * every inscription and filtered in memory, which makes a `LIMIT` a lie — the
+ * rows dropped by the filter are dropped *after* the limit is chosen, so a page
+ * comes back short or empty.
+ * @param {{ q?: string, anio?: string, seccion?: string }} filters
+ * @returns {{ sql: string, params: Array }} `sql` starts with WHERE, or is ''
+ */
+function buildListFilter({ q, anio, seccion }) {
+  const clauses = []
+  const params = []
+
+  if (q !== undefined && q !== null && typeof q === 'string' && q.trim() !== '') {
+    const term = `%${q.trim()}%`
+    clauses.push(
+      '(e.primer_nombre LIKE ? OR e.segundo_nombre LIKE ? OR e.primer_apellido LIKE ?' +
+        ' OR e.segundo_apellido LIKE ? OR e.numero_ci LIKE ?)',
+    )
+    params.push(term, term, term, term, term)
   }
-  const term = `%${q.trim()}%`
-  return {
-    'primer_nombre%': term,
-    '||segundo_nombre%': term,
-    '||primer_apellido%': term,
-    '||segundo_apellido%': term,
-    '||numero_ci%': term,
+
+  // A student matches the inscription filters when they hold a matching
+  // inscription: the row shown afterwards is that same inscription, not the
+  // most recent one overall.
+  if (anio || seccion) {
+    const conditions = []
+    if (anio) {
+      conditions.push('i.anio = ?')
+      params.push(anio)
+    }
+    if (seccion) {
+      conditions.push('i.seccion = ?')
+      params.push(seccion)
+    }
+    clauses.push(
+      `EXISTS (SELECT 1 FROM inscripciones i WHERE i.estudiante_id = e.id AND ${conditions.join(' AND ')})`,
+    )
   }
+
+  return { sql: clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '', params }
 }
 
 /**
- * List students with optional filters. When `anio` or `seccion` is given the
- * list is restricted to students with a matching inscription; otherwise each
- * student shows their most recent inscripcion (string max of anio_escolar,
- * which sorts chronologically because it is YYYY-YYYY).
- * @param {{ q?: string, anio?: string, seccion?: string }} filters
+ * Clamp what came off the query string. Junk falls back to the default instead
+ * of failing the list: a stale bookmark with `page=abc` must still show rows.
+ * @param {unknown} value
+ * @param {number} fallback
+ * @param {number} max
+ */
+function toPositiveInt(value, fallback, max = Number.MAX_SAFE_INTEGER) {
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return fallback
+  }
+  return Math.min(parsed, max)
+}
+
+/**
+ * List one page of students with optional filters.
+ *
+ * The order is total (apellido, nombre, id): paging over an order with ties can
+ * show the same row on two pages and skip another, because MySQL is free to
+ * answer each query in a different order.
+ * @param {{ q?: string, anio?: string, seccion?: string, page?: unknown, pageSize?: unknown }} filters
+ * @returns {Promise<{ estudiantes: Array, total: number, page: number, pageSize: number, pages: number }>}
  */
 async function listEstudiantes(filters = {}) {
   const { q, anio, seccion } = filters
+  const pageSize = toPositiveInt(filters.pageSize, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
+  const requestedPage = toPositiveInt(filters.page, 1)
+  const filter = buildListFilter({ q, anio, seccion })
 
-  const students = await db
-    .tabla('estudiantes')
-    .select(null, null, buildSearchWhere(q), null, null, 'primer_apellido, primer_nombre')
+  const countRows = await db.query(
+    `SELECT COUNT(*) AS total FROM estudiantes e ${filter.sql}`,
+    { values: filter.params },
+  )
+  const total = Number(countRows[0]?.total ?? 0)
+  const pages = Math.max(1, Math.ceil(total / pageSize))
 
-  const insWhere = {}
-  if (anio) {
-    insWhere.anio = anio
+  // A page past the end is what a stale tab or a deletion leaves behind: serve
+  // the last page and say so, instead of an empty screen that reads as "no
+  // students".
+  const page = Math.min(requestedPage, pages)
+
+  if (total === 0) {
+    return { estudiantes: [], total, page: 1, pageSize, pages }
   }
-  if (seccion) {
-    insWhere.seccion = seccion
-  }
+
+  const idRows = await db.query(
+    `SELECT e.id FROM estudiantes e ${filter.sql}
+     ORDER BY e.primer_apellido, e.primer_nombre, e.id
+     LIMIT ? OFFSET ?`,
+    { values: [...filter.params, pageSize, (page - 1) * pageSize] },
+  )
+  const ids = idRows.map((row) => row.id)
+
+  // Hydrate only the page's students; the whole-table cross is gone.
+  const students = await db.tabla('estudiantes').select(null, null, { id: ids })
   const inscriptions = await db
     .tabla('inscripciones')
-    .select(null, null, Object.keys(insWhere).length > 0 ? insWhere : undefined, null, null, 'anio_escolar DESC')
+    .select(null, null, { estudiante_id: ids }, null, null, 'anio_escolar DESC, id DESC')
 
-  // First row per student is the most recent one because of the DESC order.
-  const latestByStudent = new Map()
+  const studentById = new Map(students.map((student) => [student.id, student]))
+  const inscriptionByStudent = new Map()
   for (const ins of inscriptions) {
-    if (!latestByStudent.has(ins.estudiante_id)) {
-      latestByStudent.set(ins.estudiante_id, ins)
+    if (anio && ins.anio !== anio) {
+      continue
+    }
+    if (seccion && ins.seccion !== seccion) {
+      continue
+    }
+    // DESC order: the first match per student is the most recent one.
+    if (!inscriptionByStudent.has(ins.estudiante_id)) {
+      inscriptionByStudent.set(ins.estudiante_id, ins)
     }
   }
 
   const estudiantes = []
-  for (const student of students) {
-    if ((anio || seccion) && !latestByStudent.has(student.id)) {
+  for (const id of ids) {
+    const student = studentById.get(id)
+    if (!student) {
       continue
     }
-    const ins = latestByStudent.get(student.id) ?? null
+    const ins = inscriptionByStudent.get(id) ?? null
     estudiantes.push({
       id: student.id,
       tipo_ci: student.tipo_ci,
@@ -247,7 +323,7 @@ async function listEstudiantes(filters = {}) {
     })
   }
 
-  return { estudiantes }
+  return { estudiantes, total, page, pageSize, pages }
 }
 
 /**

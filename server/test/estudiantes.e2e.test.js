@@ -553,9 +553,11 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
   })
 
   await t.test('filters the list by anio and seccion', async () => {
+    // pageSize=100: the assertion is about the filter, not about which page the
+    // fixture lands on once a real school has more than one page per section.
     const res = await api(
       'GET',
-      `/api/estudiantes?anio=${encodeURIComponent('1er Año')}&seccion=A`,
+      `/api/estudiantes?anio=${encodeURIComponent('1er Año')}&seccion=A&pageSize=100`,
     )
     assert.equal(res.status, 200)
     const body = await res.json()
@@ -595,7 +597,7 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     extraStudentIds.push(sectionStudentId)
     createdRepCis.push(sectionRepCi)
 
-    const res = await api('GET', '/api/estudiantes?seccion=C')
+    const res = await api('GET', '/api/estudiantes?seccion=C&pageSize=100')
     assert.equal(res.status, 200)
     const body = await res.json()
     const ids = body.estudiantes.map((student) => student.id)
@@ -612,6 +614,105 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     const body = await res.json()
     const found = body.estudiantes.find((student) => student.id === createdId)
     assert.equal(found, undefined)
+  })
+
+  // Pagination is only truthful if the filter runs in SQL: with the old
+  // in-memory cross the rows a page keeps depend on how many survive the filter,
+  // so a page could come back short or empty. Every case below is scoped by a
+  // token in the name, which isolates it from whatever else the database holds.
+  const pageToken = `pg${uniqueCi('77')}`
+
+  await t.test('the list is paginated with a count that follows the filter', async () => {
+    // Alphabetical on apellido so the expected order is not a guess.
+    for (const apellido of ['Alfa', 'Bravo', 'Charlie']) {
+      const repCi = uniqueCi('78')
+      const create = await api('POST', '/api/estudiantes', {
+        estudiante: {
+          ...contactoObligatorio,
+          tipo_ci: 'V',
+          numero_ci: uniqueCi('79'),
+          primer_nombre: pageToken,
+          primer_apellido: apellido,
+          fecha_nacimiento: '2012-06-06',
+          sexo: 'M',
+        },
+        inscripcion: {
+          anio_escolar: '2025-2026',
+          anio: '2do Año',
+          seccion: 'B',
+          fecha_inscripcion: '2025-09-15',
+        },
+        representantes: [
+          { ...repObligatorio, tipo_ci: 'V', numero_ci: repCi, nombre: `Rep ${pageToken}`, parentesco: 'Padre' },
+        ],
+        documentos: { ...allDocumentos },
+      })
+      assert.equal(create.status, 201)
+      const created = await create.json()
+      extraStudentIds.push(created.estudiante.id)
+      createdRepCis.push(repCi)
+    }
+
+    const first = await api('GET', `/api/estudiantes?q=${pageToken}&pageSize=2`)
+    assert.equal(first.status, 200)
+    const firstPage = await first.json()
+    assert.equal(firstPage.total, 3, 'total must count the filtered set, not the table')
+    assert.equal(firstPage.pages, 2)
+    assert.equal(firstPage.page, 1)
+    assert.equal(firstPage.pageSize, 2)
+    assert.equal(firstPage.estudiantes.length, 2)
+
+    const second = await api('GET', `/api/estudiantes?q=${pageToken}&pageSize=2&page=2`)
+    const secondPage = await second.json()
+    assert.equal(secondPage.estudiantes.length, 1)
+    assert.equal(secondPage.page, 2)
+
+    // Page one plus page two is the whole set, in the same order a single long
+    // page returns it: no row repeated, none skipped between pages.
+    const everything = await api('GET', `/api/estudiantes?q=${pageToken}&pageSize=100`)
+    const allIds = (await everything.json()).estudiantes.map((student) => student.id)
+    const pagedIds = [...firstPage.estudiantes, ...secondPage.estudiantes].map((student) => student.id)
+    assert.deepEqual(pagedIds, allIds, 'paging must be a split of the same ordered list')
+    assert.equal(new Set(pagedIds).size, 3, 'a row was repeated across pages')
+  })
+
+  await t.test('a page past the end clamps to the last one instead of coming back empty', async () => {
+    const res = await api('GET', `/api/estudiantes?q=${pageToken}&pageSize=2&page=99`)
+    assert.equal(res.status, 200)
+    const body = await res.json()
+    assert.equal(body.page, body.pages, 'the response must report the page it actually served')
+    assert.equal(body.estudiantes.length, 1)
+  })
+
+  await t.test('pageSize is capped so one request cannot ask for the whole table', async () => {
+    const res = await api('GET', `/api/estudiantes?q=${pageToken}&pageSize=5000`)
+    assert.equal(res.status, 200)
+    const body = await res.json()
+    assert.equal(body.pageSize, 100, 'pageSize must clamp to the documented maximum')
+
+    const junk = await api('GET', `/api/estudiantes?q=${pageToken}&page=abc&pageSize=xyz`)
+    assert.equal(junk.status, 200, 'junk paging parameters fall back to the defaults')
+    const junkBody = await junk.json()
+    assert.equal(junkBody.page, 1)
+    assert.equal(junkBody.pageSize, 20)
+  })
+
+  await t.test('pagination respects the inscription filters', async () => {
+    const matching = await api(
+      'GET',
+      `/api/estudiantes?q=${pageToken}&anio=${encodeURIComponent('2do Año')}&pageSize=2`,
+    )
+    const matchingBody = await matching.json()
+    assert.equal(matchingBody.total, 3)
+
+    const excluded = await api(
+      'GET',
+      `/api/estudiantes?q=${pageToken}&anio=${encodeURIComponent('3er Año')}&pageSize=2`,
+    )
+    const excludedBody = await excluded.json()
+    assert.equal(excludedBody.total, 0, 'the count must follow the same filter the rows use')
+    assert.equal(excludedBody.pages, 1)
+    assert.equal(excludedBody.estudiantes.length, 0)
   })
 
   await t.test('returns the full record by id', async () => {
