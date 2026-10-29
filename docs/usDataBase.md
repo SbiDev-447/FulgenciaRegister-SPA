@@ -5,8 +5,9 @@
 > usar para trabajar la base fuera del servidor (DBeaver, TablePlus, MySQL Workbench,
 > línea de comandos...).
 >
-> `DOCUMENTATION/` está en `.gitignore`: este archivo vive en tu máquina, no viaja al
-> repositorio. Si algún día quieres compartirlo, hay que sacarlo de esa lista.
+> Este archivo vive en `docs/` y **sí** está versionado: viaja con el repositorio. La
+> idea de dejarlo fuera fue de una versión anterior del proyecto; hoy se mantiene al día
+> con cada cambio de esquema, igual que `mermaid.md`.
 
 Todo lo que dice acá está comprobado contra la base real (octubre 2026). Cuando algo es
 una recomendación y no un hecho del sistema, lo digo explícitamente.
@@ -25,8 +26,9 @@ una recomendación y no un hecho del sistema, lo digo explícitamente.
 | Tablas | 7 (más abajo, el mapa) |
 | Migraciones | **No existen.** Ver §8, es importante |
 
-Volumen Docker `fulgencia-db-data`: ahí viven los datos de verdad. Si lo borras, la
-base vuelve a nacer vacía.
+Volumen Docker declarado `fulgencia-db-data` —Docker lo prefija con el nombre del
+proyecto, así que en la práctica aparece como `fulgenciaproject_fulgencia-db-data`—:
+ahí viven los datos de verdad. Si lo borras, la base vuelve a nacer vacía.
 
 ---
 
@@ -75,26 +77,47 @@ const estudiantes = await db.tabla('estudiantes').select()
 await db.tabla('estudiante_representante').insert({ estudiante_id, representante_id, parentesco })
 ```
 
-API de `db.tabla(...)` (la de `dbtabla`):
+API de `db.tabla(...)` (la de `dbtabla`). La forma normal de llamarla es **con un objeto
+de opciones**, no con argumentos posicionales: contar posiciones es cómo se cuelan los
+`undefined` en el lugar equivocado, y una consulta que olvida el tercer argumento
+devuelve otra cosa sin avisar.
 
-| Método | Firma | Para qué |
-| ------ | ----- | -------- |
-| `select` | `select(campos, joins, where, group, having, order, limit)` | Leer |
-| `selectOne` | `selectOne(where)` | Leer una fila |
+| Método | Firma (forma objeto) | Para qué |
+| ------ | -------------------- | -------- |
+| `select` | `select({ campos, joins, where, group, having, order, limit })` | Leer |
+| `selectOne` | `selectOne({ where })` | Leer una fila |
+| `selectById` | `selectById(id)` | Leer por clave primaria — **usa este, no `selectOne`** |
+| `paginate` | `paginate({ campos, where, order, page, limit })` | Página + `{ data, total, page, limit, totalPages, hasNext, hasPrev }` |
+| `busqueda` | `busqueda({ cadena, campo_bus, campos, where, order })` | Buscar con puntaje |
+| `busquedaPaginate` | `busquedaPaginate({ cadena, campo_bus, campos, where, order, page, limit })` | Buscar + paginar |
+| `busquedaPaginada` | `busquedaPaginada({ ... })` | Variante con cursor |
 | `insert` | `insert(datos)` | Insertar |
-| `update` | `update(sets, where)` | Actualizar |
-| `delete` | `delete(where)` | Borrar |
-| `query` | SQL crudo, cuando hace falta | Escape hatch |
+| `insertAll` | `insertAll([datos, ...])` | Insertar en lote |
+| `update` | `update(sets, { where })` | Actualizar |
+| `updateById` | `updateById(id, sets)` | Actualizar por PK |
+| `delete` | `delete({ where })` | Borrar |
+| `deleteById` | `deleteById(id)` | Borrar por PK |
+| `ready` | `ready()` | Esperar a que la tabla exista |
+| `lastSql` | propiedad (`string`) | El último SQL armado, para depurar |
 
-Ojo con **quién** tiene cada método: `select`, `selectOne`, `insert`, `update` y
-`delete` viven en el objeto que devuelve `db.tabla('x')`. Sobre `db` directamente solo
-hay `tabla`, `query`, `createAllTables`, `addModel` y `end` (lo comprobé con `typeof`,
-no lo digo de memoria).
+Detalles que cuestan una tarde si no se saben:
 
-El `where` acepta objeto (`{ id: 5 }`) **o SQL crudo** — de ahí que la purga pueda
-escribir `NOT EXISTS (...)` como condición. Es cómodo y también es la puerta por
-donde se cuela SQL mal armado: si algún día interpolas texto de usuario en un `where`,
-tienes inyección.
+- **No existe `offset`.** La paginación va en `limit: [desplazamiento, cantidad]`, que
+  se traduce a `LIMIT desplazamiento,cantidad`.
+- **`selectOne({ where })` pierde el `LIMIT 1`**: la rama de objeto ignora los
+  posicionales. Para una fila por clave primaria usa `selectById(id)`.
+- **El `where` objeto** acepta un `%` al final del valor para `LIKE`, y el prefijo `||`
+  para encadenar con `OR`. Solo expresa condiciones de la tabla que estás consultando.
+- **No usa placeholders**: interpola los valores escapándolos. Un `%` escrito en un
+  buscador actúa de comodín. Sigue siendo más seguro que armar el SQL a mano, pero no
+  es una barrera contra texto de usuario: eso lo hace la validación del servidor.
+- **Un `where` como string en SQL crudo sigue funcionando** — de ahí que la purga pueda
+  escribir `NOT EXISTS (...)`. Es cómodo y es la puerta por donde se cuela SQL mal
+  armado: si algún día interpolas texto de usuario ahí, tienes inyección.
+
+Y el SQL de verdad, el que no es una consulta a una tabla, va por `db.query(sql)` —
+DDL, `TRUNCATE`, los `CREATE TABLE` de `createAllTables()`. Sobre `db` directamente hay
+`tabla`, `query`, `createAllTables`, `addModel` y `end` (comprobado con `typeof`).
 
 El servidor arranca con `node --env-file-if-exists=../.env`, así que lee el `.env` de
 la raíz sin librerías extra (`scripts` en `server/package.json`).
@@ -110,9 +133,15 @@ pnpm db:up        # docker compose up -d    → levanta MariaDB
 pnpm db:down      # docker compose down     → la apaga (los datos QUEDAN)
 pnpm db:reset     # down -v && up -d        → BORRA el volumen: adiós datos
 pnpm db:seed      # crea las tablas que falten + usuario admin
+pnpm db:demo      # 30 estudiantes de demostración (vacía las tablas de personas)
+pnpm db:repair-schema   # ensancha columnas que quedaron cortas, sin tocar datos
 ```
 
-`db:reset` destruye el volumen. Es la única orden de esa lista que pierde datos.
+`db:reset` destruye el volumen entero. `db:demo` es el otro comando que se lleva datos
+por delante: vacía `documentos_emitidos`, `documentos_consignados`,
+`estudiante_representante`, `inscripciones`, `estudiantes` y `representantes` —**no
+toca `usuarios`**— y siembra 30 estudiantes deterministas e idempotentes. Es para tener
+algo que mirar en desarrollo, nunca para una base con datos reales.
 
 El `docker-compose.yml` tiene `restart: "no"` a propósito: en un portátil, la base no
 debe arrancar sola al encender el equipo. Hay que pedirla.
@@ -450,10 +479,11 @@ el **servidor** (`server/src/constants/academic.js` para años y secciones,
 `constants/documentos.js` para los tipos de documento, más los validadores del módulo
 de estudiantes).
 
-La prueba está en los datos actuales de tu base de desarrollo: hay
-`pais_nacimiento = 'sjnjswj'`, `parentesco = 'SMKSNK'`, `primer_nombre = 'Otro Nombre'`
-y cédulas de relleno. La base los aceptó sin chistar porque **no tiene forma de
-rechazarlos**.
+La prueba: en una base de pruebas se aceptaron sin chistar cosas como
+`pais_nacimiento = 'sjnjswj'`, `parentesco = 'SMKSNK'` y cédulas de relleno. La base las
+guardó porque **no tiene forma de rechazarlas**. Si quieres comprobarlo en la tuya, corre
+`pnpm db:demo` (siembra datos de demostración válidos) y después inserta un valor absurdo
+por SQL: entra igual.
 
 Consecuencia: la base confía en quien escribe. Un `INSERT` desde un IDE, un script
 suelto o un endpoint nuevo que olvide validar pueden meter basura que después aparece
@@ -802,8 +832,13 @@ pnpm db:up                          # levantarla
 pnpm db:down                        # apagarla (conserva datos)
 pnpm db:seed                        # crear tablas faltantes + admin
 pnpm db:reset && pnpm db:seed       # recrear desde cero (BORRA datos)
+pnpm db:demo                        # 30 estudiantes de demostración (BORRA personas)
+pnpm db:repair-schema               # ensanchar columnas cortas, sin tocar datos
 pnpm db:purge-orphans               # auditar representantes huérfanos (no borra)
 pnpm db:purge-orphans --apply       # borrarlos de verdad
+pnpm db:dump                        # respaldo en backups/<base>-<fecha>.sql
+pnpm db:restore                     # decir qué haría con el último respaldo
+pnpm db:restore backups/x.sql --apply   # restaurarlo de verdad
 
 # Cliente SQL dentro del contenedor
 set -a; . ./.env; set +a
