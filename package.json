@@ -14,6 +14,7 @@
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d",
     "db:seed": "pnpm --filter @fulgencia/server db:seed",
+    "db:demo": "pnpm --filter @fulgencia/server db:demo",
     "db:purge-orphans": "pnpm --filter @fulgencia/server db:purge-orphans",
     "db:repair-schema": "pnpm --filter @fulgencia/server db:repair-schema",
     "db:dump": "pnpm --filter @fulgencia/server db:dump",

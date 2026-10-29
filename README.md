@@ -16,14 +16,15 @@
 
 | Componente | Estado |
 | ---------- | ------ |
-| Backend (API REST) | Listo — 99 pruebas en verde |
+| Backend (API REST) | Listo — 105 pruebas (104 en verde, 1 saltada sin base) |
 | Base de datos (MariaDB) | Listo — esquema y datos semilla |
-| Frontend (SPA) | Inicio y Estudiantes listos — 55 pruebas en verde |
+| Frontend (SPA) | Listo — 81 pruebas en verde |
 
-El backend está completo y cubierto por pruebas. En la SPA ya funcionan el shell,
-el router, los temas y las vistas de Inicio y Estudiantes (lista, búsqueda, ficha,
-edición y borrado con confirmación); la vista de Documentos está en construcción, y la
-sección "Alcance" describe lo planificado.
+El backend está completo y cubierto por pruebas. En la SPA funcionan el shell, el router,
+los temas y las cuatro vistas: Inicio (estadísticas), Estudiantes (lista paginada,
+búsqueda, ficha, edición y borrado con confirmación), Nueva inscripción y Documentos
+(verificación por cédula y los cuatro documentos imprimibles). La sección "Alcance"
+describe el alcance funcional, no trabajo pendiente.
 
 ## Alcance
 
@@ -158,6 +159,7 @@ enlace directo o una recarga funcionan igual.
 | `pnpm db:up` / `pnpm db:down` | Levantar / detener MariaDB |
 | `pnpm db:reset` | Recrear la base de datos (borra los datos) |
 | `pnpm db:seed` | Crear tablas y datos semilla |
+| `pnpm db:demo` | Llenar la base con 30 estudiantes de demostración (borra los datos de personas, conserva los usuarios) |
 | `pnpm db:purge-orphans` | Borrar representantes que quedaron sin ningún estudiante (ver abajo) |
 | `pnpm db:repair-schema` | Ensanchar columnas que quedaron demasiado pequeñas (ver abajo) |
 | `pnpm db:dump` | Guardar una copia de la base de datos en `backups/` (ver abajo) |
