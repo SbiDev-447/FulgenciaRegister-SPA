@@ -21,7 +21,7 @@ const LIST_FIELDS = ['id', 'tipo_ci', 'numero_ci', 'nombre', 'telefono', 'correo
  * @returns {Promise<Array<object>>}
  */
 function listOrphanRepresentantes() {
-  return db.tabla('representantes').select(LIST_FIELDS, null, NO_STUDENT_LEFT, null, null, 'id')
+  return db.tabla('representantes').select({ campos: LIST_FIELDS, where: NO_STUDENT_LEFT, order: 'id' })
 }
 
 /**
@@ -56,7 +56,7 @@ async function purgeOrphanRepresentantes({ apply = false, ids } = {}) {
   // Read back instead of assuming: the report comes from the database. A row can
   // be missing from the orphan list either because this run deleted it or because
   // an inscription claimed it in between, and only a lookup tells them apart.
-  const survivors = await db.tabla('representantes').select(['id'], null, { id: scope }, null, null, null)
+  const survivors = await db.tabla('representantes').select({ campos: ['id'], where: { id: scope } })
   const aliveIds = new Set(survivors.map((rep) => rep.id))
   return {
     found,

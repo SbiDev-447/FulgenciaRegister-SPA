@@ -27,7 +27,7 @@ function toPublicUser(row) {
  * @returns {Promise<{ token: string, usuario: object }>}
  */
 async function login(usuario, clientHash) {
-  const row = await db.tabla('usuarios').selectOne(null, null, { usuario })
+  const row = await db.tabla('usuarios').selectOne({ where: { usuario } })
 
   // Generic error for both unknown user and bad password. checkCredentials runs
   // the KDF even for unknown users, so timing does not leak user existence.
@@ -47,7 +47,7 @@ async function login(usuario, clientHash) {
  * @returns {Promise<object|null>}
  */
 async function getById(id) {
-  const row = await db.tabla('usuarios').selectOne(null, null, { id })
+  const row = await db.tabla('usuarios').selectById(id)
   return row ? toPublicUser(row) : null
 }
 

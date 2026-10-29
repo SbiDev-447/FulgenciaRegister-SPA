@@ -163,3 +163,29 @@ Al pegar, `parseLatamDate` acepta además `04-03-2010`, `4.3.2010` y `04032010`.
 - El orden es total (`primer_apellido`, `primer_nombre`, `id`). Con un orden que
   empata, MySQL puede contestar cada página en un orden distinto y repetir una fila
   mientras salta otra.
+
+### Sintaxis de objeto en `dbtabla` (mysql-tab)
+
+Las consultas del servidor usan la forma con nombre, no la posicional:
+
+```js
+db.tabla('estudiantes').selectById(id)               // clave primaria
+db.tabla('estudiantes').select({ where: { id: ids }, order: 'anio_escolar DESC' })
+db.tabla('usuarios').selectOne({ where: { usuario } })
+```
+
+La forma posicional (`select(null, null, { id }, null, null, 'orden')`) obliga a contar
+posiciones para saber si el tercer argumento es `where` o ya es `order`. La forma objeto
+viene de `dbtabla@2.2.10` y acepta `campos`, `joins`, `where`, `group`, `having`, `order`,
+`limit`. Dos cosas que la documentación no dice:
+
+- **No hay clave `offset`.** El offset va dentro de `limit: [offset, cantidad]`, que
+  genera `LIMIT offset,cantidad`.
+- **`selectOne({ where })` pierde el `LIMIT 1`.** `selectOne` pasa el 1 como séptimo
+  argumento posicional, y la rama de objeto ignora los posicionales: devuelve todas las
+  filas y se queda con la primera. El resultado es el correcto, pero deja de traer una
+  sola fila. Para clave primaria, `selectById` no tiene ese problema.
+
+Quedan dos consultas en `listEstudiantes` con `db.query` y `?` a propósito: un
+`COUNT(*)` y un `EXISTS` sobre otra tabla no se expresan con el objeto `where`, y pasar
+el filtro como string perdería los valores enlazados.

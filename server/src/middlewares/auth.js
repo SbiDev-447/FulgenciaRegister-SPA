@@ -29,7 +29,7 @@ async function requireAuth(req, res, next) {
   }
 
   try {
-    const row = await db.tabla('usuarios').selectOne(null, null, { id: payload.sub })
+    const row = await db.tabla('usuarios').selectById(payload.sub)
     if (!row) {
       return next(HttpError.unauthorized())
     }

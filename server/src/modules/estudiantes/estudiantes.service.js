@@ -130,18 +130,18 @@ function toDuplicateError(error) {
  * @returns {Promise<object|null>} null when the student does not exist
  */
 async function getFullRecord(studentId) {
-  const student = await db.tabla('estudiantes').selectOne(null, null, { id: studentId })
+  const student = await db.tabla('estudiantes').selectById(studentId)
   if (!student) {
     return null
   }
 
   const inscripciones = await db
     .tabla('inscripciones')
-    .select(null, null, { estudiante_id: studentId }, null, null, 'anio_escolar DESC')
+    .select({ where: { estudiante_id: studentId }, order: 'anio_escolar DESC' })
 
   const insIds = inscripciones.map((row) => row.id)
   const docRows = insIds.length > 0
-    ? await db.tabla('documentos_consignados').select(null, null, { inscripcion_id: insIds })
+    ? await db.tabla('documentos_consignados').select({ where: { inscripcion_id: insIds } })
     : []
   const docsByInscripcion = new Map(docRows.map((row) => [row.inscripcion_id, row]))
 
@@ -152,12 +152,12 @@ async function getFullRecord(studentId) {
 
   const links = await db
     .tabla('estudiante_representante')
-    .select(null, null, { estudiante_id: studentId })
+    .select({ where: { estudiante_id: studentId } })
   const repIds = links.map((link) => link.representante_id)
 
   let representantes = []
   if (repIds.length > 0) {
-    const reps = await db.tabla('representantes').select(null, null, { id: repIds })
+    const reps = await db.tabla('representantes').select({ where: { id: repIds } })
     const repById = new Map(reps.map((rep) => [rep.id, rep]))
     representantes = links
       .map((link) => {
@@ -282,10 +282,10 @@ async function listEstudiantes(filters = {}) {
   const ids = idRows.map((row) => row.id)
 
   // Hydrate only the page's students; the whole-table cross is gone.
-  const students = await db.tabla('estudiantes').select(null, null, { id: ids })
+  const students = await db.tabla('estudiantes').select({ where: { id: ids } })
   const inscriptions = await db
     .tabla('inscripciones')
-    .select(null, null, { estudiante_id: ids }, null, null, 'anio_escolar DESC, id DESC')
+    .select({ where: { estudiante_id: ids }, order: 'anio_escolar DESC, id DESC' })
 
   const studentById = new Map(students.map((student) => [student.id, student]))
   const inscriptionByStudent = new Map()
@@ -335,7 +335,7 @@ async function listEstudiantes(filters = {}) {
 async function findOrCreateRepresentante(data) {
   const existing = await db
     .tabla('representantes')
-    .selectOne(null, null, cedulaWhere(data.tipo_ci, data.numero_ci))
+    .selectOne({ where: cedulaWhere(data.tipo_ci, data.numero_ci) })
   if (existing) {
     return { id: existing.id }
   }
@@ -420,7 +420,7 @@ async function createEstudiante(payload) {
 async function updateEstudiante(id, payload) {
   const { estudiante, inscripcion, representantes, documentos } = payload
 
-  const existing = await db.tabla('estudiantes').selectOne(null, null, { id })
+  const existing = await db.tabla('estudiantes').selectById(id)
   if (!existing) {
     return null
   }
@@ -459,7 +459,7 @@ async function updateEstudiante(id, payload) {
     if (inscripcion) {
       const ins = await db
         .tabla('inscripciones')
-        .selectOne(null, null, { estudiante_id: id, anio_escolar: inscripcion.anio_escolar })
+        .selectOne({ where: { estudiante_id: id, anio_escolar: inscripcion.anio_escolar } })
       if (!ins) {
         throw HttpError.notFound('Inscription not found for the given anio_escolar')
       }
@@ -479,7 +479,7 @@ async function updateEstudiante(id, payload) {
       if (documentos && Object.keys(documentos).length > 0) {
         const docRow = await db
           .tabla('documentos_consignados')
-          .selectOne(null, null, { inscripcion_id: ins.id })
+          .selectOne({ where: { inscripcion_id: ins.id } })
         const docSets = pickDocuments(documentos)
         if (docRow) {
           await db.tabla('documentos_consignados').update(docSets, { id: docRow.id })
@@ -513,7 +513,7 @@ async function updateEstudiante(id, payload) {
 async function reconcileRepresentantes(estudianteId, representantes) {
   const links = await db
     .tabla('estudiante_representante')
-    .select(null, null, { estudiante_id: estudianteId })
+    .select({ where: { estudiante_id: estudianteId } })
   const currentById = new Map(links.map((link) => [link.representante_id, link]))
 
   const resolved = []
@@ -560,7 +560,7 @@ async function reconcileRepresentantes(estudianteId, representantes) {
 async function deleteEstudiante(id) {
   await db.beginTransaction()
   try {
-    const existing = await db.tabla('estudiantes').selectOne(null, null, { id })
+    const existing = await db.tabla('estudiantes').selectById(id)
     if (!existing) {
       await db.rollback().catch(() => {})
       return false
@@ -568,14 +568,14 @@ async function deleteEstudiante(id) {
 
     const links = await db
       .tabla('estudiante_representante')
-      .select(null, null, { estudiante_id: id })
+      .select({ where: { estudiante_id: id } })
 
     await db.tabla('estudiantes').delete({ id })
 
     for (const { representante_id: representanteId } of links) {
       const remaining = await db
         .tabla('estudiante_representante')
-        .select(null, null, { representante_id: representanteId })
+        .select({ where: { representante_id: representanteId } })
       if (remaining.length === 0) {
         await db.tabla('representantes').delete({ id: representanteId })
       }

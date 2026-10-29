@@ -21,7 +21,7 @@ async function seed() {
   await db.createAllTables()
 
   const usuarios = db.tabla('usuarios')
-  const existing = await usuarios.selectOne(`usuario = '${DEFAULT_USER.usuario}'`)
+  const existing = await usuarios.selectOne({ where: { usuario: DEFAULT_USER.usuario } })
 
   if (existing) {
     console.log(`Seed: user "${DEFAULT_USER.usuario}" already exists, skipping.`)

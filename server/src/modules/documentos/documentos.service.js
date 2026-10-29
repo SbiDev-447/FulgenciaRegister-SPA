@@ -14,7 +14,7 @@ const { parseCedula, cedulaWhere } = require('../../utils/cedula')
 async function buildRepresentante(studentId) {
   const links = await db
     .tabla('estudiante_representante')
-    .select(null, null, { estudiante_id: studentId }, null, null, 'representante_id ASC')
+    .select({ where: { estudiante_id: studentId }, order: 'representante_id ASC' })
   const link = links[0]
   if (!link) {
     return null
@@ -22,7 +22,7 @@ async function buildRepresentante(studentId) {
 
   const rep = await db
     .tabla('representantes')
-    .selectOne(null, null, { id: link.representante_id })
+    .selectById(link.representante_id)
   if (!rep) {
     return null
   }
@@ -65,7 +65,7 @@ function toDateOnly(value) {
 async function buildStudentSummary(student) {
   const inscriptions = await db
     .tabla('inscripciones')
-    .select(null, null, { estudiante_id: student.id }, null, null, 'anio_escolar DESC')
+    .select({ where: { estudiante_id: student.id }, order: 'anio_escolar DESC' })
   const latest = inscriptions[0] ?? null
   const nombreCompleto = [
     student.primer_apellido,
@@ -107,7 +107,7 @@ async function verificar(rawCedula) {
 
   const student = await db
     .tabla('estudiantes')
-    .selectOne(null, null, cedulaWhere(cedula.tipo_ci, cedula.numero_ci))
+    .selectOne({ where: cedulaWhere(cedula.tipo_ci, cedula.numero_ci) })
   if (!student) {
     throw HttpError.notFound('Estudiante not found')
   }
@@ -123,7 +123,7 @@ async function verificar(rawCedula) {
  * @throws {HttpError} 404 when the student does not exist
  */
 async function emitir({ tipo, estudiante_id, usuario_id }) {
-  const student = await db.tabla('estudiantes').selectOne(null, null, { id: estudiante_id })
+  const student = await db.tabla('estudiantes').selectById(estudiante_id)
   if (!student) {
     throw HttpError.notFound('Estudiante not found')
   }
@@ -133,7 +133,7 @@ async function emitir({ tipo, estudiante_id, usuario_id }) {
     .insert({ estudiante_id, tipo, usuario_id })
   const documento = await db
     .tabla('documentos_emitidos')
-    .selectOne(null, null, { id: inserted.insertId })
+    .selectById(inserted.insertId)
 
   return { documento, estudiante: await buildStudentSummary(student) }
 }

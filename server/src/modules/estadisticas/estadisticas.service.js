@@ -80,7 +80,7 @@ async function getEstadisticas(filters = {}) {
     documentosEmitidos = 0
   } else {
     documentosEmitidos = (
-      await db.tabla('documentos_emitidos').select(null, null, { estudiante_id: [...matchingIds] })
+      await db.tabla('documentos_emitidos').select({ where: { estudiante_id: [...matchingIds] } })
     ).length
   }
 
