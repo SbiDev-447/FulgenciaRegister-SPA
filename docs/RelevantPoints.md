@@ -153,16 +153,27 @@ Al pegar, `parseLatamDate` acepta además `04-03-2010`, `4.3.2010` y `04032010`.
 - `page` es 1-based; `pageSize` tiene techo de **100** y por defecto 20. Valores
   basura (`page=abc`) caen al default en vez de fallar: un marcador viejo tiene que
   seguir mostrando filas.
-- `total` cuenta **el conjunto filtrado**, no la tabla: es el mismo predicado SQL que
-  elige las filas, para que el resumen nunca contradiga la tabla.
+- `total` cuenta **el conjunto filtrado**, no la tabla: lo calcula la misma consulta que
+  elige las filas, así que el resumen no puede contradecir la tabla.
 - Una `page` fuera de rango se sirve como la última, y la respuesta informa la página
   que realmente sirvió.
-- `anio`/`seccion` se resuelven con `EXISTS` en SQL y **antes** del `LIMIT`. Filtrar
-  después de limitar dejaría páginas cortas o vacías — es la razón por la que la
-  versión anterior (cruzar todo en memoria) no podía paginar.
+- `anio`/`seccion` se resuelven **antes** del `LIMIT`: se piden los `estudiante_id` de
+  las inscripciones que cumplen y se suman como condición. Filtrar después de limitar
+  dejaría páginas cortas o vacías — es la razón por la que la versión anterior (cruzar
+  todo en memoria) no podía paginar.
 - El orden es total (`primer_apellido`, `primer_nombre`, `id`). Con un orden que
   empata, MySQL puede contestar cada página en un orden distinto y repetir una fila
-  mientras salta otra.
+  mientras salta otra. Con `q` el orden es `puntaje_busqueda DESC` y esa cola
+  alfabética rompe los empates del puntaje.
+
+La paginación y el conteo los hace la librería, no SQL escrito a mano:
+
+```js
+db.tabla('estudiantes').paginate({ campos, where, order, page, limit })
+db.tabla('estudiantes').busquedaPaginate({ cadena, campo_bus, campos, where, order, page, limit })
+```
+
+Ambas devuelven `{ data, total, page, limit, totalPages, hasNext, hasPrev }`.
 
 ### Sintaxis de objeto en `dbtabla` (mysql-tab)
 
@@ -186,6 +197,12 @@ viene de `dbtabla@2.2.10` y acepta `campos`, `joins`, `where`, `group`, `having`
   filas y se queda con la primera. El resultado es el correcto, pero deja de traer una
   sola fila. Para clave primaria, `selectById` no tiene ese problema.
 
-Quedan dos consultas en `listEstudiantes` con `db.query` y `?` a propósito: un
-`COUNT(*)` y un `EXISTS` sobre otra tabla no se expresan con el objeto `where`, y pasar
-el filtro como string perdería los valores enlazados.
+`paginate` y `busquedaPaginate` existen desde `dbtabla@2.3.1`; el proyecto está en esa
+versión porque `mysql-tab@2.1.4` la resuelve (declara `^2.2.9`). Antes de ella había que
+escribir el `COUNT(*)` y el `LIMIT` a mano.
+
+La búsqueda de `busquedaPaginate` no es `MATCH AGAINST`: arma un `CASE ... LIKE` por
+columna con puntaje (valor exacto 10, prefijo 6, subcadena 4, y lo mismo por palabra) y
+**no necesita índice `FULLTEXT`**. Sigue encontrando por subcadena de cédula. En 2.2.10
+el umbral del puntaje era `>1`, así que una coincidencia en una sola columna no
+aparecía; 2.3.1 lo bajó a `>0`.

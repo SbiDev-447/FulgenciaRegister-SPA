@@ -20,7 +20,7 @@
     "cookie-parser": "1.4.7",
     "express": "5.3.0",
     "jsonwebtoken": "9.0.3",
-    "mysql-tab": "2.1.1",
+    "mysql-tab": "2.1.4",
     "tabla-model": "2.0.6"
   }
 }

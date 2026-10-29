@@ -182,49 +182,62 @@ async function getFullRecord(studentId) {
 const DEFAULT_PAGE_SIZE = 20
 const MAX_PAGE_SIZE = 100
 
+// Columns the search box looks at: both names, both surnames and the identity
+// card, because the office searches by whatever the parent says on the phone.
+const SEARCH_FIELDS = [
+  'primer_nombre',
+  'segundo_nombre',
+  'primer_apellido',
+  'segundo_apellido',
+  'numero_ci',
+]
+
+// The list shows a summary, not the record: hydrate the rest only when one
+// student is opened.
+const LIST_FIELDS = [
+  'id',
+  'tipo_ci',
+  'numero_ci',
+  'primer_nombre',
+  'primer_apellido',
+  'sexo',
+  'telefono',
+]
+
+// A total order is not decoration: paging over an order with ties can show the
+// same row on two pages and skip another, because MySQL is free to answer each
+// query in a different order.
+const LIST_ORDER = 'primer_apellido, primer_nombre, id'
+// Searching ranks by relevance first; the alphabetical tail breaks score ties so
+// the order stays total.
+const SEARCH_ORDER = 'puntaje_busqueda DESC, primer_apellido, primer_nombre, id'
+
 /**
- * The SQL predicate shared by the count and the page query, so the number in
- * the summary can never disagree with the rows.
+ * Ids of the students holding an inscription that matches the filters.
  *
- * It has to run in the database: the previous version loaded every student and
- * every inscription and filtered in memory, which makes a `LIMIT` a lie — the
- * rows dropped by the filter are dropped *after* the limit is chosen, so a page
- * comes back short or empty.
- * @param {{ q?: string, anio?: string, seccion?: string }} filters
- * @returns {{ sql: string, params: Array }} `sql` starts with WHERE, or is ''
+ * The filter lives on another table, and the query builders express conditions
+ * on the table being queried, so the ids are resolved first and handed over as
+ * one more condition. The inscription row shown afterwards is a separate
+ * concern: this only decides *who* is on the page.
+ * @param {string} [anio]
+ * @param {string} [seccion]
+ * @returns {Promise<number[] | null>} null when there is nothing to filter
  */
-function buildListFilter({ q, anio, seccion }) {
-  const clauses = []
-  const params = []
-
-  if (q !== undefined && q !== null && typeof q === 'string' && q.trim() !== '') {
-    const term = `%${q.trim()}%`
-    clauses.push(
-      '(e.primer_nombre LIKE ? OR e.segundo_nombre LIKE ? OR e.primer_apellido LIKE ?' +
-        ' OR e.segundo_apellido LIKE ? OR e.numero_ci LIKE ?)',
-    )
-    params.push(term, term, term, term, term)
+async function inscriptionFilter(anio, seccion) {
+  if (!anio && !seccion) {
+    return null
   }
-
-  // A student matches the inscription filters when they hold a matching
-  // inscription: the row shown afterwards is that same inscription, not the
-  // most recent one overall.
-  if (anio || seccion) {
-    const conditions = []
-    if (anio) {
-      conditions.push('i.anio = ?')
-      params.push(anio)
-    }
-    if (seccion) {
-      conditions.push('i.seccion = ?')
-      params.push(seccion)
-    }
-    clauses.push(
-      `EXISTS (SELECT 1 FROM inscripciones i WHERE i.estudiante_id = e.id AND ${conditions.join(' AND ')})`,
-    )
+  const where = {}
+  if (anio) {
+    where.anio = anio
   }
-
-  return { sql: clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '', params }
+  if (seccion) {
+    where.seccion = seccion
+  }
+  const rows = await db
+    .tabla('inscripciones')
+    .select({ campos: ['estudiante_id'], where })
+  return [...new Set(rows.map((row) => row.estudiante_id))]
 }
 
 /**
@@ -245,9 +258,11 @@ function toPositiveInt(value, fallback, max = Number.MAX_SAFE_INTEGER) {
 /**
  * List one page of students with optional filters.
  *
- * The order is total (apellido, nombre, id): paging over an order with ties can
- * show the same row on two pages and skip another, because MySQL is free to
- * answer each query in a different order.
+ * Paging and counting are the library's job: `paginate` returns the page and the
+ * total from the same filter, so the number in the summary can never disagree
+ * with the rows. `busquedaPaginate` does the same for the search box, scoring
+ * every column by how well it matches (whole value, prefix, substring) instead
+ * of one flat LIKE.
  * @param {{ q?: string, anio?: string, seccion?: string, page?: unknown, pageSize?: unknown }} filters
  * @returns {Promise<{ estudiantes: Array, total: number, page: number, pageSize: number, pages: number }>}
  */
@@ -255,39 +270,49 @@ async function listEstudiantes(filters = {}) {
   const { q, anio, seccion } = filters
   const pageSize = toPositiveInt(filters.pageSize, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
   const requestedPage = toPositiveInt(filters.page, 1)
-  const filter = buildListFilter({ q, anio, seccion })
 
-  const countRows = await db.query(
-    `SELECT COUNT(*) AS total FROM estudiantes e ${filter.sql}`,
-    { values: filter.params },
-  )
-  const total = Number(countRows[0]?.total ?? 0)
-  const pages = Math.max(1, Math.ceil(total / pageSize))
+  const matchingIds = await inscriptionFilter(anio, seccion)
+  if (matchingIds !== null && matchingIds.length === 0) {
+    return { estudiantes: [], total: 0, page: 1, pageSize, pages: 1 }
+  }
+  const where = matchingIds === null ? undefined : { id: matchingIds }
+  const term = typeof q === 'string' ? q.trim() : ''
+  const tabla = db.tabla('estudiantes')
+
+  const pageOf = (page) =>
+    term
+      ? tabla.busquedaPaginate({
+          cadena: term,
+          campo_bus: SEARCH_FIELDS,
+          campos: LIST_FIELDS,
+          where,
+          order: SEARCH_ORDER,
+          page,
+          limit: pageSize,
+        })
+      : tabla.paginate({ campos: LIST_FIELDS, where, order: LIST_ORDER, page, limit: pageSize })
+
+  const first = await pageOf(requestedPage)
+  const pages = Math.max(1, Math.ceil(first.total / pageSize))
 
   // A page past the end is what a stale tab or a deletion leaves behind: serve
   // the last page and say so, instead of an empty screen that reads as "no
   // students".
   const page = Math.min(requestedPage, pages)
+  const result = page === requestedPage ? first : await pageOf(page)
+  const ids = result.data.map((student) => student.id)
 
-  if (total === 0) {
-    return { estudiantes: [], total, page: 1, pageSize, pages }
+  if (ids.length === 0) {
+    return { estudiantes: [], total: result.total, page: 1, pageSize, pages: 1 }
   }
 
-  const idRows = await db.query(
-    `SELECT e.id FROM estudiantes e ${filter.sql}
-     ORDER BY e.primer_apellido, e.primer_nombre, e.id
-     LIMIT ? OFFSET ?`,
-    { values: [...filter.params, pageSize, (page - 1) * pageSize] },
-  )
-  const ids = idRows.map((row) => row.id)
-
-  // Hydrate only the page's students; the whole-table cross is gone.
-  const students = await db.tabla('estudiantes').select({ where: { id: ids } })
+  // The page already carries the summary fields; only the inscriptions still
+  // have to be fetched, and only for these ids.
   const inscriptions = await db
     .tabla('inscripciones')
     .select({ where: { estudiante_id: ids }, order: 'anio_escolar DESC, id DESC' })
 
-  const studentById = new Map(students.map((student) => [student.id, student]))
+  const studentById = new Map(result.data.map((student) => [student.id, student]))
   const inscriptionByStudent = new Map()
   for (const ins of inscriptions) {
     if (anio && ins.anio !== anio) {
@@ -323,7 +348,7 @@ async function listEstudiantes(filters = {}) {
     })
   }
 
-  return { estudiantes, total, page, pageSize, pages }
+  return { estudiantes, total: result.total, page, pageSize, pages }
 }
 
 /**
