@@ -353,7 +353,7 @@ export function renderAjustes(container, { user } = {}) {
         h('h3', { class: 'ajustes__block-title', text: 'Representantes huérfanos' }),
         h('p', {
           class: 'ajustes__meta',
-          text: 'Un representante queda huérfano cuando ningún estudiante lo referencia. Se borra sólo ese caso: al compartir hermanos, la fila se elimina cuando el último la suelta.',
+          text: 'Un representante queda huérfano cuando ya no tiene ningún estudiante a su cargo. Sólo se borran esos casos: si un papá tiene tres hijos en el liceo, se elimina cuando el último deja de tenerlo asignado.',
         }),
         orphanSummary,
         orphanList,
