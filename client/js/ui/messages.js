@@ -14,6 +14,8 @@ const BY_CODE = {
   forbidden: 'No tienes permiso para hacer esto.',
   not_found: 'No se encontró el registro solicitado.',
   conflict: 'Ese registro ya existe.',
+  payload_too_large: 'El archivo es demasiado grande (máximo 2 MB).',
+  backup_failed: 'No se pudo crear el backup. Revisa que la base de datos esté levantada.',
   network_error: 'No se pudo conectar con el servidor.',
 }
 

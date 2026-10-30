@@ -178,13 +178,23 @@ const ASSET_BASE = './assets/skeletons/'
  * Image `src` values are rebased: the logos are siblings of the skeleton file,
  * and once the sheet is embedded in the app a bare `./x.webp` would resolve
  * against the app URL, 404, and print as its alt text.
+ *
+ * `logoUrl` replaces the ministry logo with the one uploaded in Ajustes. It is
+ * the only image swapped: the school shield is not a setting, and the four
+ * skeletons name the ministry file explicitly, which is what this matches.
  * @param {string} html
+ * @param {{ logoUrl?: string|null }} [options]
  * @returns {string}
  */
-export function extractSheet(html) {
+export function extractSheet(html, { logoUrl } = {}) {
   const match = /<main class="sheet">[\s\S]*<\/main>/.exec(String(html ?? ''))
   if (!match) {
     return ''
   }
-  return match[0].replace(/(<img\b[^>]*\bsrc=")\.\/([^"]+)(")/g, `$1${ASSET_BASE}$2$3`)
+  const sheet = match[0].replace(/(<img\b[^>]*\bsrc=")\.\/([^"]+)(")/g, `$1${ASSET_BASE}$2$3`)
+
+  if (!logoUrl) {
+    return sheet
+  }
+  return sheet.replace(/(<img\b[^>]*\bsrc=")[^"]*LogoMinisterio[^"]*(")/g, `$1${escapeHtml(logoUrl)}$2`)
 }

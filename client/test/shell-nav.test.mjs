@@ -2,7 +2,8 @@
 //
 // "Nueva inscripción" is a first-class entry, placed right below Estudiantes
 // because that is the list the enrolment flow starts from: the operator scans
-// the roster first, then adds somebody to it.
+// the roster first, then adds somebody to it. Ajustes closes the list: settings
+// are visited when something needs changing, not on the daily round.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -19,5 +20,5 @@ test('the sidebar lists Nueva inscripción right below Estudiantes', () => {
 
   const labels = findAll(root, '.nav-link').map((link) => textOf(link).trim())
 
-  assert.deepEqual(labels, ['Inicio', 'Estudiantes', 'Nueva inscripción', 'Documentos'])
+  assert.deepEqual(labels, ['Inicio', 'Estudiantes', 'Nueva inscripción', 'Documentos', 'Ajustes'])
 })

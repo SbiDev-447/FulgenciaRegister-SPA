@@ -7,6 +7,7 @@ import { renderInicio } from './views/inicio.js'
 import { renderEstudiantes } from './views/estudiantes.js'
 import { renderInscripcion } from './views/inscripcion.js'
 import { renderDocumentos } from './views/documentos.js'
+import { renderAjustes } from './views/ajustes.js'
 
 /**
  * @typedef {{
@@ -23,6 +24,9 @@ export const ROUTES = [
   { path: '/estudiantes', title: 'Estudiantes', view: renderEstudiantes },
   { path: '/inscripcion', title: 'Nueva inscripción', view: renderInscripcion },
   { path: '/documentos', title: 'Documentos', view: renderDocumentos },
+  // Last on purpose: settings are visited when something needs changing, not
+  // as part of the daily round.
+  { path: '/ajustes', title: 'Ajustes', view: renderAjustes },
 ]
 
 /** @param {string} path @returns {Route|null} */

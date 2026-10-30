@@ -1,0 +1,196 @@
+/* Ajustes view: the sitting director, the ministry logo and the two
+   housekeeping jobs. Claro y oscuro cambian sólo tokens. */
+
+.ajustes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+
+  .ajustes__hero {
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--hero-from), var(--hero-to));
+    color: var(--hero-text);
+    box-shadow: var(--shadow-md);
+
+    .ajustes__title {
+      font-size: 1.75rem;
+      line-height: 1.25;
+      margin-bottom: var(--space-2);
+    }
+
+    p {
+      font-size: 1.125rem;
+      opacity: 0.9;
+      max-width: 60ch;
+    }
+  }
+
+  .ajustes__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-5);
+    align-items: start;
+  }
+
+  .ajustes__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+
+    &.ajustes__card--wide {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .ajustes__card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .ajustes__card-title {
+    font-size: 1.1rem;
+    color: var(--color-text);
+  }
+
+  .ajustes__meta {
+    color: var(--color-text-muted);
+    font-size: 0.92rem;
+    max-width: 70ch;
+  }
+
+  .ajustes__form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+  }
+
+  .ajustes__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
+  }
+
+  /* The actions row spans the form grid, so the button does not sit in a
+     narrow column next to a field it does not belong to. */
+  .ajustes__form > .ajustes__actions,
+  .ajustes__form > .ajustes__status {
+    grid-column: 1 / -1;
+  }
+
+  .ajustes__status {
+    min-height: 1.25rem;
+    font-size: 0.92rem;
+    color: var(--color-text-muted);
+
+    &.ajustes__status--ok {
+      color: var(--color-success);
+    }
+
+    &.ajustes__status--error {
+      color: var(--color-danger);
+    }
+  }
+
+  .ajustes__logo-row {
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .ajustes__logo-frame {
+    display: grid;
+    place-items: center;
+    min-width: 132px;
+    min-height: 132px;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-input);
+  }
+
+  .ajustes__logo {
+    max-width: 100px;
+    max-height: 100px;
+    object-fit: contain;
+  }
+
+  .ajustes__logo-side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    flex: 1 1 220px;
+  }
+
+  .ajustes__file {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+  }
+
+  .ajustes__grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-5);
+  }
+
+  .ajustes__block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-2);
+  }
+
+  .ajustes__block-title {
+    font-size: 1rem;
+    color: var(--color-navy);
+  }
+
+  .ajustes__orphans {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-height: 220px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  .ajustes__orphan {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    font-size: 0.92rem;
+  }
+
+  .ajustes__orphan-ci {
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (max-width: 640px) {
+  .ajustes .ajustes__hero {
+    padding: var(--space-5);
+  }
+}

@@ -11,12 +11,41 @@ import { h, clear } from '../ui/dom.js'
 import { api } from '../api.js'
 import { errorCopy } from '../ui/messages.js'
 import { DOCUMENT_TYPES, letterValues, fillLetter, extractSheet } from '../letter.js'
+import { INSTITUTION } from '../institution.js'
 
 /** Today as `YYYY-MM-DD` in the operator's own calendar, not UTC. */
 function todayIso(now = new Date()) {
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   return `${now.getFullYear()}-${month}-${day}`
+}
+
+/**
+ * Who signs and which logo heads the page, for the letter about to print.
+ *
+ * Read from Ajustes on every print, not cached at boot: the operator may have
+ * just changed the director in another tab, and a letter signed by the previous
+ * one is exactly the mistake this setting exists to avoid. A settings call that
+ * fails must not stop a document from being issued, so it falls back to the
+ * bundled placeholder silently.
+ * @returns {Promise<{ institucion: object, logoUrl: string|null }>}
+ */
+async function loadLetterhead() {
+  try {
+    const { director, logo } = await api.ajustes()
+    if (!director) {
+      return { institucion: INSTITUTION, logoUrl: logo?.url ?? null }
+    }
+    return {
+      institucion: {
+        ...INSTITUTION,
+        director: { name: director.nombre, ci: director.ci, position: director.cargo },
+      },
+      logoUrl: logo?.url ?? null,
+    }
+  } catch {
+    return { institucion: INSTITUTION, logoUrl: null }
+  }
 }
 
 /** Parse one sheet string into a node. Never innerHTML on the live document. */
@@ -171,12 +200,13 @@ export function renderDocumentos(container, { print } = {}) {
 
     try {
       const { estudiante: fresh } = await api.emitirDocumento({ tipo, estudiante_id: student.id })
+      const letterhead = await loadLetterhead()
       const response = await fetch(`./assets/skeletons/${DOCUMENT_TYPES[tipo].file}`)
       if (!response.ok) throw new Error('No se pudo cargar el formato.')
       const template = await response.text()
       const filled = fillLetter(
-        extractSheet(template),
-        letterValues({ estudiante: fresh ?? student, fecha: todayIso() }),
+        extractSheet(template, { logoUrl: letterhead.logoUrl }),
+        letterValues({ estudiante: fresh ?? student, fecha: todayIso(), institucion: letterhead.institucion }),
       )
       if (!filled) throw new Error('El formato está vacío.')
       printArea.replaceChildren(sheetNode(filled))

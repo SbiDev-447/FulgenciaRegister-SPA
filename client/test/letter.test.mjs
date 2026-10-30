@@ -133,3 +133,20 @@ test('extracting the sheet drops the toolbar and the page chrome', () => {
   assert.doesNotMatch(sheet, /class="toolbar"/)
   assert.doesNotMatch(sheet, /<html>|<head>|<title>/)
 })
+
+test('the ministry logo is the one uploaded in Ajustes, and the shield is not', () => {
+  // S3: replacing the letterhead logo is a setting, but only that one image.
+  // Without a configured logo every skeleton keeps its bundled file (S8).
+  const html = extractSheet(skeleton('constancia-estudio.html'), { logoUrl: '/api/ajustes/logo?v=1' })
+
+  assert.match(html, /<img src="\/api\/ajustes\/logo\?v=1" alt="Logo del Ministerio"/)
+  assert.doesNotMatch(html, /LogoMinisterio-To-Left\.webp/)
+  assert.match(html, /Shield-to-Right\.webp/)
+})
+
+test('every skeleton carries a ministry logo the settings can replace', () => {
+  for (const file of ['carta-aceptacion.html', 'constancia-conducta.html', 'constancia-retiro.html', 'constancia-estudio.html']) {
+    const html = extractSheet(skeleton(file), { logoUrl: '/api/ajustes/logo' })
+    assert.match(html, /\/api\/ajustes\/logo/, `${file} kept its bundled logo`)
+  }
+})

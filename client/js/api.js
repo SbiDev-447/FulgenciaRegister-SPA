@@ -25,17 +25,23 @@ export class ApiError extends Error {
 
 /**
  * @param {string} path - path after /api, e.g. '/auth/login'
- * @param {{ method?: string, body?: unknown }} [options]
+ * @param {{ method?: string, body?: unknown, raw?: File|Blob }} [options]
+ *   `body` is sent as JSON; `raw` is sent as the request body itself, which is
+ *   how the logo travels instead of base64 inside a JSON string.
  * @returns {Promise<any>}
  */
-async function request(path, { method = 'GET', body } = {}) {
+async function request(path, { method = 'GET', body, raw } = {}) {
   const options = {
     method,
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
   }
 
-  if (body !== undefined) {
+  if (raw !== undefined) {
+    // The browser sets Content-Type from the blob, which is the type the server
+    // validates the bytes against.
+    options.body = raw
+  } else if (body !== undefined) {
     options.headers['Content-Type'] = 'application/json'
     options.body = JSON.stringify(body)
   }
@@ -47,11 +53,11 @@ async function request(path, { method = 'GET', body } = {}) {
     throw new ApiError('No se pudo conectar con el servidor.', 0, 'network_error')
   }
 
-  const raw = await response.text()
+  const text = await response.text()
   let data = null
-  if (raw) {
+  if (text) {
     try {
-      data = JSON.parse(raw)
+      data = JSON.parse(text)
     } catch {
       data = null
     }
@@ -137,6 +143,26 @@ export const api = {
    */
   emitirDocumento: ({ tipo, estudiante_id }) =>
     request('/documentos/emitir', { method: 'POST', body: { tipo, estudiante_id } }),
+  /** Institutional settings: the sitting director and the ministry logo. */
+  ajustes: () => request('/ajustes'),
+  /**
+   * Save the director that signs every document.
+   * @param {{ nombre: string, ci: string, cargo: string }} director
+   */
+  guardarDirector: (director) => request('/ajustes/director', { method: 'PUT', body: director }),
+  /**
+   * Replace the ministry logo printed on the letterhead.
+   * @param {File} file - PNG, JPEG or WebP, at most 2 MB
+   */
+  subirLogo: (file) => request('/ajustes/logo', { method: 'PUT', raw: file }),
+  /** Representatives no student references: the purge preview. */
+  huerfanos: () => request('/ajustes/representantes-huerfanos'),
+  /** Delete exactly those representatives; the server re-checks before deleting. */
+  purgarHuerfanos: () => request('/ajustes/purgar-representantes', { method: 'POST' }),
+  /** Write a dump into backups/ and report what it holds. */
+  backup: () => request('/ajustes/backup', { method: 'POST' }),
+  /** The stored logo, for the preview and for the printed letter. */
+  logoUrl: () => `${API_BASE}/ajustes/logo`,
 }
 
 /**
