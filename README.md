@@ -2,7 +2,7 @@
 
 # FULGENCIA REGISTER - SPA
 
-**SPA de registro e inscripción estudiantil** para el Liceo Fulgencia Jiménez de Olmos, esta SPA se encargara de la administración de los datos de los estudiantes a la hora de la realización de las Inscripciones de los mismos, permitiendo una gestión fácil y segura, respaldando la información en una DB (MariaDB), asimismo, funcionara para la expedición automatizada de Documentos (Constancias y Cartas).
+**SPA de registro e inscripción estudiantil** para el Liceo Fulgencia Jiménez de Olmos. Administra los datos de los estudiantes al momento de inscribirlos —la ficha permanente, los representantes y los recaudos consignados en una sola base MariaDB— y automatiza la expedición de constancias y cartas, que se arman con esos mismos datos y se imprimen desde el navegador.
 
 > Interfaz en JavaScript vanilla sin recarga de página, API REST en Express y base de datos MariaDB en Docker.
 
@@ -51,7 +51,7 @@ describe el alcance funcional, no trabajo pendiente.
 fulgenciaProject/
 ├── client/                  # SPA vanilla JS
 │   ├── index.html
-│   ├── assets/              # tipografías e imágenes locales
+│   ├── assets/              # tipografías, imágenes y el esqueleto de las cartas
 │   ├── styles/              # tokens.css, reset.css, layout.css, views/
 │   ├── js/                  # main.js, routes.js, router.js, shell.js, api.js
 │   │   ├── views/           # una vista por ruta (login, inicio, estudiantes, ...)
@@ -65,10 +65,18 @@ fulgenciaProject/
 │   │   ├── middlewares/     # auth, error
 │   │   ├── constants/       # academico, auth, documentos
 │   │   └── utils/           # cedula, password, jwt, httpError
-│   ├── model/               # modelos tabla-model (esquema)
-│   ├── db/seed.js           # datos semilla
+│   ├── model/               # modelos tabla-model (el esquema)
+│   ├── db/                  # seed, seed demo, dump, restore, purga y reparación
 │   └── test/                # pruebas del servidor (node:test)
+├── docs/                    # documentación del proyecto
+│   ├── Informe.md           # qué es el proyecto y qué problema resuelve
+│   ├── Mermaid.md           # esquema de la base en Mermaid
+│   ├── MermaidFulgencia.pdf # el mismo esquema, exportado a PDF
+│   ├── RelevantPoints.md    # notas técnicas de las decisiones no obvias
+│   ├── Tests.md             # qué cubren las pruebas y qué no
+│   └── usDataBase.md        # guía de estudio de la base de datos
 ├── files/                   # recursos del repositorio (banner)
+├── backups/                 # respaldos locales (en .gitignore: llevan datos reales)
 ├── docker-compose.yml       # MariaDB 11
 └── package.json             # scripts raíz
 ```
@@ -135,6 +143,26 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 | POST | `/api/documentos/emitir` | Emitir un documento |
 | GET | `/api/estadisticas` | Estadísticas de inscripción |
 
+### El listado de estudiantes
+
+`GET /api/estudiantes` pagina en el servidor; no devuelve el padrón entero.
+
+| Parámetro | Por defecto | Qué hace |
+| --------- | ----------- | -------- |
+| `q` | — | Busca en nombres, apellidos y cédula, ordenando por relevancia |
+| `anio` | — | Filtra por año (`1er Año`, `2do Año`, …) |
+| `seccion` | — | Filtra por sección (`A`..`F` según el año) |
+| `page` | `1` | Página pedida; si se pasa del final, devuelve la última |
+| `pageSize` | `20` | Filas por página, con techo de `100` |
+
+```json
+{ "estudiantes": [ ... ], "total": 30, "page": 2, "pageSize": 20, "pages": 2 }
+```
+
+`total` es el total **con los filtros aplicados**, no el del padrón completo, y `pages`
+nunca baja de `1`: una búsqueda sin resultados devuelve `total: 0` en lugar de un listado
+vacío sin explicación.
+
 ## Rutas de la SPA
 
 El enrutado es por hash: todo ocurre en la misma página, sin recargas.
@@ -144,11 +172,22 @@ El enrutado es por hash: todo ocurre en la misma página, sin recargas.
 | `#/` | Inicio — estadísticas de inscripción con filtros |
 | `#/estudiantes` | Listado con búsqueda y filtros, ficha del estudiante, y acciones Ver / Editar / Borrar |
 | `#/inscripcion` | Wizard de inscripción en 4 pasos |
-| `#/documentos` | Documentos (en construcción) |
+| `#/documentos` | Verificación por cédula y emisión de los cuatro documentos |
 
 El wizard **no** tiene entrada en el menú lateral: se llega desde el botón "Nueva
 inscripción" de Estudiantes y, como carga sus propias opciones académicas, un
 enlace directo o una recarga funcionan igual.
+
+## Documentación
+
+| Documento | Para qué sirve |
+| --------- | -------------- |
+| [`docs/Informe.md`](./docs/Informe.md) | Qué es el proyecto, por qué existe y qué problema resuelve, en un párrafo |
+| [`docs/Mermaid.md`](./docs/Mermaid.md) | Esquema de la base en Mermaid, con cardinalidades y reglas de borrado |
+| [`docs/MermaidFulgencia.pdf`](./docs/MermaidFulgencia.pdf) | El mismo esquema exportado a PDF, para imprimir o adjuntar |
+| [`docs/usDataBase.md`](./docs/usDataBase.md) | Guía de estudio de la base: diccionario de datos, trampas del esquema y recetas SQL |
+| [`docs/RelevantPoints.md`](./docs/RelevantPoints.md) | Notas técnicas de las decisiones que no se leen en el código |
+| [`docs/Tests.md`](./docs/Tests.md) | Qué cubren las pruebas, cómo correrlas y qué queda fuera de su alcance |
 
 ## Scripts
 
@@ -214,5 +253,5 @@ Para pasar el proyecto a otro equipo: `pnpm db:dump` en este, copiar el `.sql` y
 - [x] API de documentos y estadísticas
 - [x] Interfaz SPA (shell, router, temas)
 - [x] Vistas de inicio y estudiantes (lista, ficha, edición, borrado y wizard de inscripción)
-- [ ] Vista de documentos
-- [ ] Generación e impresión de documentos
+- [x] Vista de documentos
+- [x] Generación e impresión de documentos
