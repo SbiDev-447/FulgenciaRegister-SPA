@@ -69,6 +69,7 @@ fulgenciaProject/
 │   ├── db/                  # seed, seed demo, dump, restore, purga y reparación
 │   └── test/                # pruebas del servidor (node:test)
 ├── docs/                    # documentación del proyecto
+│   ├── BackToFront.md       # el recorrido de una petición: backend, frontend y su enlace
 │   ├── Informe.md           # qué es el proyecto y qué problema resuelve
 │   ├── Mermaid.md           # esquema de la base en Mermaid
 │   ├── MermaidFulgencia.pdf # el mismo esquema, exportado a PDF
@@ -182,6 +183,7 @@ enlace directo o una recarga funcionan igual.
 
 | Documento | Para qué sirve |
 | --------- | -------------- |
+| [`docs/BackToFront.md`](./docs/BackToFront.md) | Cómo funciona el backend, cómo funciona el frontend y cómo se conectan, siguiendo una petición de punta a punta |
 | [`docs/Informe.md`](./docs/Informe.md) | Qué es el proyecto, por qué existe y qué problema resuelve, en un párrafo |
 | [`docs/Mermaid.md`](./docs/Mermaid.md) | Esquema de la base en Mermaid, con cardinalidades y reglas de borrado |
 | [`docs/MermaidFulgencia.pdf`](./docs/MermaidFulgencia.pdf) | El mismo esquema exportado a PDF, para imprimir o adjuntar |
