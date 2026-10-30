@@ -78,8 +78,10 @@
       cursor: pointer;
 
       &:disabled {
-        opacity: 0.6;
-        cursor: default;
+        background: var(--color-disabled-bg);
+        border-color: var(--color-disabled-border);
+        color: var(--color-disabled-text);
+        cursor: not-allowed;
       }
     }
 

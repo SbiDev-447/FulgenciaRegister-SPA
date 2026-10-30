@@ -65,6 +65,12 @@
   --color-danger-contrast: #e9e0c3;
   --color-success: #0e7c5a;
   --color-success-soft: #d5ece1;
+  /* Blocked controls: a neutral grey that belongs to no variant. A disabled
+     button keeps its shape and loses its color, so it reads as inert even
+     before the cursor says "not-allowed". */
+  --color-disabled-bg: #cbc8be;
+  --color-disabled-border: #b3afa2;
+  --color-disabled-text: #6b6961;
   /* Input fields: slightly deeper than surfaces so the card reads as the
        lightest layer. On hover it deepens a step further, because the border
        alone was too quiet to say "this one is under the cursor". */
@@ -137,6 +143,9 @@
   --color-danger-contrast: #06080f;
   --color-success: #3fbf92;
   --color-success-soft: #0f2b22;
+  --color-disabled-bg: #243044;
+  --color-disabled-border: #33415a;
+  --color-disabled-text: #7d8aa3;
   --color-input: #1e293b;
   --color-input-hover: #2a3a56;
   /* Navy is unreadable on dark surfaces; lighten it while keeping the tone. */

@@ -269,11 +269,6 @@
     flex: none;
   }
 
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
   &.btn--primary {
     background: var(--color-primary);
     color: var(--color-primary-contrast);
@@ -283,14 +278,28 @@
     }
   }
 
+  /* The ghost's hover used to fill with --color-surface-2, which is exactly
+     the background of the blocks it usually sits in (and of a hovered table
+     row): the fill was invisible and only the text moved. A translucent wash
+     composites over whatever is behind, so it shows on a card, on a block and
+     on a row alike. */
   &.btn--ghost {
     background: transparent;
     border-color: var(--color-border-strong);
     color: var(--color-text-muted);
 
+    /* Tinted with the text color, not with a surface token: that way the wash
+       is always darker (light theme) or lighter (dark theme) than whatever is
+       behind it — card, block or hovered row — instead of matching it. The
+       border carries the brand color, which is the part that says "clickable". */
     &:not(:disabled):hover {
-      background: var(--color-surface-2);
+      background: color-mix(in srgb, var(--color-text) 10%, transparent);
+      border-color: var(--color-primary);
       color: var(--color-text);
+    }
+
+    &:not(:disabled):active {
+      background: color-mix(in srgb, var(--color-text) 18%, transparent);
     }
   }
 
@@ -301,8 +310,12 @@
     color: var(--color-danger);
 
     &:not(:disabled):hover {
-      background: var(--color-danger-soft);
+      background: color-mix(in srgb, var(--color-danger) 18%, transparent);
       border-color: var(--color-danger);
+    }
+
+    &:not(:disabled):active {
+      background: color-mix(in srgb, var(--color-danger) 28%, transparent);
     }
   }
 
@@ -315,6 +328,17 @@
 
   &.btn--block {
     width: 100%;
+  }
+
+  /* Last on purpose: a blocked control must beat the variant that painted it.
+     Same specificity as `.btn.btn--primary`, so order decides — the fill goes
+     neutral grey, the text loses its color and nothing invites a click. */
+  &:disabled {
+    background: var(--color-disabled-bg);
+    border-color: var(--color-disabled-border);
+    color: var(--color-disabled-text);
+    opacity: 1;
+    cursor: not-allowed;
   }
 }
 
@@ -330,6 +354,12 @@
   &:hover {
     background: var(--color-surface-2);
     color: var(--color-text);
+  }
+
+  &:disabled {
+    background: none;
+    color: var(--color-disabled-text);
+    cursor: not-allowed;
   }
 
   svg {
@@ -357,6 +387,10 @@
 
   &:has(.input-error) .field__label {
     color: var(--color-danger);
+  }
+
+  &:has(.input:disabled) .field__label {
+    color: var(--color-disabled-text);
   }
 
   /* Wraps an input with a control that sits over it (the password reveal).
@@ -426,12 +460,13 @@
   }
 
   /* A disabled field has to look off, not just ignore the cursor: in Ajustes a
-     non-admin sees the values they cannot change. */
+     non-admin sees the values they cannot change, and the fill is what says so.
+     Opacity would fade the text into illegible instead of greying it out. */
   &:disabled {
-    background: var(--color-input);
-    color: var(--color-text-muted);
+    background: var(--color-disabled-bg);
+    border-color: var(--color-disabled-border);
+    color: var(--color-disabled-text);
     cursor: not-allowed;
-    opacity: 0.7;
   }
 
   &:focus {

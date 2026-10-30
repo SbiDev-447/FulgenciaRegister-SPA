@@ -97,8 +97,13 @@
       outline-offset: 2px;
     }
 
+    /* Same grey as every other blocked control, so the filters read as
+       unavailable instead of merely faded. */
     &:disabled {
-      opacity: 0.6;
+      background: var(--color-disabled-bg);
+      border-color: var(--color-disabled-border);
+      color: var(--color-disabled-text);
+      cursor: not-allowed;
     }
   }
 
