@@ -66,8 +66,10 @@
   --color-success: #0e7c5a;
   --color-success-soft: #d5ece1;
   /* Input fields: slightly deeper than surfaces so the card reads as the
-       lightest layer. */
+       lightest layer. On hover it deepens a step further, because the border
+       alone was too quiet to say "this one is under the cursor". */
   --color-input: #f3f6f9;
+  --color-input-hover: #e6eef7;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -136,6 +138,7 @@
   --color-success: #3fbf92;
   --color-success-soft: #0f2b22;
   --color-input: #1e293b;
+  --color-input-hover: #2a3a56;
   /* Navy is unreadable on dark surfaces; lighten it while keeping the tone. */
   --color-navy: #7d9cec;
 

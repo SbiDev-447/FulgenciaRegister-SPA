@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   // Right below the roster: the enrolment flow starts by scanning it.
   { path: '/inscripcion', label: 'Nueva inscripción', iconName: 'plus' },
   { path: '/documentos', label: 'Documentos', iconName: 'documentos' },
-  { path: '/ajustes', label: 'Ajustes', iconName: 'tools' },
+  { path: '/ajustes', label: 'Ajustes', iconName: 'gear' },
 ]
 
 function navLink(item, activePath) {

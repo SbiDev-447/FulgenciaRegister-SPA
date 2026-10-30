@@ -386,7 +386,7 @@ export function renderAjustes(container, { user } = {}) {
     h('div', { class: 'ajustes__hero' }, [
       h('h1', { class: 'ajustes__title', text: 'Ajustes' }),
       h('p', {
-        text: 'El director que firma, el logo del Ministerio y el mantenimiento de la base de datos.',
+        text: 'Apartado para el mantenimiento y actualización de datos del Sistema.',
       }),
     ]),
     restrictedNote,
