@@ -21,9 +21,9 @@ una recomendación y no un hecho del sistema, lo digo explícitamente.
 | Motor | **MariaDB 11** corriendo en Docker (`docker-compose.yml`, contenedor `fulgencia-db`) |
 | Base | `fulgencia` (el nombre sale de `DB_NAME`) |
 | Puerto | `3306` en tu máquina (sale de `DB_PORT`), redirigido al 3306 del contenedor |
-| Motor de tablas | `InnoDB` en las siete — por eso hay transacciones y claves foráneas |
+| Motor de tablas | `InnoDB` en las ocho — por eso hay transacciones y claves foráneas |
 | Acceso desde el código | `mysql-tab` → `dbtabla` → `mysql2` |
-| Tablas | 7 (más abajo, el mapa) |
+| Tablas | 8 (más abajo, el mapa) |
 | Migraciones | **No existen.** Ver §8, es importante |
 
 Volumen Docker declarado `fulgencia-db-data` —Docker lo prefija con el nombre del
@@ -189,8 +189,8 @@ servidor, así que ves exactamente lo que ve la aplicación.
 
 ## 4. Mapa de las tablas
 
-Siete tablas. Léelas como tres grupos: **personas**, **el hecho académico** y
-**los papeles**.
+Ocho tablas. Léelas como tres grupos: **personas**, **el hecho académico** y
+**los papeles**; la octava, `ajustes`, no es de nadie: es configuración del liceo.
 
 ```
                            ┌──────────────┐
@@ -228,6 +228,7 @@ Siete tablas. Léelas como tres grupos: **personas**, **el hecho académico** y
 | `inscripciones` | El hecho académico: año, sección, condición | `estudiantes`, `estadisticas` |
 | `documentos_consignados` | Los seis recaudos entregados de una inscripción | `estudiantes` |
 | `documentos_emitidos` | Bitácora: qué PDF se emitió, para quién y cuándo | `documentos`, `estadisticas` |
+| `ajustes` | Clave/valor: el director que firma y el logo del Ministerio | módulo `ajustes` |
 
 Detalle de las ideas centrales:
 
@@ -242,6 +243,10 @@ Detalle de las ideas centrales:
   cada año.
 - **`documentos_emitidos` es bitácora, no configuración.** Solo registra emisiones;
   los cuatro tipos posibles están en `server/src/constants/documentos.js`.
+- **`ajustes` sí es configuración, y es la única tabla sin relaciones.** Dos filas hoy:
+  `director` (JSON con nombre, cédula y cargo) y `logo_ministerio` (JSON con `mime` y el
+  archivo en base64). No cuelga de ningún estudiante porque no es un dato de nadie en
+  particular, y entra en el respaldo como cualquier otra tabla.
 
 ---
 
@@ -368,6 +373,22 @@ Seis booleanos (`0`/`1`). Una fila por inscripción, no por estudiante.
 
 Tipos válidos: `carta_aceptacion`, `constancia_conducta`, `constancia_retiro`,
 `constancia_estudio`. Alimenta la tarjeta "documentos emitidos" de Inicio.
+
+### 5.8 `ajustes`
+
+| Columna | Tipo | Nulo | Notas |
+| ------- | ---- | ---- | ----- |
+| `clave` | `varchar(40)` | no | PK: `director`, `logo_ministerio` |
+| `valor` | `longtext` | no | JSON del valor (el logo va en base64) |
+| `actualizado_en` | `datetime` | no | `CURRENT_TIMESTAMP`; el `UPDATE` lo reescribe |
+
+Diseño clave/valor a propósito: son dos datos sin relación entre sí y mañana puede
+aparecer un tercero. Se leen con `selectOne({ where: { clave } })` y se escriben con
+`update({...}, { clave })` (o `insert` la primera vez). Si alguien edita una fila a mano
+y deja un JSON inválido, el servicio la trata como no configurada en lugar de romper la
+pantalla.
+
+---
 
 ---
 

@@ -16,15 +16,16 @@
 
 | Componente | Estado |
 | ---------- | ------ |
-| Backend (API REST) | Listo — 105 pruebas (104 en verde, 1 saltada sin base) |
+| Backend (API REST) | Listo — 118 pruebas (117 en verde, 1 saltada sin base) |
 | Base de datos (MariaDB) | Listo — esquema y datos semilla |
-| Frontend (SPA) | Listo — 81 pruebas en verde |
+| Frontend (SPA) | Listo — 90 pruebas en verde |
 
 El backend está completo y cubierto por pruebas. En la SPA funcionan el shell, el router,
-los temas y las cuatro vistas: Inicio (estadísticas), Estudiantes (lista paginada,
-búsqueda, ficha, edición y borrado con confirmación), Nueva inscripción y Documentos
-(verificación por cédula y los cuatro documentos imprimibles). La sección "Alcance"
-describe el alcance funcional, no trabajo pendiente.
+los temas y las cinco vistas: Inicio (estadísticas), Estudiantes (lista paginada,
+búsqueda, ficha, edición y borrado con confirmación), Nueva inscripción, Documentos
+(verificación por cédula y los cuatro documentos imprimibles) y Ajustes (director que
+firma, logo del Ministerio y mantenimiento de la base). La sección "Alcance" describe el
+alcance funcional, no trabajo pendiente.
 
 ## Alcance
 
@@ -34,6 +35,10 @@ describe el alcance funcional, no trabajo pendiente.
   inscripción, representantes y documentos consignados). Búsqueda por nombre o cédula.
 - **Documentos:** verificación por cédula y emisión de cuatro documentos imprimibles
   (carta de aceptación, constancia de conducta, constancia de retiro, constancia de estudio).
+- **Ajustes:** director o directora que firma los documentos, logo del Ministerio que
+  encabeza la carta, y dos tareas de mantenimiento desde la interfaz: borrar los
+  representantes huérfanos y escribir un respaldo de la base en `backups/`. Sólo el rol
+  `admin` puede cambiarlos.
 - **Autenticación:** inicio de sesión con contraseña cifrada y sesión mediante JWT.
 
 ## Stack
@@ -61,8 +66,8 @@ fulgenciaProject/
 ├── server/                  # API REST (Express + mysql-tab)
 │   ├── src/
 │   │   ├── config/          # variables de entorno y pool de MariaDB
-│   │   ├── modules/         # auth, estudiantes, documentos, estadisticas
-│   │   ├── middlewares/     # auth, error
+│   │   ├── modules/         # auth, estudiantes, documentos, estadisticas, ajustes
+│   │   ├── middlewares/     # auth (incluye el guardia de rol), error
 │   │   ├── constants/       # academico, auth, documentos
 │   │   └── utils/           # cedula, password, jwt, httpError
 │   ├── model/               # modelos tabla-model (el esquema)
@@ -143,6 +148,13 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 | GET | `/api/documentos/verificar/:cedula` | Verificar una cédula |
 | POST | `/api/documentos/emitir` | Emitir un documento |
 | GET | `/api/estadisticas` | Estadísticas de inscripción |
+| GET | `/api/ajustes` | Director configurado y metadatos del logo |
+| PUT | `/api/ajustes/director` | Guardar el director que firma (sólo `admin`) |
+| GET | `/api/ajustes/logo` | El logo del Ministerio guardado |
+| PUT | `/api/ajustes/logo` | Reemplazar el logo (cuerpo binario, máx. 2 MB, sólo `admin`) |
+| GET | `/api/ajustes/representantes-huerfanos` | Representantes que ningún estudiante referencia (sólo `admin`) |
+| POST | `/api/ajustes/purgar-representantes` | Borrarlos, revalidando en el `DELETE` (sólo `admin`) |
+| POST | `/api/ajustes/backup` | Escribir un respaldo en `backups/` (sólo `admin`) |
 
 ### El listado de estudiantes
 
@@ -174,6 +186,7 @@ El enrutado es por hash: todo ocurre en la misma página, sin recargas.
 | `#/estudiantes` | Listado con búsqueda y filtros, ficha del estudiante, y acciones Ver / Editar / Borrar |
 | `#/inscripcion` | Wizard de inscripción en 4 pasos |
 | `#/documentos` | Verificación por cédula y emisión de los cuatro documentos |
+| `#/ajustes` | Director que firma, logo del Ministerio y mantenimiento (huérfanos y respaldo) |
 
 El wizard **no** tiene entrada en el menú lateral: se llega desde el botón "Nueva
 inscripción" de Estudiantes y, como carga sus propias opciones académicas, un
@@ -201,9 +214,9 @@ enlace directo o una recarga funcionan igual.
 | `pnpm db:reset` | Recrear la base de datos (borra los datos) |
 | `pnpm db:seed` | Crear tablas y datos semilla |
 | `pnpm db:demo` | Llenar la base con 30 estudiantes de demostración (borra los datos de personas, conserva los usuarios) |
-| `pnpm db:purge-orphans` | Borrar representantes que quedaron sin ningún estudiante (ver abajo) |
+| `pnpm db:purge-orphans` | Borrar representantes que quedaron sin ningún estudiante (lo mismo que el botón de Ajustes) |
 | `pnpm db:repair-schema` | Ensanchar columnas que quedaron demasiado pequeñas (ver abajo) |
-| `pnpm db:dump` | Guardar una copia de la base de datos en `backups/` (ver abajo) |
+| `pnpm db:dump` | Guardar una copia de la base de datos en `backups/` (o el botón de Ajustes) |
 | `pnpm db:restore` | Devolver una copia: sin `--apply` solo dice qué haría (ver abajo) |
 | `pnpm test` | Ejecutar todas las pruebas (servidor y cliente) |
 
@@ -257,3 +270,4 @@ Para pasar el proyecto a otro equipo: `pnpm db:dump` en este, copiar el `.sql` y
 - [x] Vistas de inicio y estudiantes (lista, ficha, edición, borrado y wizard de inscripción)
 - [x] Vista de documentos
 - [x] Generación e impresión de documentos
+- [x] Vista de ajustes: director, logo del Ministerio y mantenimiento desde la interfaz

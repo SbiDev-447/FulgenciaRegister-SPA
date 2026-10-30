@@ -137,7 +137,7 @@ métodos: `tabla`, `query`, `createAllTables`, `addModel`, `end`. Todo lo demás
 (`select`, `paginate`, `insert`, `update`, `delete`, …) vive en lo que devuelve
 `db.tabla('x')`. La tabla de métodos y sus trampas está en `usDataBase.md` §2.2.
 
-### 1.5 Los cuatro módulos
+### 1.5 Los cinco módulos
 
 **`auth`** — login, sesión, cierre.
 
@@ -179,6 +179,25 @@ métodos: `tabla`, `query`, `createAllTables`, `addModel`, `end`. Todo lo demás
 
 **`estadisticas`** — solo lectura, con filtros opcionales por año y sección. Devuelve
 totales por sexo, una fila por año académico y el conteo de documentos emitidos.
+
+**`ajustes`** — lo institucional y el mantenimiento.
+
+- Guarda en la tabla `ajustes` (`clave` primaria, `valor` JSON) dos cosas que no son de
+  ningún estudiante y no son historia: el director que firma y el logo del Ministerio.
+  Van a la base y no al navegador porque el respaldo tiene que llevárselos y porque la
+  carta se imprime desde cualquier equipo de la escuela.
+- **Por qué `LONGTEXT` y no `BLOB`**: `dbtabla` interpola los valores como texto, así que
+  el logo viaja en base64. Por lo mismo el `PUT` del logo acepta el **cuerpo binario**
+  crudo en lugar de un JSON: el parser global de Express corta en 100 KB y abrirlo para
+  toda la API sería una puerta más grande que este filtro.
+- Valida del lado del servidor aunque el formulario ya avise: cédula canónica
+  (`V-12345678`), cargo entre `Director`/`Directora`, imagen PNG/JPEG/WebP de hasta 2 MB
+  comprobada **por firma de bytes**, no por el `Content-Type` declarado.
+- Reutiliza lo que ya existía: la purga llama a `purgeOrphanRepresentantes` del script de
+  consola (la condición va dentro del `DELETE`) y el respaldo llama a la misma función
+  que `pnpm db:dump`. No hay una segunda implementación de ninguna de las dos reglas.
+- `requireAdmin` protege las escrituras y las dos operaciones; leer los ajustes pide
+  sesión y nada más, porque el director se muestra en la pantalla a cualquier usuario.
 
 ### 1.6 Los errores tienen una sola forma
 
@@ -329,6 +348,13 @@ las imágenes se esperan con `decode()` porque imprimir antes de que decodifique
 texto alternativo en lugar del escudo. El CSS de impresión (`assets/skeletons/carta.css`)
 está acotado a `.sheet`, así que no afecta al resto de la aplicación.
 
+Antes de armar la hoja, la vista pide `GET /api/ajustes`: el nombre y la cédula del
+director salen de ahí (no de `institution.js`, que queda como respaldo cuando nadie
+configuró nada) y, si hay un logo subido, `extractSheet(html, { logoUrl })` cambia el
+`<img src="./LogoMinisterio-To-Left.webp">` de los cuatro esqueletos por el de la base.
+Si esa llamada falla, la carta se emite igual con el placeholder: un ajuste caído no
+puede impedir que la escuela entregue un documento.
+
 ---
 
 ## 3. Cómo se conectan
@@ -339,7 +365,7 @@ está acotado a `.sheet`, así que no afecta al resto de la aplicación.
 | ------- | ----- |
 | Origen | Uno solo: Express sirve la SPA y la API. Sin CORS |
 | Sesión | Cookie `fulgencia_token` httpOnly; el JS nunca la lee |
-| Cuerpo | JSON en pedidos con cuerpo; el servidor responde siempre JSON en `/api` |
+| Cuerpo | JSON en los pedidos con cuerpo; el logo es la excepción y viaja como cuerpo binario. El servidor responde siempre JSON en `/api`, salvo la imagen |
 | Errores | `{ code, message, details }`; el cliente traduce por `code` |
 | Fechas | La API entrega ISO (`YYYY-MM-DD`); la interfaz muestra `dd/mm/aaaa` |
 | Cédula | Guardada como `tipo_ci` + `numero_ci`; viaja como `V-12345678` en URLs y cartas |
@@ -390,7 +416,9 @@ impresión falla, la emisión ya quedó en la bitácora con fecha y autor.
 | Agregar una columna | `server/model/<tabla>.model.js` + `ALTER TABLE` a mano (§8 de `usDataBase.md`) |
 | Agregar un tipo de documento | `constants/documentos.js` + un esqueleto en `client/assets/skeletons/` |
 | Cambiar años o secciones | `constants/academic.js` |
-| Agregar una vista | `client/js/views/` + una línea en `routes.js` |
+| Agregar una vista | `client/js/views/` + una línea en `routes.js` y en `NAV_ITEMS` de `shell.js` |
+| Cambiar el director o el logo que se imprime | `client/js/views/ajustes.js` (formulario) → `PUT /api/ajustes/*` → `modules/ajustes/ajustes.service.js` |
+| Agregar otro ajuste institucional | una clave nueva en `ajustes.service.js` (`DIRECTOR_KEY`/`LOGO_KEY`) y su bloque en la vista; la tabla es clave/valor y no necesita migración |
 | Cambiar textos de error | `client/js/ui/messages.js` (el servidor sigue respondiendo en inglés) |
 | Cambiar la carta impresa | `client/assets/skeletons/*.html` y `.css` (no toques `letter.js` salvo que cambien los huecos) |
 

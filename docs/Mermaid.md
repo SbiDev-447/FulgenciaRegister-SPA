@@ -1,7 +1,8 @@
 # Esquema de la base de datos
 
 Esquema real de la base `fulgencia` (MariaDB 11), leído de `information_schema`.
-Siete tablas: cinco de dominio, una de unión y una de acceso.
+Ocho tablas: cinco de dominio, una de unión, una de acceso y una de configuración
+(`AJUSTES`, la única sin relaciones).
 
 ```mermaid
 erDiagram
@@ -12,6 +13,14 @@ erDiagram
     INSCRIPCIONES ||--|| DOCUMENTOS_CONSIGNADOS : "consigna"
     USUARIOS |o--o{ INSCRIPCIONES : "es docente de"
     USUARIOS |o--o{ DOCUMENTOS_EMITIDOS : "emite"
+
+    %% Ajustes es configuración del liceo: el director que firma y el logo del
+    %% Ministerio. No cuelga de ninguna otra tabla, por eso no tiene líneas.
+    AJUSTES {
+        varchar(40) clave PK "director | logo_ministerio"
+        longtext valor "JSON; el logo va en base64"
+        datetime actualizado_en
+    }
 
     ESTUDIANTES {
         int id PK
@@ -118,6 +127,7 @@ erDiagram
 
 ## Notas
 
+- `ajustes` es la única tabla sin claves foráneas: guarda el director que firma y el logo del Ministerio, dos datos del liceo que no pertenecen a ningún estudiante. Va dentro del respaldo como cualquier otra tabla.
 - `usuarios` no se relaciona con `estudiantes`: el sistema no crea cuentas para alumnos.
 - Las cédulas son únicas por **tipo + número** en `estudiantes` y en `representantes`, no por número solo.
 - No hay ningún índice `FULLTEXT` en la base: la búsqueda del listado se resuelve con `LIKE` y un puntaje por columna calculado en SQL.
