@@ -9,6 +9,7 @@ const authRoutes = require('./modules/auth/auth.routes')
 const estudianteRoutes = require('./modules/estudiantes/estudiantes.routes')
 const documentosRoutes = require('./modules/documentos/documentos.routes')
 const estadisticasRoutes = require('./modules/estadisticas/estadisticas.routes')
+const ajustesRoutes = require('./modules/ajustes/ajustes.routes')
 
 function createApp() {
   const app = express()
@@ -22,6 +23,7 @@ function createApp() {
   app.use('/api/estudiantes', estudianteRoutes)
   app.use('/api/documentos', documentosRoutes)
   app.use('/api/estadisticas', estadisticasRoutes)
+  app.use('/api/ajustes', ajustesRoutes)
 
   // In development the same Express process serves the static SPA. Routing is
   // hash-based, so a plain static middleware is enough (everything is `/`).
