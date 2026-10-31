@@ -4,16 +4,17 @@
 // logo printed on the letterhead, and the two housekeeping operations that used
 // to need a terminal.
 //
-// Settings live in the database and not in the browser on purpose. The director
-// and the logo belong to the school, not to the machine someone happened to use,
-// and the backup offered on the same screen has to carry them.
+// Settings are files in `data/` (see `ajustes.almacen.js`) and not rows in the
+// database. They configure the letterhead, not the record: they are two facts
+// the school sets once, they belong to the installation and not to a student,
+// and a human can read them when something looks wrong. The backup copies that
+// directory next to the `.sql`, so a restore brings them back too.
 
-const db = require('../../config/db')
 const { HttpError } = require('../../utils/httpError')
 const { parseCedula } = require('../../utils/cedula')
+const store = require('./ajustes.almacen')
 
-const DIRECTOR_KEY = 'director'
-const LOGO_KEY = 'logo_ministerio'
+const LOGO_KEY = 'logo'
 
 /** The office is a choice, not free text: a letter signs as one or the other. */
 const POSITIONS = ['Director', 'Directora']
@@ -22,48 +23,21 @@ const MAX_LOGO_BYTES = 2 * 1024 * 1024
 
 // What a browser is allowed to send, and the signature that proves the bytes
 // really are that format: the declared Content-Type is the client's word, and a
-// file that is not an image would be served back to the app as one.
+// file that is not an image would be served back to the app as one. The
+// extension is the one the file is stored with.
 const LOGO_FORMATS = new Map([
   ['image/png', { ext: 'png', magic: [0x89, 0x50, 0x4e, 0x47] }],
   ['image/jpeg', { ext: 'jpg', magic: [0xff, 0xd8, 0xff] }],
   ['image/webp', { ext: 'webp', magic: [0x52, 0x49, 0x46, 0x46] }],
 ])
 
-/** `2026-10-30 09:05:03`, the shape MariaDB reads for a DATETIME. */
+/** `2026-10-30 09:05:03`, a readable stamp that also busts the logo cache. */
 function stamp(date = new Date()) {
   const pad = (value) => String(value).padStart(2, '0')
   return [
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
     `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`,
   ].join(' ')
-}
-
-async function readValue(clave) {
-  const row = await db.tabla('ajustes').selectOne({ where: { clave } })
-  if (!row?.valor) {
-    return null
-  }
-  try {
-    return JSON.parse(row.valor)
-  } catch {
-    // A row someone edited by hand is treated as unset: the fallbacks in the
-    // client are better than a crash on every settings read.
-    return null
-  }
-}
-
-async function writeValue(clave, value) {
-  const valor = JSON.stringify(value)
-  const existing = await db.tabla('ajustes').selectOne({ where: { clave } })
-  const actualizado = stamp()
-
-  if (existing) {
-    await db.tabla('ajustes').update({ valor, actualizado_en: actualizado }, { clave })
-  } else {
-    await db.tabla('ajustes').insert({ clave, valor, actualizado_en: actualizado })
-  }
-
-  return { value, actualizadoEn: actualizado }
 }
 
 function normalizeSpaces(value) {
@@ -123,7 +97,7 @@ function parseDirector(input = {}) {
 /**
  * Validate an uploaded logo against what it claims to be.
  * @param {{ mime?: unknown, buffer?: unknown }} upload
- * @returns {{ mime: string, buffer: Buffer }}
+ * @returns {{ mime: string, ext: string, buffer: Buffer }}
  * @throws {HttpError} 400 for a format we do not print, 413 for a file too big
  */
 function parseLogo({ mime, buffer } = {}) {
@@ -152,12 +126,12 @@ function parseLogo({ mime, buffer } = {}) {
     })
   }
 
-  return { mime: String(mime).toLowerCase(), buffer }
+  return { mime: String(mime).toLowerCase(), ext: format.ext, buffer }
 }
 
 /** Where the app asks for the image. `v` changes when the file does. */
 function logoUrl(logo) {
-  return `/api/ajustes/logo?v=${encodeURIComponent(logo.actualizadoEn ?? '')}`
+  return `/api/ajustes/logo?v=${encodeURIComponent(logo?.actualizadoEn ?? '')}`
 }
 
 /**
@@ -165,20 +139,24 @@ function logoUrl(logo) {
  * the client renders as the bundled fallback instead of a broken form.
  */
 async function getAjustes() {
-  const [director, logo] = await Promise.all([readValue(DIRECTOR_KEY), readValue(LOGO_KEY)])
+  const settings = store.readSettings()
+  const stored = store.readLogo(settings)
 
   return {
-    // Uppercased on the way out as well: a row written before this rule existed
-    // (or edited by hand in the database) must not print in mixed case.
-    director: director ? { ...director, nombre: upperName(director.nombre) } : null,
-    logo: logo
-      ? {
-          url: logoUrl(logo),
-          mime: logo.mime,
-          bytes: Buffer.byteLength(logo.data ?? '', 'base64'),
-          actualizadoEn: logo.actualizadoEn ?? null,
-        }
+    // Uppercased on the way out as well: a file written before this rule existed
+    // (or edited by hand) must not print in mixed case.
+    director: settings.director
+      ? { ...settings.director, nombre: upperName(settings.director.nombre) }
       : null,
+    logo:
+      stored && settings[LOGO_KEY]
+        ? {
+            url: logoUrl(settings[LOGO_KEY]),
+            mime: settings[LOGO_KEY].mime ?? 'image/png',
+            bytes: stored.buffer.length,
+            actualizadoEn: settings[LOGO_KEY].actualizadoEn ?? null,
+          }
+        : null,
     positions: POSITIONS,
     maxLogoBytes: MAX_LOGO_BYTES,
   }
@@ -190,8 +168,9 @@ async function getAjustes() {
  */
 async function saveDirector(input) {
   const director = parseDirector(input)
-  const { actualizadoEn } = await writeValue(DIRECTOR_KEY, director)
-  return { ...director, actualizadoEn }
+  const settings = store.readSettings()
+  store.writeSettings({ ...settings, director })
+  return { ...director }
 }
 
 /**
@@ -199,26 +178,32 @@ async function saveDirector(input) {
  * @returns {Promise<object>} the stored logo metadata (never the bytes)
  */
 async function saveLogo(upload) {
-  const { mime, buffer } = parseLogo(upload)
-  const logo = { mime, data: buffer.toString('base64'), actualizadoEn: stamp() }
-  await writeValue(LOGO_KEY, logo)
+  const { mime, ext, buffer } = parseLogo(upload)
+  const { archivo } = store.writeLogo(buffer, ext)
+  const logo = { archivo, mime, actualizadoEn: stamp() }
+  const settings = store.readSettings()
+  store.writeSettings({ ...settings, [LOGO_KEY]: logo })
   return { url: logoUrl(logo), mime, bytes: buffer.length, actualizadoEn: logo.actualizadoEn }
 }
 
 /**
  * The stored image, ready to be served.
- * @returns {Promise<{ mime: string, buffer: Buffer }|null>}
+ * @returns {Promise<{ mime: string, buffer: Buffer, actualizadoEn: string|null }|null>}
  */
 async function getLogo() {
-  const logo = await readValue(LOGO_KEY)
-  if (!logo?.data) {
+  const settings = store.readSettings()
+  const stored = store.readLogo(settings)
+  if (!stored) {
     return null
   }
-  return { mime: logo.mime ?? 'image/png', buffer: Buffer.from(logo.data, 'base64') }
+  return {
+    mime: settings[LOGO_KEY]?.mime ?? 'image/png',
+    buffer: stored.buffer,
+    actualizadoEn: settings[LOGO_KEY]?.actualizadoEn ?? null,
+  }
 }
 
 module.exports = {
-  DIRECTOR_KEY,
   LOGO_KEY,
   POSITIONS,
   MAX_LOGO_BYTES,

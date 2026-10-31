@@ -25,6 +25,7 @@ const {
   tablesInDump,
   inContainer,
   databaseName,
+  copySettings,
   ROOT,
   BACKUPS,
 } = require('./backup')
@@ -114,6 +115,9 @@ function createDump({ out } = {}) {
     bytes: fs.statSync(file).size,
     database: database.name,
     tables: tablesInDump(sql),
+    // The director and the logo do not live in the database, so they do not
+    // travel inside the `.sql`: they are copied beside it.
+    settings: copySettings(file),
   }
 }
 
@@ -132,8 +136,15 @@ function main() {
   const size = (result.bytes / 1024).toFixed(1)
   console.log(`Backup written: ${result.relative} (${size} KB)`)
   console.log(`Database "${result.database}": ${result.tables.length} table(s) — ${result.tables.join(', ')}`)
+  console.log(
+    result.settings?.relative
+      ? `Settings:      ${result.settings.relative} (${result.settings.files.join(', ')})`
+      : result.settings?.skipped === 'inside'
+        ? 'Settings:      not copied — the dump was written inside the settings folder'
+        : 'Settings:      nothing configured yet, so nothing to copy',
+  )
   console.log(`To put it back on this machine: pnpm db:restore ${result.relative}`)
-  console.log('To put it back on another one: copy the file there and run the same command.')
+  console.log('To put it back on another one: copy the .sql file AND its .datos folder, then run the same command.')
 }
 
 // The server requires this module; the command must not run on import.

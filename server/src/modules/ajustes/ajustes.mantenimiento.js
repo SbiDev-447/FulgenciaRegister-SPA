@@ -37,7 +37,7 @@ async function purgeOrphans() {
  * runs. That is acceptable for a single-operator school register and it is the
  * price of reusing the exact command the CLI uses; a queued job would be a
  * second implementation to keep in step.
- * @returns {{ archivo: string, bytes: number, tablas: string[], baseDeDatos: string }}
+ * @returns {{ archivo: string, bytes: number, tablas: string[], baseDeDatos: string, configuracion: string|null }}
  * @throws {HttpError} 503 when the container does not answer or the dump is unusable
  */
 function backup() {
@@ -54,6 +54,9 @@ function backup() {
     bytes: result.bytes,
     tablas: result.tables,
     baseDeDatos: result.database,
+    // The director and the logo are files, so they are copied beside the dump
+    // instead of travelling inside it.
+    configuracion: result.settings?.relative ?? null,
   }
 }
 

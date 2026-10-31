@@ -22,6 +22,9 @@ const {
   databaseName,
   tablesIn,
   importDump,
+  settingsDirFor,
+  settingsFiles,
+  restoreSettings,
   ROOT,
   BACKUPS,
 } = require('./backup')
@@ -84,6 +87,15 @@ function main() {
   console.log(`Database:      "${target}"${values.database ? '' : ' (the one the container uses)'}`)
   console.log(`The backup carries ${tables.length} table(s): ${tables.join(', ')}`)
 
+  // The director and the logo are files, not rows: they travel in a folder next
+  // to the dump and a restore puts them back with it.
+  const settings = settingsFiles(settingsDirFor(file))
+  console.log(
+    settings.length > 0
+      ? `Settings:      ${settings.length} file(s) — ${settings.join(', ')}`
+      : 'Settings:      none beside this dump, so the ones on disk are kept',
+  )
+
   if (!existing) {
     return fail(
       `The database "${target}" does not exist, so nothing was touched.`,
@@ -120,6 +132,17 @@ function main() {
       ? `Restored into "${target}": ${after.length} table(s).`
       : `Restored into "${target}": ${after.length} table(s), ${restored} student(s).`,
   )
+
+  // Only into the live installation: restoring into another database
+  // (`--database`) exists to inspect a backup, and it must not overwrite the
+  // settings of the school that is running.
+  if (settings.length > 0 && !values.database) {
+    const settingsResult = restoreSettings(file)
+    console.log(`Settings restored into ${settingsResult.relative}: ${settingsResult.files.join(', ')}.`)
+  } else if (settings.length > 0) {
+    console.log('The settings folder was left alone: restoring into another database does not touch it.')
+  }
+
   console.log('Restart the API if it is running, so it does not keep state from before the restore.')
 }
 

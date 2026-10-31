@@ -48,7 +48,7 @@ function apiStub(overrides = {}) {
       })
     }
     if (url.endsWith('/purgar-representantes')) return jsonResponse({ encontrados: 2, eliminados: [{ id: 1 }, { id: 2 }], restantes: 0 })
-    if (url.endsWith('/backup')) return jsonResponse({ archivo: 'backups/fulgencia-2026-10-30-101500.sql', bytes: 27275, tablas: ['ajustes', 'estudiantes'], baseDeDatos: 'fulgencia' })
+    if (url.endsWith('/backup')) return jsonResponse({ archivo: 'backups/fulgencia-2026-10-30-101500.sql', bytes: 27275, tablas: ['estudiantes', 'representantes'], baseDeDatos: 'fulgencia', configuracion: 'backups/fulgencia-2026-10-30-101500.datos' })
     return jsonResponse({}, 404)
   }
 }
@@ -209,6 +209,8 @@ test('the backup reports the file it wrote', async () => {
     const status = textOf(findAll(container, '[id="ajustes-backup-status"]')[0])
     assert.match(status, /backups\/fulgencia-2026-10-30-101500\.sql/)
     assert.match(status, /2 tablas/)
+    // The settings are files: the dump alone does not hold the director or the logo.
+    assert.match(status, /backups\/fulgencia-2026-10-30-101500\.datos/)
     assert.equal(buttonWithText(container, 'Hacer backup').disabled, false)
   } finally {
     stallFetch()

@@ -10,5 +10,4 @@ module.exports = [
   require('./inscripcion.model'),
   require('./documento-consignado.model'),
   require('./documento-emitido.model'),
-  require('./ajuste.model'),
 ]

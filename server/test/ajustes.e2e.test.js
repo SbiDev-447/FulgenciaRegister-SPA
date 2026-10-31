@@ -11,6 +11,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const path = require('node:path')
 const fs = require('node:fs')
+const os = require('node:os')
 const crypto = require('node:crypto')
 
 const envFile = path.resolve(__dirname, '..', '..', '.env')
@@ -58,10 +59,12 @@ test('ajustes endpoints (require MariaDB and a configured .env)', async (t) => {
     return t.skip(`Skipping ajustes e2e: database unreachable (${error.message})`)
   }
 
-  // The settings are real data someone may have typed. Put back exactly what was
-  // there, whatever happens below.
-  const before = await db.tabla('ajustes').select({ campos: ['clave', 'valor', 'actualizado_en'] })
-  await db.tabla('ajustes').delete('1 = 1')
+  // The settings are files in `data/`, and they are real data someone may have
+  // typed: this run points them at a scratch folder outside the worktree, so the
+  // suite never reads or rewrites the settings of a real school. Set before the
+  // app is required: the routes read it on every call, but the backup does too.
+  const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'fulgencia-data-'))
+  process.env.FULGENCIA_DATA_DIR = DATA
 
   const server = createApp().listen(0)
   await new Promise((resolve) => server.once('listening', resolve))
@@ -88,20 +91,15 @@ test('ajustes endpoints (require MariaDB and a configured .env)', async (t) => {
       // Best-effort cleanup.
     }
     try {
-      await db.tabla('ajustes').delete('1 = 1')
-      for (const row of before) {
-        await db.tabla('ajustes').insert({
-          clave: row.clave,
-          valor: row.valor,
-          actualizado_en: row.actualizado_en,
-        })
-      }
+      fs.rmSync(DATA, { recursive: true, force: true })
     } catch {
-      // Best-effort restore.
+      // Best-effort cleanup of the scratch folder outside the worktree.
     }
     if (backupFile) {
       try {
         fs.rmSync(backupFile, { force: true })
+        // The settings travel beside the dump, in a folder of the same name.
+        fs.rmSync(backupFile.replace(/\.sql$/, '.datos'), { recursive: true, force: true })
       } catch {
         // Best-effort cleanup of the test's own dump.
       }
@@ -164,6 +162,15 @@ test('ajustes endpoints (require MariaDB and a configured .env)', async (t) => {
       { nombre: read.director.nombre, ci: read.director.ci, cargo: read.director.cargo },
       { nombre: 'ANA MARÍA PÉREZ', ci: 'V-12345678', cargo: 'Directora' },
     )
+
+    // The point of the screen: what is saved stays saved. It is on disk as JSON,
+    // not only in this process's memory or a row.
+    const stored = JSON.parse(fs.readFileSync(path.join(DATA, 'ajustes.json'), 'utf8'))
+    assert.deepEqual(stored.director, {
+      nombre: 'ANA MARÍA PÉREZ',
+      ci: 'V-12345678',
+      cargo: 'Directora',
+    })
   })
 
   await t.test('names every invalid director field in one rejection', async () => {
@@ -192,6 +199,11 @@ test('ajustes endpoints (require MariaDB and a configured .env)', async (t) => {
     const read = await (await api('GET', '/api/ajustes')).json()
     assert.equal(read.logo.mime, 'image/png')
     assert.equal(read.logo.bytes, PNG_1X1.length)
+
+    // Stored as the file it is, with its real extension, so it survives a
+    // restart and travels inside the backup.
+    const stored = path.join(DATA, 'logo-ministerio.png')
+    assert.deepEqual(fs.readFileSync(stored), PNG_1X1)
   })
 
   await t.test('refuses a file that is not the image it claims to be', async () => {
@@ -246,11 +258,22 @@ test('ajustes endpoints (require MariaDB and a configured .env)', async (t) => {
 
     assert.equal(res.status, 200)
     const body = await res.json()
-    assert.match(body.archivo, /^backups\/.+\.sql$/)
-    assert.ok(body.tablas.includes('ajustes'), 'the dump does not carry the new settings table')
-    assert.ok(body.bytes > 0)
-
+    // Stored before the assertions: a failed expectation must still leave the
+    // dump this test wrote to be cleaned up.
     backupFile = path.resolve(__dirname, '..', '..', body.archivo)
+    assert.match(body.archivo, /^backups\/.+\.sql$/)
+    assert.ok(body.tablas.includes('estudiantes'), 'the dump does not carry the student table')
+    assert.ok(
+      !body.tablas.includes('ajustes'),
+      'the settings are files now: the dump must not recreate a settings table',
+    )
+    assert.ok(body.bytes > 0)
+    // The director and the logo were saved above, so they travel beside the dump.
+    assert.match(body.configuracion, /^backups\/.+\.datos$/)
+    const settingsFolder = path.resolve(__dirname, '..', '..', body.configuracion)
+    assert.ok(fs.existsSync(path.join(settingsFolder, 'ajustes.json')))
+    assert.ok(fs.existsSync(path.join(settingsFolder, 'logo-ministerio.png')))
+
     assert.ok(fs.existsSync(backupFile))
     assert.match(fs.readFileSync(backupFile, 'utf8'), /CREATE TABLE/i)
   })

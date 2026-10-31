@@ -8,6 +8,8 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const path = require('node:path')
+const fs = require('node:fs')
+const os = require('node:os')
 
 const {
   timestampFor,
@@ -15,6 +17,10 @@ const {
   looksLikeDump,
   tablesInDump,
   resolveFromRoot,
+  settingsDirFor,
+  settingsFiles,
+  copySettings,
+  restoreSettings,
   ROOT,
 } = require('../db/backup')
 
@@ -82,4 +88,116 @@ test('looksLikeDump refuses what a real empty database dumps', () => {
 
 test('resolveFromRoot also reads a ./-prefixed path from the root', () => {
   assert.equal(resolveFromRoot('./backups/x.sql'), path.join(ROOT, 'backups', 'x.sql'))
+})
+
+// The director and the logo are files, so a backup that carries only the `.sql`
+// restores the students and forgets who signs the letters. These pin the rule:
+// the settings travel in a folder of the same name, beside the dump.
+function scratch(t) {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), 'fulgencia-backup-'))
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }))
+  return work
+}
+
+test('settingsDirFor puts the settings beside the dump, not inside it', () => {
+  assert.equal(
+    settingsDirFor('/repo/backups/fulgencia-2026-10-30-090503.sql'),
+    '/repo/backups/fulgencia-2026-10-30-090503.datos',
+  )
+})
+
+test('settingsFiles lists what a backup would carry, and nothing when there is nothing', (t) => {
+  const work = scratch(t)
+  assert.deepEqual(settingsFiles(path.join(work, 'nada')), [])
+
+  fs.mkdirSync(path.join(work, 'data'))
+  fs.writeFileSync(path.join(work, 'data', 'logo-ministerio.webp'), 'x')
+  fs.writeFileSync(path.join(work, 'data', 'ajustes.json'), '{}')
+  assert.deepEqual(settingsFiles(path.join(work, 'data')), ['ajustes.json', 'logo-ministerio.webp'])
+})
+
+test('copySettings copies the folder next to the dump and replaces an older copy', (t) => {
+  const work = scratch(t)
+  const source = path.join(work, 'data')
+  const file = path.join(work, 'fulgencia-2026-10-30-090503.sql')
+  fs.mkdirSync(source)
+  fs.writeFileSync(path.join(source, 'ajustes.json'), '{"director":null}')
+
+  const first = copySettings(file, source)
+  assert.deepEqual(first.files, ['ajustes.json'])
+  assert.deepEqual(fs.readdirSync(settingsDirFor(file)), ['ajustes.json'])
+
+  // A second backup in the same second must not leave the previous file behind.
+  fs.writeFileSync(path.join(source, 'logo-ministerio.png'), 'px')
+  const second = copySettings(file, source)
+  assert.deepEqual(second.files, ['ajustes.json', 'logo-ministerio.png'])
+  assert.deepEqual(fs.readdirSync(settingsDirFor(file)).sort(), ['ajustes.json', 'logo-ministerio.png'])
+})
+
+test('copySettings reports nothing to carry instead of failing an empty school', (t) => {
+  const work = scratch(t)
+  fs.mkdirSync(path.join(work, 'data'))
+  assert.equal(copySettings(path.join(work, 'x.sql'), path.join(work, 'data')), null)
+})
+
+test('restoreSettings swaps the folder in whole, never half of each', (t) => {
+  const work = scratch(t)
+  const file = path.join(work, 'fulgencia-2026-10-30-090503.sql')
+  const backup = settingsDirFor(file)
+  const destination = path.join(work, 'data')
+
+  fs.mkdirSync(backup)
+  fs.writeFileSync(path.join(backup, 'ajustes.json'), '{"director":"ANA"}')
+
+  fs.mkdirSync(destination)
+  fs.writeFileSync(path.join(destination, 'logo-viejo.png'), 'old')
+
+  const result = restoreSettings(file, destination)
+  assert.deepEqual(result.files, ['ajustes.json'])
+  assert.deepEqual(fs.readdirSync(destination), ['ajustes.json'])
+  assert.equal(fs.readFileSync(path.join(destination, 'ajustes.json'), 'utf8'), '{"director":"ANA"}')
+  // The staging folder is moved into place, not left behind.
+  assert.equal(fs.existsSync(`${destination}.restaurando`), false)
+})
+
+test('restoreSettings leaves the settings alone when the dump has none beside it', (t) => {
+  const work = scratch(t)
+  const destination = path.join(work, 'data')
+  fs.mkdirSync(destination)
+  fs.writeFileSync(path.join(destination, 'ajustes.json'), '{"director":"ACTUAL"}')
+
+  assert.equal(restoreSettings(path.join(work, 'sin-datos.sql'), destination), null)
+  assert.equal(fs.readFileSync(path.join(destination, 'ajustes.json'), 'utf8'), '{"director":"ACTUAL"}')
+})
+
+test('copySettings never copies the settings folder into a folder inside itself', (t) => {
+  // Regression: `db:dump --out data/x.sql` wrote the dump and then crashed,
+  // because the settings folder was copied into `data/x.datos` — a folder
+  // inside the thing being copied. A flag value must not turn a dump into an
+  // exception after the file is already on disk.
+  const work = scratch(t)
+  const source = path.join(work, 'data')
+  fs.mkdirSync(path.join(source, 'sub'), { recursive: true })
+  fs.writeFileSync(path.join(source, 'ajustes.json'), '{}')
+
+  const result = copySettings(path.join(source, 'backup.sql'), source)
+  assert.equal(result.skipped, 'inside')
+  assert.equal(result.directory, null)
+  assert.deepEqual(fs.readdirSync(source).sort(), ['ajustes.json', 'sub'])
+  assert.deepEqual(fs.readdirSync(path.join(source, 'sub')), [])
+
+  // The same holds one level down: the check is "inside", not "one name deep".
+  const nested = copySettings(path.join(source, 'sub', 'backup.sql'), source)
+  assert.equal(nested.skipped, 'inside')
+})
+
+test('copySettings still copies into a folder beside the settings', (t) => {
+  const work = scratch(t)
+  const source = path.join(work, 'data')
+  fs.mkdirSync(source)
+  fs.writeFileSync(path.join(source, 'ajustes.json'), '{}')
+
+  const sibling = copySettings(path.join(work, 'otra', 'backup.sql'), source)
+  assert.equal(sibling.skipped, null)
+  assert.deepEqual(fs.readdirSync(sibling.directory), ['ajustes.json'])
 })

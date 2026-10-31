@@ -328,9 +328,12 @@ export function renderAjustes(container, { user } = {}) {
     try {
       const result = await api.backup()
       const tables = result?.tablas?.length ?? 0
+      // The settings are files, so the dump alone is not the whole backup: the
+      // folder beside it holds the director and the logo.
+      const settings = result?.configuracion ? ` y ${result.configuracion}` : ''
       setStatus(
         backupStatus,
-        `Backup creado: ${result.archivo} (${kilobytes(result.bytes)}, ${tables} tablas).`,
+        `Backup creado: ${result.archivo} (${kilobytes(result.bytes)}, ${tables} tablas)${settings}.`,
         'ok',
       )
     } catch (error) {
@@ -368,7 +371,7 @@ export function renderAjustes(container, { user } = {}) {
         h('h3', { class: 'ajustes__block-title', text: 'Backup de la base de datos' }),
         h('p', {
           class: 'ajustes__meta',
-          text: 'Escribe un .sql con fecha y hora en la carpeta backups/ del proyecto. Ese archivo es el que se copia a un pendrive o se restaura en otra máquina.',
+          text: 'Escribe un .sql con fecha y hora en la carpeta backups/ del proyecto, junto a una carpeta .datos que guarda el director y el logo. Las dos cosas se copian juntas a un pendrive y se restauran en otra máquina.',
         }),
         h('div', { class: 'ajustes__actions' }, [backupBtn]),
         backupStatus,

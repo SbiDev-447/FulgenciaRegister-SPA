@@ -17,6 +17,9 @@ node_modules/
 # Database backups (real student data — never commit)
 backups/
 
+# Institutional settings (the director's name and cédula — never commit)
+data/
+
 # Logs
 *.log
 npm-debug.log*
