@@ -190,9 +190,10 @@ totales por sexo, una fila por año académico y el conteo de documentos emitido
   el logo viaja en base64. Por lo mismo el `PUT` del logo acepta el **cuerpo binario**
   crudo en lugar de un JSON: el parser global de Express corta en 100 KB y abrirlo para
   toda la API sería una puerta más grande que este filtro.
-- Valida del lado del servidor aunque el formulario ya avise: cédula canónica
-  (`V-12345678`), cargo entre `Director`/`Directora`, imagen PNG/JPEG/WebP de hasta 2 MB
-  comprobada **por firma de bytes**, no por el `Content-Type` declarado.
+- Valida y canonicaliza del lado del servidor aunque el formulario ya avise: cédula
+  (`V-12345678`), **nombre en mayúsculas** —una carta se firma así, y el formulario no
+  decide tipografía—, cargo entre `Director`/`Directora`, imagen PNG/JPEG/WebP de hasta
+  2 MB comprobada **por firma de bytes**, no por el `Content-Type` declarado.
 - Reutiliza lo que ya existía: la purga llama a `purgeOrphanRepresentantes` del script de
   consola (la condición va dentro del `DELETE`) y el respaldo llama a la misma función
   que `pnpm db:dump`. No hay una segunda implementación de ninguna de las dos reglas.

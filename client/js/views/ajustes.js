@@ -60,12 +60,16 @@ export function renderAjustes(container, { user } = {}) {
 
   /* ---------------------------------------------------------------- director */
 
+  // The letterhead sets the name in capitals, and the server stores it that
+  // way; the field shows it uppercased while typing so the form never promises
+  // a lowercase name the document will not print.
   const nombreInput = h('input', {
-    class: 'input',
+    class: 'input ajustes__input--upper',
     name: 'nombre',
     type: 'text',
-    placeholder: 'Nombre y apellido',
+    placeholder: 'NOMBRE Y APELLIDO',
     autocomplete: 'off',
+    autocapitalize: 'characters',
     maxlength: 120,
   })
   const ciInput = h('input', {

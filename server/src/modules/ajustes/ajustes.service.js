@@ -74,8 +74,19 @@ function normalizeSpaces(value) {
 const HAS_LETTER = /\p{L}/u
 
 /**
+ * Names on a letterhead are set in capitals, and a form does not get to decide
+ * that: the stored name is uppercase so the four documents print it that way
+ * whether it was typed in lowercase or mixed case.
+ * @param {unknown} value
+ */
+function upperName(value) {
+  return normalizeSpaces(value).toUpperCase()
+}
+
+/**
  * Validate and canonicalize the director block. Canonical cédula (`V-12345678`)
- * so the letter prints the same text no matter how it was typed.
+ * and uppercase name, so the letter prints the same text no matter how it was
+ * typed.
  * @param {{ nombre?: unknown, ci?: unknown, cargo?: unknown }} input
  * @returns {{ nombre: string, ci: string, cargo: string }}
  * @throws {HttpError} 400 naming each invalid field
@@ -83,7 +94,7 @@ const HAS_LETTER = /\p{L}/u
 function parseDirector(input = {}) {
   const details = {}
 
-  const nombre = normalizeSpaces(input.nombre)
+  const nombre = upperName(input.nombre)
   if (nombre.length < 3) {
     details.nombre = 'must be at least 3 characters'
   } else if (nombre.length > 120) {
@@ -157,7 +168,9 @@ async function getAjustes() {
   const [director, logo] = await Promise.all([readValue(DIRECTOR_KEY), readValue(LOGO_KEY)])
 
   return {
-    director: director ?? null,
+    // Uppercased on the way out as well: a row written before this rule existed
+    // (or edited by hand in the database) must not print in mixed case.
+    director: director ? { ...director, nombre: upperName(director.nombre) } : null,
     logo: logo
       ? {
           url: logoUrl(logo),

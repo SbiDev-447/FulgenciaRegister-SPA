@@ -145,7 +145,7 @@ test('ajustes endpoints (require MariaDB and a configured .env)', async (t) => {
     assert.equal(body.maxLogoBytes, 2 * 1024 * 1024)
   })
 
-  await t.test('saves the director, canonicalizing the cédula', async () => {
+  await t.test('saves the director: canonical cédula and uppercase name', async () => {
     const put = await api('PUT', '/api/ajustes/director', {
       nombre: '  Ana   María Pérez ',
       ci: 'v-12.345.678',
@@ -153,14 +153,16 @@ test('ajustes endpoints (require MariaDB and a configured .env)', async (t) => {
     })
     assert.equal(put.status, 200)
     const saved = await put.json()
-    assert.equal(saved.nombre, 'Ana María Pérez')
+    // The letters print the name in capitals, so the uppercase is stored and not
+    // just painted. Accents survive: toUpperCase() keeps the Spanish alphabet.
+    assert.equal(saved.nombre, 'ANA MARÍA PÉREZ')
     assert.equal(saved.ci, 'V-12345678')
     assert.equal(saved.cargo, 'Directora')
 
     const read = await (await api('GET', '/api/ajustes')).json()
     assert.deepEqual(
       { nombre: read.director.nombre, ci: read.director.ci, cargo: read.director.cargo },
-      { nombre: 'Ana María Pérez', ci: 'V-12345678', cargo: 'Directora' },
+      { nombre: 'ANA MARÍA PÉREZ', ci: 'V-12345678', cargo: 'Directora' },
     )
   })
 

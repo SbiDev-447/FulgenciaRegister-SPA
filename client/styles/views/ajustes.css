@@ -64,6 +64,11 @@
     color: var(--color-text);
   }
 
+  /* Visual only: the value the server stores is already uppercase. */
+  .ajustes__input--upper {
+    text-transform: uppercase;
+  }
+
   .ajustes__meta {
     color: var(--color-text-muted);
     font-size: 0.92rem;
