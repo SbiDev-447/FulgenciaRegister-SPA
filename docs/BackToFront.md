@@ -182,14 +182,25 @@ totales por sexo, una fila por año académico y el conteo de documentos emitido
 
 **`ajustes`** — lo institucional y el mantenimiento.
 
-- Guarda en la tabla `ajustes` (`clave` primaria, `valor` JSON) dos cosas que no son de
-  ningún estudiante y no son historia: el director que firma y el logo del Ministerio.
-  Van a la base y no al navegador porque el respaldo tiene que llevárselos y porque la
-  carta se imprime desde cualquier equipo de la escuela.
-- **Por qué `LONGTEXT` y no `BLOB`**: `dbtabla` interpola los valores como texto, así que
-  el logo viaja en base64. Por lo mismo el `PUT` del logo acepta el **cuerpo binario**
-  crudo en lugar de un JSON: el parser global de Express corta en 100 KB y abrirlo para
-  toda la API sería una puerta más grande que este filtro.
+- Guarda **en archivos, no en la base**, dos cosas que no son de ningún estudiante y no
+  son historia: el director que firma y el logo del Ministerio. Viven en `data/`
+  (`ajustes.json` y `logo-ministerio.<ext>`), una carpeta de la instalación gitignoreada
+  porque lleva el nombre y la cédula de una persona. Van al servidor y no al navegador
+  porque la carta se imprime desde cualquier equipo de la escuela.
+- **Por qué archivos y no filas**: no son registro ni historia, son el membrete. Se
+  escriben una vez y se quedan hasta que alguien los cambie; se inspeccionan con un
+  editor cuando algo no cuadra; y no obligan a que un `dbtabla` transporte bytes. El
+  respaldo copia `data/` en `backups/<mismo-nombre>.datos/` junto al `.sql`, y
+  `pnpm db:restore` la devuelve con él — un respaldo que trae los estudiantes y olvida
+  quién firma las cartas no es un respaldo de esta aplicación.
+- **Se escribe con un temporal y un `rename`**: el `rename` es atómico en el mismo
+  sistema de archivos, así que un corte a mitad deja la configuración anterior intacta
+  en lugar de un JSON a medias. El logo se guarda con su extensión real y el anterior se
+  borra: dos imágenes servidas a la vez es una que no se puede explicar.
+- El `PUT` del logo acepta el **cuerpo binario** crudo en lugar de un JSON: el parser
+  global de Express corta en 100 KB y abrirlo para toda la API sería una puerta más
+  grande que este filtro. Sin `multer` ni `sharp`: no hay procesamiento, sólo el tope de
+  2 MB, la firma de bytes y el archivo tal como llegó.
 - Valida y canonicaliza del lado del servidor aunque el formulario ya avise: cédula
   (`V-12345678`), **nombre en mayúsculas** —una carta se firma así, y el formulario no
   decide tipografía—, cargo entre `Director`/`Directora`, imagen PNG/JPEG/WebP de hasta
@@ -419,7 +430,7 @@ impresión falla, la emisión ya quedó en la bitácora con fecha y autor.
 | Cambiar años o secciones | `constants/academic.js` |
 | Agregar una vista | `client/js/views/` + una línea en `routes.js` y en `NAV_ITEMS` de `shell.js` |
 | Cambiar el director o el logo que se imprime | `client/js/views/ajustes.js` (formulario) → `PUT /api/ajustes/*` → `modules/ajustes/ajustes.service.js` |
-| Agregar otro ajuste institucional | una clave nueva en `ajustes.service.js` (`DIRECTOR_KEY`/`LOGO_KEY`) y su bloque en la vista; la tabla es clave/valor y no necesita migración |
+| Agregar otro ajuste institucional | un campo nuevo en `data/ajustes.json` (`ajustes.almacen.js`) y su bloque en la vista; no hay migración ni tabla que tocar |
 | Cambiar textos de error | `client/js/ui/messages.js` (el servidor sigue respondiendo en inglés) |
 | Cambiar la carta impresa | `client/assets/skeletons/*.html` y `.css` (no toques `letter.js` salvo que cambien los huecos) |
 

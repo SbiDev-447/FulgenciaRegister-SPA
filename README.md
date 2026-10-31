@@ -16,7 +16,7 @@
 
 | Componente | Estado |
 | ---------- | ------ |
-| Backend (API REST) | Listo — 118 pruebas (117 en verde, 1 saltada sin base) |
+| Backend (API REST) | Listo — 132 pruebas (131 en verde, 1 saltada sin base) |
 | Base de datos (MariaDB) | Listo — esquema y datos semilla |
 | Frontend (SPA) | Listo — 90 pruebas en verde |
 
@@ -73,6 +73,7 @@ fulgenciaProject/
 │   ├── model/               # modelos tabla-model (el esquema)
 │   ├── db/                  # seed, seed demo, dump, restore, purga y reparación
 │   └── test/                # pruebas del servidor (node:test)
+├── data/                    # director y logo configurados (gitignoreado, datos reales)
 ├── docs/                    # documentación del proyecto
 │   ├── BackToFront.md       # el recorrido de una petición: backend, frontend y su enlace
 │   ├── Informe.md           # qué es el proyecto y qué problema resuelve
@@ -227,10 +228,16 @@ modelos, el seed— y nunca su **contenido**. Copiar la carpeta a otro equipo da
 funcionando con una escuela vacía; para llevarse los datos hay que llevarse un respaldo.
 
 ```bash
-pnpm db:dump                      # guarda backups/<base>-<fecha>.sql
+pnpm db:dump                      # guarda backups/<base>-<fecha>.sql (+ <mismo>.datos/)
 pnpm db:restore                   # dice qué haría con el respaldo más nuevo; no escribe
 pnpm db:restore backups/x.sql --apply   # lo restaura de verdad
 ```
+
+Un respaldo son **dos cosas**: el `.sql` con las tablas y una carpeta `<mismo-nombre>.datos/`
+con el director y el logo que configuró la escuela. Esos dos no están en la base —viven en
+`data/`, ver `docs/BackToFront.md`—, así que el volcado los copia al lado y `db:restore` los
+devuelve en bloque. Un `.sql` sin su carpeta restaura a los estudiantes y deja las cartas sin
+firmar: al mover el proyecto hay que llevarse las dos cosas.
 
 `db:dump` corre `mariadb-dump` **dentro del contenedor**, con las credenciales y el nombre
 de la base que el propio contenedor tiene (`MARIADB_*`, los de `docker-compose.yml`), no con
@@ -256,9 +263,9 @@ las siete tablas coincidieron con los de la base viva.
 
 `backups/` está en `.gitignore`: **contiene datos reales de estudiantes y no se commitea.**
 
-Para pasar el proyecto a otro equipo: `pnpm db:dump` en este, copiar el `.sql` y el `.env`
-(a mano, por un pendrive o donde corresponda), y en el otro `pnpm db:up && pnpm db:restore
-<archivo>.sql --apply`.
+Para pasar el proyecto a otro equipo: `pnpm db:dump` en este, copiar el `.sql`, su carpeta
+`.datos` y el `.env` (a mano, por un pendrive o donde corresponda), y en el otro `pnpm db:up
+&& pnpm db:restore <archivo>.sql --apply`.
 
 ## Roadmap
 
