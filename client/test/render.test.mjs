@@ -54,7 +54,7 @@ test('estudiantes paints the bar with the search, the filters and the action', a
   assert.ok(text.includes('Nueva inscripción'), 'the primary action label is missing')
 })
 
-test('the inscription wizard shows one of its four steps at a time', async () => {
+test('the inscription wizard shows one of its five steps at a time', async () => {
   const mod = await import(new URL('../js/features/inscripcion.js', import.meta.url))
   const host = makeEl('div')
   // The wizard is a page now (S22): it paints itself and its own footer into the
@@ -65,13 +65,31 @@ test('the inscription wizard shows one of its four steps at a time', async () =>
   assert.ok(form, 'the wizard form did not mount')
 
   const sections = findAll(form, '.inscripcion__section')
-  assert.equal(sections.length, 4, 'the wizard must take its four steps from the four sections')
+  assert.equal(sections.length, 5, 'the wizard must take its five steps from the five sections')
 
   const visible = sections.filter((section) => !section.hidden)
   assert.equal(visible.length, 1, 'exactly one step is visible at a time')
   assert.equal(sections[0].hidden, false, 'the first step is the one shown')
 
-  assert.equal(findAll(form, '.inscripcion__step').length, 4, 'the stepper needs one item per step')
+  assert.equal(findAll(form, '.inscripcion__step').length, 5, 'the stepper needs one item per step')
+
+  // The physical data is its own step, second: it must not stay mixed into the
+  // student's personal data.
+  const personal = textOf(sections[0])
+  const physical = textOf(sections[1])
+  for (const label of [
+    'Lateralidad *',
+    'Talla (cm)',
+    'Peso (kg)',
+    'Camisa',
+    'Pantalón',
+    'Zapatos',
+    'Alérgico a',
+    'Enfermedades padecidas',
+  ]) {
+    assert.ok(physical.includes(label), `the physical data step is missing "${label}"`)
+    assert.ok(!personal.includes(label), `"${label}" must not live in the student data step`)
+  }
 
   // The buttons live in the wizard's own footer, outside the form, and reach it
   // through the `form` attribute.

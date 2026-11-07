@@ -44,7 +44,7 @@ function controlLabelled(container, label) {
 
 /**
  * Fill the whole wizard up to the Documentos step, which is only reachable with
- * the three previous steps valid.
+ * the four previous steps valid.
  * @param {object} container
  */
 async function fillUntilDocumentos(container) {
@@ -249,14 +249,14 @@ test('reaching the Documentos step never saves the inscription on its own', asyn
 
   await fillUntilDocumentos(container)
   const next = findAll(container, '.inscripcion__footer .btn--primary')[0]
-  for (let step = 0; step < 3; step += 1) {
+  for (let step = 0; step < 4; step += 1) {
     await dispatch(next, 'click')
   }
 
   const secciones = findAll(container, '.inscripcion__section')
   const errors = findAll(container, '.inscripcion__error')[0]
   assert.equal(
-    secciones[3].hidden,
+    secciones[4].hidden,
     false,
     `the wizard should have reached Documentos: ${textOf(errors)}`,
   )
@@ -299,7 +299,7 @@ test('the last step saves the inscription, but only when it is asked to', async 
     await fillUntilDocumentos(container)
 
     const save = findAll(container, '.inscripcion__footer .btn--primary')[0]
-    for (let step = 0; step < 3; step += 1) {
+    for (let step = 0; step < 4; step += 1) {
       await dispatch(save, 'click')
     }
     assert.equal(
@@ -357,7 +357,7 @@ test('a rejected save leaves the button ready to try again', async () => {
     await fillUntilDocumentos(container)
 
     const save = findAll(container, '.inscripcion__footer .btn--primary')[0]
-    for (let step = 0; step < 3; step += 1) {
+    for (let step = 0; step < 4; step += 1) {
       await dispatch(save, 'click')
     }
     for (const box of findAll(container, 'input[type="checkbox"]')) {
@@ -416,7 +416,7 @@ test('a value the column cannot hold reaches the user in Spanish and marks its f
     await fillUntilDocumentos(container)
 
     const save = findAll(container, '.inscripcion__footer .btn--primary')[0]
-    for (let step = 0; step < 3; step += 1) {
+    for (let step = 0; step < 4; step += 1) {
       await dispatch(save, 'click')
     }
     for (const box of findAll(container, 'input[type="checkbox"]')) {

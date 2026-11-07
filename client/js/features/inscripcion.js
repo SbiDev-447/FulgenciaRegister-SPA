@@ -258,6 +258,12 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
         field('País de nacimiento *', paisNacimiento),
         field('Estado de nacimiento *', estadoNacimiento),
         field('Municipio de nacimiento *', municipioNacimiento),
+        field('Dirección de habitación', direccion, { full: true }),
+      ]),
+    ]),
+    h('section', { class: 'inscripcion__section' }, [
+      h('h3', { class: 'inscripcion__section-title', text: 'Datos físicos y salud' }),
+      h('div', { class: 'inscripcion__grid' }, [
         field('Lateralidad *', lateralidad),
         field('Talla (cm)', talla),
         field('Peso (kg)', peso),
@@ -266,7 +272,6 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
         field('Zapatos', zapatos),
         field('Alérgico a', alergicoA),
         field('Enfermedades padecidas', enfermedades, { full: true }),
-        field('Dirección de habitación', direccion, { full: true }),
       ]),
     ]),
     h('section', { class: 'inscripcion__section' }, [
@@ -296,7 +301,13 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
   // Advancing checks that step alone; saving — or a rejection coming from the
   // API — jumps back to the step that owns the first marked control.
 
-  const STEP_TITLES = ['Datos del estudiante', 'Inscripción', 'Representantes', 'Documentos']
+  const STEP_TITLES = [
+    'Datos del estudiante',
+    'Datos físicos y salud',
+    'Inscripción',
+    'Representantes',
+    'Documentos',
+  ]
   const steps = Array.from(form.querySelectorAll('.inscripcion__section'))
   const stepItems = steps.map((_section, index) =>
     h('li', { class: 'inscripcion__step' }, [

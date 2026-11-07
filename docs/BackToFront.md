@@ -336,7 +336,7 @@ export function renderEstudiantes(container, options) {
 | `ui/format.js` | Fechas `dd/mm/aaaa` y formato de contacto |
 | `features/session.js` | Estado de usuario, `sha256Hex`, `login`, `logout`, `loadSession` |
 | `features/theme.js` | `localStorage` + `prefers-color-scheme`, aplicado como `data-theme` |
-| `features/inscripcion.js` | El wizard de 4 pasos (datos, inscripción, representantes, recaudos) |
+| `features/inscripcion.js` | El wizard de 5 pasos (datos personales, datos físicos y salud, inscripción, representantes, recaudos) |
 
 ### 2.5 El cliente HTTP
 

@@ -62,7 +62,7 @@ fulgenciaProject/
 │   ├── styles/              # tokens.css, reset.css, layout.css, views/
 │   ├── js/                  # main.js, routes.js, router.js, shell.js, api.js
 │   │   ├── views/           # una vista por ruta (login, inicio, estudiantes, ...)
-│   │   ├── features/        # sesión, tema e inscripción (el wizard de 4 pasos)
+│   │   ├── features/        # sesión, tema e inscripción (el wizard de 5 pasos)
 │   │   └── ui/              # helpers DOM (h, clear, svgIcon), iconos, modal, copy de errores y formato de contacto
 │   └── test/                # pruebas del cliente (node:test, sin navegador)
 ├── server/                  # API REST (Express + mysql-tab)
@@ -202,7 +202,7 @@ El enrutado es por hash: todo ocurre en la misma página, sin recargas.
 | ---- | ----- |
 | `#/` | Inicio — estadísticas de inscripción con filtros |
 | `#/estudiantes` | Listado con búsqueda y filtros, ficha del estudiante, y acciones Ver / Editar / Borrar |
-| `#/inscripcion` | Wizard de inscripción en 4 pasos |
+| `#/inscripcion` | Wizard de inscripción en 5 pasos |
 | `#/documentos` | Verificación por cédula y emisión de los cuatro documentos |
 | `#/reportes` | Lista de asistencia de una sección completa, lista para imprimir |
 | `#/ajustes` | Director que firma, logo del Ministerio y mantenimiento (huérfanos y respaldo) |
