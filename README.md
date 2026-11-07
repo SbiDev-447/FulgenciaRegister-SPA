@@ -16,9 +16,9 @@
 
 | Componente | Estado |
 | ---------- | ------ |
-| Backend (API REST) | Listo — 132 pruebas (131 en verde, 1 saltada sin base) |
+| Backend (API REST) | Listo — 142 pruebas (141 en verde, 1 saltada sin base) |
 | Base de datos (MariaDB) | Listo — esquema y datos semilla |
-| Frontend (SPA) | Listo — 90 pruebas en verde |
+| Frontend (SPA) | Listo — 96 pruebas en verde |
 
 El backend está completo y cubierto por pruebas. En la SPA funcionan el shell, el router,
 los temas y las cinco vistas: Inicio (estadísticas), Estudiantes (lista paginada,
@@ -35,6 +35,7 @@ alcance funcional, no trabajo pendiente.
   inscripción, representantes y documentos consignados). Búsqueda por nombre o cédula.
 - **Documentos:** verificación por cédula y emisión de cuatro documentos imprimibles
   (carta de aceptación, constancia de conducta, constancia de retiro, constancia de estudio).
+- **Reportes:** lista de asistencia imprimible de una sección completa, por año y sección.
 - **Ajustes:** director o directora que firma los documentos, logo del Ministerio que
   encabeza la carta, y dos tareas de mantenimiento desde la interfaz: borrar los
   representantes huérfanos y escribir un respaldo de la base en `backups/`. Sólo el rol
@@ -66,7 +67,7 @@ fulgenciaProject/
 ├── server/                  # API REST (Express + mysql-tab)
 │   ├── src/
 │   │   ├── config/          # variables de entorno y pool de MariaDB
-│   │   ├── modules/         # auth, estudiantes, documentos, estadisticas, ajustes
+│   │   ├── modules/         # auth, estudiantes, documentos, estadisticas, reportes, ajustes
 │   │   ├── middlewares/     # auth (incluye el guardia de rol), error
 │   │   ├── constants/       # academico, auth, documentos
 │   │   └── utils/           # cedula, password, jwt, httpError
@@ -149,6 +150,7 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 | GET | `/api/documentos/verificar/:cedula` | Verificar una cédula |
 | POST | `/api/documentos/emitir` | Emitir un documento |
 | GET | `/api/estadisticas` | Estadísticas de inscripción |
+| GET | `/api/reportes/seccion` | Lista completa de estudiantes de una sección (`anio`, `seccion`, `anio_escolar` opcional) |
 | GET | `/api/ajustes` | Director configurado y metadatos del logo |
 | PUT | `/api/ajustes/director` | Guardar el director que firma (sólo `admin`) |
 | GET | `/api/ajustes/logo` | El logo del Ministerio guardado |
@@ -187,6 +189,7 @@ El enrutado es por hash: todo ocurre en la misma página, sin recargas.
 | `#/estudiantes` | Listado con búsqueda y filtros, ficha del estudiante, y acciones Ver / Editar / Borrar |
 | `#/inscripcion` | Wizard de inscripción en 4 pasos |
 | `#/documentos` | Verificación por cédula y emisión de los cuatro documentos |
+| `#/reportes` | Lista de asistencia de una sección completa, lista para imprimir |
 | `#/ajustes` | Director que firma, logo del Ministerio y mantenimiento (huérfanos y respaldo) |
 
 El wizard **no** tiene entrada en el menú lateral: se llega desde el botón "Nueva
@@ -277,4 +280,5 @@ Para pasar el proyecto a otro equipo: `pnpm db:dump` en este, copiar el `.sql`, 
 - [x] Vistas de inicio y estudiantes (lista, ficha, edición, borrado y wizard de inscripción)
 - [x] Vista de documentos
 - [x] Generación e impresión de documentos
+- [x] Reportes: lista de asistencia imprimible por sección
 - [x] Vista de ajustes: director, logo del Ministerio y mantenimiento desde la interfaz

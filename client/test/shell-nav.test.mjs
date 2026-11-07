@@ -20,5 +20,12 @@ test('the sidebar lists Nueva inscripción right below Estudiantes', () => {
 
   const labels = findAll(root, '.nav-link').map((link) => textOf(link).trim())
 
-  assert.deepEqual(labels, ['Inicio', 'Estudiantes', 'Nueva inscripción', 'Documentos', 'Ajustes'])
+  assert.deepEqual(labels, [
+    'Inicio',
+    'Estudiantes',
+    'Nueva inscripción',
+    'Documentos',
+    'Reportes',
+    'Ajustes',
+  ])
 })

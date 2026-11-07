@@ -17,6 +17,7 @@ const VIEWS = [
   ['inicio', '../js/views/inicio.js', 'renderInicio'],
   ['estudiantes', '../js/views/estudiantes.js', 'renderEstudiantes'],
   ['documentos', '../js/views/documentos.js', 'renderDocumentos'],
+  ['reportes', '../js/views/reportes.js', 'renderReportes'],
   ['ajustes', '../js/views/ajustes.js', 'renderAjustes'],
   ['login', '../js/views/login.js', 'renderLogin'],
   ['notFound', '../js/views/notFound.js', 'renderNotFound'],

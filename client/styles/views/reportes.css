@@ -1,0 +1,296 @@
+/* Reportes view: pick a year and a section, preview its roster and print it.
+ *
+ * The preview and the sheet share the same data. On paper nothing but the
+ * roster sheet survives; token names come from styles/tokens.css.
+ */
+
+.reportes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 84ch;
+  margin-inline: auto;
+
+  .reportes__hero h2 {
+    margin: 0 0 var(--space-1);
+  }
+
+  .reportes__hero p {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+
+  .reportes__form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    align-items: end;
+    gap: var(--space-4);
+  }
+
+  .reportes__field {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .reportes__select {
+    width: 100%;
+    min-width: 0;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-input);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    text-transform: none;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      background: var(--color-disabled-bg);
+      border-color: var(--color-disabled-border);
+      color: var(--color-disabled-text);
+      cursor: not-allowed;
+    }
+  }
+
+  .reportes__results {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .reportes__status {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+
+  .reportes__error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+
+    p {
+      margin: 0;
+    }
+  }
+
+  .reportes__card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+
+    h3 {
+      margin: 0;
+    }
+  }
+
+  .reportes__meta {
+    margin: var(--space-1) 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+
+  .reportes__count {
+    margin: var(--space-3) 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+
+  .reportes__table-wrap {
+    margin-top: var(--space-3);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+  }
+
+  .reportes__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+
+    th {
+      padding: var(--space-3) var(--space-4);
+      text-align: left;
+      color: var(--color-text-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+      color: var(--color-text);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .reportes__num {
+      width: 1%;
+      color: var(--color-text-muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .reportes__name {
+      font-weight: 700;
+    }
+
+    .reportes__ci {
+      color: var(--color-text-muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+  }
+
+  .reportes__empty {
+    padding: var(--space-8) var(--space-5);
+    border: 1px dashed var(--color-border-strong);
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    text-align: center;
+
+    p {
+      margin: 0;
+    }
+
+    p + p {
+      margin-top: var(--space-2);
+      font-size: 0.9rem;
+      color: var(--color-text-subtle);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .reportes__form {
+      grid-template-columns: 1fr;
+    }
+
+    .reportes__form > .btn {
+      width: 100%;
+    }
+  }
+}
+
+/* ---- print: only the roster sheet survives ---- */
+.reportes__print {
+  display: none;
+}
+
+@media print {
+  /* Same `visibility` trick as documentos: hiding with `display` would collapse
+     the app's layout while the sheet is measured. */
+  body * {
+    visibility: hidden;
+  }
+
+  .reportes__print,
+  .reportes__print * {
+    visibility: visible;
+  }
+
+  .reportes__print {
+    display: block;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  .roster-sheet {
+    color: #000;
+    background: #fff;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.35;
+  }
+
+  .roster-sheet__head {
+    margin-bottom: 8mm;
+    text-align: center;
+  }
+
+  .roster-sheet__school {
+    margin: 0 0 2mm;
+    font-size: 13pt;
+    font-weight: 700;
+  }
+
+  .roster-sheet__title {
+    margin: 0;
+    font-size: 15pt;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .roster-sheet__meta {
+    margin: 2mm 0 0;
+    font-size: 11.5pt;
+  }
+
+  .roster-sheet__table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .roster-sheet__table th,
+  .roster-sheet__table td {
+    padding: 1.6mm 2.5mm;
+    border: 1px solid #000;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .roster-sheet__table th {
+    background: #eee;
+    font-size: 10pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .roster-sheet__num {
+    width: 10mm;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .roster-sheet__foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 6mm;
+    margin-top: 6mm;
+    font-size: 9.5pt;
+    color: #222;
+  }
+}

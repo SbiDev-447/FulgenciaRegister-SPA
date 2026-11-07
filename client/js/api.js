@@ -95,6 +95,20 @@ export const api = {
     return request(`/estadisticas${qs ? `?${qs}` : ''}`)
   },
   /**
+   * Roster of one section for the printed attendance sheet.
+   * @param {{ anio: string, seccion: string, anio_escolar?: string }} filters
+   *   anio/seccion identify the group; anio_escolar pins an older school year
+   *   and is omitted for the most recent one.
+   */
+  reporteSeccion: ({ anio, seccion, anio_escolar } = {}) => {
+    const params = new URLSearchParams()
+    if (anio) params.set('anio', anio)
+    if (seccion) params.set('seccion', seccion)
+    if (anio_escolar) params.set('anio_escolar', anio_escolar)
+    const qs = params.toString()
+    return request(`/reportes/seccion${qs ? `?${qs}` : ''}`)
+  },
+  /**
    * One page of the student list with optional filters.
    * @param {{ q?: string, anio?: string, seccion?: string, page?: number }} [filters]
    *   q is a free-text match over names and cédula; anio/seccion restrict to
