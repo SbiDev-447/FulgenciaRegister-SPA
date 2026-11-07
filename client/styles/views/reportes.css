@@ -210,6 +210,13 @@
       color: var(--color-text);
     }
 
+    /* One vertical rule between every column: with only row borders the eye
+       loses the boundary between name/cédula and sexo/teléfono. */
+    th:not(:last-child),
+    td:not(:last-child) {
+      border-right: 1px solid var(--color-border);
+    }
+
     tbody tr {
       /* Zebra only: the rows are data, not links, so hovering must not suggest
          they do something. */
@@ -386,8 +393,11 @@
 
   .roster-sheet__table {
     width: 100%;
-    border-collapse: collapse;
-    border: 2px solid #000;
+    /* Separate borders, each cell drawing its own right/bottom line. With
+       `collapse`, Chrome drops some shared vertical borders at print scaling,
+       which left name/cédula and sexo/teléfono without a separator. */
+    border-collapse: separate;
+    border-spacing: 0;
   }
 
   .roster-sheet__table thead {
@@ -403,18 +413,32 @@
   .roster-sheet__table th,
   .roster-sheet__table td {
     padding: 1.7mm 2mm;
-    border: 1px solid #000;
+    border-right: 1px solid #000;
+    border-bottom: 1px solid #000;
     text-align: left;
     vertical-align: middle;
   }
 
-  .roster-sheet__table th {
-    background: #e9e9e9;
+  .roster-sheet__table tr > :first-child {
+    border-left: 2px solid #000;
+  }
+
+  .roster-sheet__table tr > :last-child {
+    border-right: 2px solid #000;
+  }
+
+  .roster-sheet__table thead th {
+    border-top: 2px solid #000;
     border-bottom: 2px solid #000;
+    background: #e9e9e9;
     font-size: 9pt;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
+  }
+
+  .roster-sheet__table tbody tr:last-child > * {
+    border-bottom: 2px solid #000;
   }
 
   .roster-sheet__table tbody tr:nth-child(even) {
