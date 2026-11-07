@@ -211,14 +211,10 @@
     }
 
     tbody tr {
-      transition: background var(--transition-fast);
-
+      /* Zebra only: the rows are data, not links, so hovering must not suggest
+         they do something. */
       &:nth-child(even) {
         background: color-mix(in srgb, var(--color-surface-2) 32%, transparent);
-      }
-
-      &:hover {
-        background: var(--color-primary-soft);
       }
 
       &:last-child td {
