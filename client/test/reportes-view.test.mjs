@@ -25,6 +25,8 @@ const ROSTER = {
       primer_apellido: 'Pérez',
       segundo_apellido: 'Gómez',
       sexo: 'F',
+      telefono: '0414-1112233',
+      correo: 'maria@ejemplo.com',
     },
     {
       id: 2,
@@ -35,6 +37,8 @@ const ROSTER = {
       primer_apellido: 'López',
       segundo_apellido: null,
       sexo: 'M',
+      telefono: '0424-4445566',
+      correo: 'ana@ejemplo.com',
     },
   ],
 }
@@ -128,6 +132,8 @@ test('choosing a year fills its sections and choosing one loads the roster', asy
     assert.match(textOf(container), /Pérez Gómez, María José/)
     assert.match(textOf(container), /López, Ana/)
     assert.match(textOf(container), /2026-2027/)
+    assert.match(textOf(container), /0414-1112233/)
+    assert.match(textOf(container), /maria@ejemplo\.com/)
   } finally {
     stallFetch()
   }
@@ -164,6 +170,8 @@ test('Imprimir builds the sheet from the loaded roster and calls the printer', a
     assert.equal(findAll(container, '.reportes__print tbody tr').length, 2)
     assert.match(textOf(container.querySelector('.reportes__print')), /Lista de estudiantes/)
     assert.match(textOf(container.querySelector('.reportes__print')), /Sección "B"/)
+    assert.match(textOf(container.querySelector('.reportes__print')), /0414-1112233/)
+    assert.match(textOf(container.querySelector('.reportes__print')), /maria@ejemplo\.com/)
   } finally {
     stallFetch()
   }

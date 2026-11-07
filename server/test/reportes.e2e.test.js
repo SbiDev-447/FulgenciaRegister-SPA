@@ -103,6 +103,8 @@ test('reportes endpoint (require MariaDB and a configured .env)', async (t) => {
       primer_apellido: apellido,
       fecha_nacimiento: '2010-06-15',
       sexo: 'F',
+      telefono: '0414-5550000',
+      correo: `reportes-${offset}@ejemplo.com`,
     })
     const id = insert.insertId
     createdStudentIds.push(id)
@@ -180,6 +182,8 @@ test('reportes endpoint (require MariaDB and a configured .env)', async (t) => {
       assert.equal(typeof student.primer_nombre, 'string')
       assert.equal(typeof student.numero_ci, 'string')
       assert.ok(['M', 'F'].includes(student.sexo))
+      assert.equal(student.telefono, '0414-5550000')
+      assert.match(student.correo, /^reportes-\d+@ejemplo\.com$/)
     }
   })
 

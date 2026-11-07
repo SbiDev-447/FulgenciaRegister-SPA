@@ -243,6 +243,16 @@
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
+
+    .reportes__phone {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .reportes__email {
+      color: var(--color-text-muted);
+      overflow-wrap: anywhere;
+    }
   }
 
   .reportes__empty {
@@ -320,8 +330,8 @@
     color: #000;
     background: #fff;
     font-family: 'InterTight', Arial, Helvetica, sans-serif;
-    font-size: 10.5pt;
-    line-height: 1.35;
+    font-size: 10pt;
+    line-height: 1.3;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -384,10 +394,10 @@
      antialiased away and the columns lose their separators. */
   .roster-sheet__table th,
   .roster-sheet__table td {
-    padding: 2mm 2.5mm;
+    padding: 1.7mm 2mm;
     border: 1px solid #000;
     text-align: left;
-    vertical-align: top;
+    vertical-align: middle;
   }
 
   .roster-sheet__table th {
@@ -404,9 +414,33 @@
   }
 
   .roster-sheet__num {
-    width: 12mm;
+    width: 10mm;
     text-align: center;
     font-variant-numeric: tabular-nums;
+  }
+
+  .roster-sheet__ci {
+    width: 24mm;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .roster-sheet__sexo {
+    width: 19mm;
+  }
+
+  .roster-sheet__phone {
+    width: 28mm;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* Emails are the one long, unbreakable value: they wrap inside their cell
+     instead of widening the table past the page. */
+  .roster-sheet__email {
+    font-size: 9pt;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .roster-sheet__foot {

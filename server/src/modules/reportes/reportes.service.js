@@ -13,6 +13,8 @@ const ROSTER_FIELDS = [
   'primer_apellido',
   'segundo_apellido',
   'sexo',
+  'telefono',
+  'correo',
 ]
 
 function apellidos(student) {

@@ -36,6 +36,14 @@ function sexoLabel(value) {
   return value === 'F' ? 'Femenino' : value === 'M' ? 'Masculino' : '—'
 }
 
+function phoneText(student) {
+  return student.telefono || '—'
+}
+
+function emailText(student) {
+  return student.correo || '—'
+}
+
 function groupLabel(filtros) {
   const year = filtros.anio_escolar ? ` · Año escolar ${filtros.anio_escolar}` : ''
   return `${filtros.anio} — Sección "${filtros.seccion}"${year}`
@@ -57,6 +65,8 @@ function buildSheet(data) {
           h('th', { scope: 'col', text: 'Apellidos y nombres' }),
           h('th', { scope: 'col', text: 'Cédula' }),
           h('th', { scope: 'col', text: 'Sexo' }),
+          h('th', { scope: 'col', text: 'Teléfono' }),
+          h('th', { scope: 'col', text: 'Correo' }),
         ]),
       ]),
       h(
@@ -66,8 +76,10 @@ function buildSheet(data) {
           h('tr', {}, [
             h('td', { class: 'roster-sheet__num', text: String(index + 1) }),
             h('td', { text: fullName(student) }),
-            h('td', { text: ciText(student) }),
-            h('td', { text: sexoLabel(student.sexo) }),
+            h('td', { class: 'roster-sheet__ci', text: ciText(student) }),
+            h('td', { class: 'roster-sheet__sexo', text: sexoLabel(student.sexo) }),
+            h('td', { class: 'roster-sheet__phone', text: phoneText(student) }),
+            h('td', { class: 'roster-sheet__email', text: emailText(student) }),
           ]),
         ),
       ),
@@ -225,6 +237,8 @@ export function renderReportes(container, { print } = {}) {
         h('td', { class: 'reportes__name', text: fullName(student) }),
         h('td', { class: 'reportes__ci', text: ciText(student) }),
         h('td', { text: sexoLabel(student.sexo) }),
+        h('td', { class: 'reportes__phone', text: phoneText(student) }),
+        h('td', { class: 'reportes__email', text: emailText(student) }),
       ]),
     )
 
@@ -260,6 +274,8 @@ export function renderReportes(container, { print } = {}) {
                 h('th', { scope: 'col', text: 'Apellidos y nombres' }),
                 h('th', { scope: 'col', text: 'Cédula' }),
                 h('th', { scope: 'col', text: 'Sexo' }),
+                h('th', { scope: 'col', text: 'Teléfono' }),
+                h('th', { scope: 'col', text: 'Correo' }),
               ]),
             ]),
             h('tbody', {}, rows),
