@@ -12,14 +12,8 @@ import { h, clear } from '../ui/dom.js'
 import { icon } from '../ui/icons.js'
 import { api } from '../api.js'
 import { errorCopy } from '../ui/messages.js'
+import { formatToday } from '../ui/format.js'
 import { INSTITUTION } from '../institution.js'
-
-/** Today as `dd/mm/yyyy`, in the operator's own calendar. */
-function printedDate(now = new Date()) {
-  const day = String(now.getDate()).padStart(2, '0')
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  return `${day}/${month}/${now.getFullYear()}`
-}
 
 /** "Pérez Gómez, María José" — the way the school writes a roster. */
 function fullName(student) {
@@ -89,7 +83,7 @@ function buildSheet(data) {
         class: 'roster-sheet__total',
         text: `${data.total} estudiante${data.total === 1 ? '' : 's'} en la sección`,
       }),
-      h('span', { class: 'roster-sheet__printed', text: `Impreso el ${printedDate()}` }),
+      h('span', { class: 'roster-sheet__printed', text: `Impreso el ${formatToday()}` }),
     ]),
   ])
 }

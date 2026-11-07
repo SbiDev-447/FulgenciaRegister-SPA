@@ -10,6 +10,7 @@ import {
   isValidPhone,
   parseLatamDate,
   formatLatamDate,
+  formatToday,
   maskDateInput,
 } from '../js/ui/format.js'
 
@@ -139,4 +140,8 @@ test('a written date survives the round trip to storage and back', () => {
   for (const written of ['04/03/2010', '31/12/2026', '01/01/1900', '29/02/2024', '11/07/1985']) {
     assert.equal(formatLatamDate(parseLatamDate(written)), written, `${written} must survive the round trip`)
   }
+})
+
+test('today is written dd/mm/aaaa from the local calendar', () => {
+  assert.equal(formatToday(new Date(2026, 10, 7)), '07/11/2026')
 })

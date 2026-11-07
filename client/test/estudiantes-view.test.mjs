@@ -53,8 +53,33 @@ const RECORD = {
     alergico_a: 'Ninguna',
     enfermedades_padecidas: 'Ninguna',
   },
-  inscripciones: [],
-  representantes: [],
+  inscripciones: [
+    {
+      anio: '1er Año',
+      seccion: 'A',
+      anio_escolar: '2026-2027',
+      fecha_inscripcion: '2026-09-15T04:30:00.000Z',
+      repite: false,
+      documentos: {
+        partida_nacimiento: true,
+        copia_cedula: true,
+        boleta: false,
+        fotos: true,
+        carpeta: false,
+        certificado_6to_grado: false,
+      },
+    },
+  ],
+  representantes: [
+    {
+      nombre: 'Ana Gómez',
+      parentesco: 'Madre',
+      tipo_ci: 'V',
+      numero_ci: '87654321',
+      telefono: '0414-9998877',
+      correo: 'ana@ejemplo.com',
+    },
+  ],
 }
 
 /** Every request the view made, in order. */
@@ -410,6 +435,52 @@ test('the ficha shows the birth date as dd/mm/yyyy, not a dash', async () => {
       textOf(modal).includes('04/03/2010'),
       `the ficha must show dd/mm/yyyy, got: ${textOf(modal)}`,
     )
+  } finally {
+    stallFetch()
+  }
+})
+
+test('Imprimir ficha builds a sheet from the loaded record and calls the printer', async () => {
+  resetBody()
+  respondWith(apiStub())
+  let printed = 0
+  try {
+    const { renderEstudiantes } = await import('../js/views/estudiantes.js')
+    const container = makeEl('div')
+    renderEstudiantes(container, { print: () => { printed += 1 } })
+    await flush()
+
+    await dispatch(rowActions(container)[0], 'click')
+    await flush()
+
+    const modal = findAll(document.body, '.modal')[0]
+    const printButton = findAll(modal, '.modal__footer .btn').find(
+      (button) => textOf(button) === 'Imprimir ficha',
+    )
+    assert.ok(printButton, 'the ficha must offer Imprimir ficha')
+
+    await dispatch(printButton, 'click')
+    await flush()
+
+    assert.equal(printed, 1, 'the printer must be invoked once')
+    const sheet = container.querySelector('.ficha-print .ficha-sheet')
+    assert.ok(sheet, 'the print target must hold the ficha sheet')
+    const text = textOf(sheet)
+    assert.match(text, /María José Pérez Gómez/)
+    assert.match(text, /Cédula V-12345678/)
+    assert.match(text, /Sexo Femenino/)
+    assert.match(text, /Datos personales/)
+    assert.match(text, /Contacto/)
+    assert.match(text, /Datos físicos y salud/)
+    assert.ok(
+      text.indexOf('Datos personales') < text.indexOf('Cédula') &&
+        text.indexOf('Cédula') < text.indexOf('Teléfono'),
+      'identity must come before the contact group',
+    )
+    assert.match(text, /1er Año · Sección A/)
+    assert.match(text, /Partida de nacimiento/)
+    assert.match(text, /Ana Gómez/)
+    assert.match(text, /Impreso el \d{2}\/\d{2}\/\d{4}/)
   } finally {
     stallFetch()
   }

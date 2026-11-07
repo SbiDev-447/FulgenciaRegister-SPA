@@ -472,3 +472,171 @@
     font-size: 0.9rem;
   }
 }
+
+/* ---- print: a ficha from the modal becomes a sheet of its own ---- */
+.ficha-print {
+  display: none;
+}
+
+@media print {
+  /* Same `visibility` trick as documentos and reportes: hiding with `display`
+     would collapse the app's layout while the sheet is measured. */
+  body * {
+    visibility: hidden;
+  }
+
+  .ficha-print,
+  .ficha-print * {
+    visibility: visible;
+  }
+
+  .ficha-print {
+    display: block;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+
+  /* The list behind the modal is hidden for reading, but `visibility` alone
+     keeps its height and spills onto an empty second page. */
+  .estudiantes__hero,
+  .estudiantes__bar,
+  .estudiantes__results {
+    display: none !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  .ficha-sheet {
+    /* Same safety margin as the roster sheet: the page margin can be shrunk by
+       the browser's print dialog, so the sheet keeps its own side inset. */
+    margin-inline: 8mm;
+    color: #000;
+    background: #fff;
+    font-family: 'InterTight', Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    line-height: 1.35;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .ficha-sheet__logo {
+    display: block;
+    width: 20mm;
+    height: auto;
+    margin: 0 auto 4mm;
+  }
+
+  .ficha-sheet__head {
+    text-align: center;
+    margin-bottom: 6mm;
+    padding-bottom: 5mm;
+    border-bottom: 2px solid #000;
+  }
+
+  .ficha-sheet__school {
+    font-size: 12pt;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .ficha-sheet__title {
+    font-size: 11pt;
+    margin-top: 1mm;
+  }
+
+  .ficha-sheet__section {
+    margin-top: 5mm;
+  }
+
+  .ficha-sheet__section:first-of-type {
+    margin-top: 0;
+  }
+
+  .ficha-sheet__name {
+    font-size: 13pt;
+    margin-bottom: 3mm;
+  }
+
+  .ficha-sheet__section-title {
+    font-size: 11pt;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #000;
+    padding-bottom: 1.5mm;
+    margin-bottom: 2.5mm;
+  }
+
+  .ficha-sheet__grid {
+    /* One label/value pair per row and a fixed label column: every value starts
+       at the same x, across all three groups. Two pairs per row made the label
+       widths of the second pair push its values to a different edge. */
+    display: grid;
+    grid-template-columns: 46mm 1fr;
+    align-items: baseline;
+    gap: 2mm 4mm;
+  }
+
+  .ficha-sheet__group + .ficha-sheet__group {
+    margin-top: 4mm;
+  }
+
+  .ficha-sheet__group-title {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 1.5mm;
+  }
+
+  .ficha-sheet__grid dt {
+    font-size: 8.5pt;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .ficha-sheet__grid dd {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 9.5pt;
+  }
+
+  .ficha-sheet__item {
+    padding: 2.5mm 0;
+    border-bottom: 1px solid #000;
+    break-inside: avoid;
+  }
+
+  .ficha-sheet__item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .ficha-sheet__item-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4mm;
+  }
+
+  .ficha-sheet__item p {
+    margin: 1mm 0 0;
+    font-size: 9.5pt;
+  }
+
+  .ficha-sheet__empty {
+    font-style: italic;
+  }
+
+  .ficha-sheet__foot {
+    margin-top: 6mm;
+    padding-top: 3mm;
+    border-top: 1px solid #000;
+    font-size: 8.5pt;
+    text-align: right;
+  }
+}

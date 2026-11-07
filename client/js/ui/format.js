@@ -114,6 +114,21 @@ export function formatLatamDate(value) {
 export const DATE_FIELD_LENGTH = 10
 
 /**
+ * Today as `dd/mm/aaaa`, read from the operator's own calendar.
+ *
+ * Deliberately not `toISOString().slice(0, 10)`: that is UTC, and west of UTC it
+ * prints yesterday's date until the evening. Printed sheets carry the day the
+ * person actually hit "Imprimir".
+ * @param {Date} [now]
+ * @returns {string}
+ */
+export function formatToday(now = new Date()) {
+  const day = String(now.getDate()).padStart(2, '0')
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  return `${day}/${month}/${now.getFullYear()}`
+}
+
+/**
  * The separators of a written date, placed while it is typed.
  *
  * It only ever APPENDS a `/`, and only to a value that grew. That is the whole

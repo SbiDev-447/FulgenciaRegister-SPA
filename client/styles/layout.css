@@ -592,3 +592,29 @@
 body.modal-open {
   overflow: hidden;
 }
+/* ---- print: the app chrome must not reserve paper ---- */
+@media print {
+  /* `visibility: hidden` hides paint but keeps layout, so the shell's 100vh
+     and the view behind the print sheet could still generate a second, empty
+     page. Take them out of the flow instead. */
+  body {
+    overflow: visible !important;
+  }
+
+  .shell {
+    display: block;
+    min-height: 0;
+  }
+
+  .sidebar,
+  .topbar,
+  .modal {
+    display: none !important;
+  }
+
+  .content {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+}

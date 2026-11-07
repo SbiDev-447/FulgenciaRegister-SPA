@@ -10,11 +10,13 @@ import {
   isValidPhone,
   parseLatamDate,
   formatLatamDate,
+  formatToday,
   DATE_FIELD_LENGTH,
 } from '../ui/format.js'
 import { api } from '../api.js'
 import { icon } from '../ui/icons.js'
 import { openModal } from '../ui/modal.js'
+import { INSTITUTION } from '../institution.js'
 import { DOC_LABELS } from '../features/inscripcion.js'
 
 const fmt = new Intl.NumberFormat('es-VE')
@@ -139,8 +141,11 @@ function nombreCompleto(estudiante) {
 
 /**
  * @param {HTMLElement} container
+ * @param {{ print?: () => void }} [options] - `print` lets a test observe the
+ *   call without opening the browser's print dialog.
  */
-export function renderEstudiantes(container) {
+export function renderEstudiantes(container, { print } = {}) {
+  const doPrint = print ?? (() => window.print())
   const qInput = h('input', {
     class: 'input',
     type: 'search',
@@ -162,6 +167,10 @@ export function renderEstudiantes(container) {
     disabled: true,
   })
   const results = h('div', { class: 'estudiantes__results' })
+  // Off-screen sheet the ficha prints from. Keeping it out of the modal means
+  // the paper carries the record and not the dialog chrome, and the on-screen
+  // ficha stays interactive.
+  const printArea = h('div', { class: 'ficha-print', 'aria-hidden': 'true' })
 
   const nuevaBtn = h('button', { class: 'btn btn--primary', type: 'button' }, [
     icon('plus'),
@@ -200,6 +209,7 @@ export function renderEstudiantes(container) {
     ]),
     bar,
     results,
+    printArea,
   ])
 
   clear(container)
@@ -385,19 +395,34 @@ export function renderEstudiantes(container) {
   function openFicha(id) {
     const status = h('p', { class: 'estudiantes__status', text: 'Cargando ficha…' })
 
+    // The record the print button will use. It stays null while the request is
+    // in flight, so a fast click cannot print an empty sheet.
+    let record = null
     let closeFicha = null
+    const printButton = h(
+      'button',
+      {
+        class: 'btn btn--primary',
+        type: 'button',
+        disabled: true,
+        on: { click: () => record && printFicha(record) },
+      },
+      [icon('printer'), h('span', { text: 'Imprimir ficha' })],
+    )
     const closeButton = h('button', {
       class: 'btn btn--ghost',
       type: 'button',
       on: { click: () => closeFicha?.() },
     }, [h('span', { text: 'Cerrar' })])
-    const modal = openModal({ title: 'Ficha del estudiante', content: status, footer: [closeButton] })
+    const modal = openModal({ title: 'Ficha del estudiante', content: status, footer: [printButton, closeButton] })
     closeFicha = modal.close
 
     api
       .estudiante(id)
-      .then((record) => {
-        modal.element.querySelector('.modal__body')?.replaceChildren(renderFicha(record))
+      .then((data) => {
+        record = data
+        printButton.disabled = false
+        modal.element.querySelector('.modal__body')?.replaceChildren(renderFicha(data))
       })
       .catch((error) => {
         const message = errorCopy(error, 'No se pudo cargar la ficha.')
@@ -405,6 +430,143 @@ export function renderEstudiantes(container) {
           h('div', { class: 'alert alert--error', role: 'alert' }, [h('p', { text: message })]),
         )
       })
+  }
+
+  /**
+   * Build the printable sheet from the same record the modal shows, then hand
+   * it to the printer. Images are awaited for the same reason as the reporte:
+   * printing before the crest decodes paints its alt text.
+   */
+  async function printFicha(record) {
+    printArea.replaceChildren(buildFichaSheet(record))
+    const images = [...printArea.querySelectorAll('img')]
+    await Promise.all(
+      images.map((image) => (image.decode ? image.decode().catch(() => {}) : Promise.resolve())),
+    )
+    doPrint()
+  }
+
+  /** One line with the documents a school actually received, or the empty case. */
+  function documentSummary(documentos) {
+    if (!documentos) return 'Sin documentos consignados'
+    const labels = Object.entries(DOC_LABELS)
+      .filter(([key]) => documentos[key])
+      .map(([, label]) => label)
+    return labels.length > 0 ? labels.join(' · ') : 'Sin documentos consignados'
+  }
+
+  /** The paper ficha: letterhead, personal data, inscriptions and representatives. */
+  function buildFichaSheet(record) {
+    const { estudiante, inscripciones = [], representantes = [] } = record
+
+    // Identity first, then contact, then physical data and health — the order an
+    // office reads a record. Empty optional fields disappear so the sheet does
+    // not show a row of blanks.
+    const groups = [
+      {
+        title: 'Datos personales',
+        rows: [
+          ['Cédula', estudiante.tipo_ci && estudiante.numero_ci ? ciText(estudiante) : ''],
+          ['Sexo', estudiante.sexo ? sexoLabel(estudiante.sexo) : ''],
+          ['Fecha de nacimiento', formatFecha(estudiante.fecha_nacimiento)],
+          ['País de nacimiento', estudiante.pais_nacimiento],
+          ['Estado de nacimiento', estudiante.estado_nacimiento],
+          ['Municipio de nacimiento', estudiante.municipio_nacimiento],
+        ],
+      },
+      {
+        title: 'Contacto',
+        rows: [
+          ['Teléfono', estudiante.telefono],
+          ['Correo', estudiante.correo],
+          ['Dirección', estudiante.direccion_habitacion],
+        ],
+      },
+      {
+        title: 'Datos físicos y salud',
+        rows: [
+          ['Lateralidad', estudiante.lateralidad],
+          ['Talla', estudiante.talla],
+          ['Peso', estudiante.peso],
+          ['Camisa', estudiante.camisa],
+          ['Pantalón', estudiante.pantalon],
+          ['Zapatos', estudiante.zapatos],
+          ['Alergias', estudiante.alergico_a],
+          ['Enfermedades', estudiante.enfermedades_padecidas],
+        ],
+      },
+    ]
+      .map((group) => ({
+        ...group,
+        rows: group.rows.filter(
+          ([, value]) => value !== undefined && value !== null && String(value).trim() !== '',
+        ),
+      }))
+      .filter((group) => group.rows.length > 0)
+
+    return h('main', { class: 'ficha-sheet' }, [
+      h('header', { class: 'ficha-sheet__head' }, [
+        h('img', { class: 'ficha-sheet__logo', src: INSTITUTION.logo, alt: '' }),
+        h('h1', { class: 'ficha-sheet__school', text: INSTITUTION.school }),
+        h('h2', { class: 'ficha-sheet__title', text: 'Ficha del estudiante' }),
+      ]),
+      h('section', { class: 'ficha-sheet__section' }, [
+        h('h3', { class: 'ficha-sheet__name', text: nombreCompleto(estudiante) }),
+        ...(groups.length > 0
+          ? groups.map((group) =>
+              h('div', { class: 'ficha-sheet__group' }, [
+                h('h4', { class: 'ficha-sheet__group-title', text: group.title }),
+                h('dl', { class: 'ficha-sheet__grid' },
+                  group.rows.flatMap(([label, value]) => [
+                    h('dt', { text: label }),
+                    h('dd', { text: String(value) }),
+                  ]),
+                ),
+              ]),
+            )
+          : [h('p', { class: 'ficha-sheet__empty', text: 'Sin datos adicionales registrados.' })]),
+      ]),
+      h('section', { class: 'ficha-sheet__section' }, [
+        h('h3', { class: 'ficha-sheet__section-title', text: 'Inscripciones' }),
+        ...(inscripciones.length > 0
+          ? inscripciones.map((ins) =>
+              h('article', { class: 'ficha-sheet__item' }, [
+                h('div', { class: 'ficha-sheet__item-head' }, [
+                  h('strong', { text: `${ins.anio} · Sección ${ins.seccion}` }),
+                  h('span', { text: ins.anio_escolar }),
+                ]),
+                h('p', {
+                  text: `Inscrito el ${formatFecha(ins.fecha_inscripcion)} · ${
+                    ins.repite ? 'Repite el año' : 'Inscripción regular'
+                  }`,
+                }),
+                h('p', { class: 'ficha-sheet__docs', text: documentSummary(ins.documentos) }),
+              ]),
+            )
+          : [h('p', { class: 'ficha-sheet__empty', text: 'Sin inscripciones registradas.' })]),
+      ]),
+      h('section', { class: 'ficha-sheet__section' }, [
+        h('h3', { class: 'ficha-sheet__section-title', text: 'Representantes' }),
+        ...(representantes.length > 0
+          ? representantes.map((rep) =>
+              h('article', { class: 'ficha-sheet__item' }, [
+                h('div', { class: 'ficha-sheet__item-head' }, [
+                  h('strong', { text: rep.nombre }),
+                  rep.parentesco ? h('span', { text: `Parentesco: ${rep.parentesco}` }) : null,
+                ]),
+                h('p', {
+                  text: [`${rep.tipo_ci}-${rep.numero_ci}`, rep.telefono, rep.correo]
+                    .filter(Boolean)
+                    .join(' · '),
+                }),
+              ]),
+            )
+          : [h('p', { class: 'ficha-sheet__empty', text: 'Sin representantes registrados.' })]),
+      ]),
+      h('footer', { class: 'ficha-sheet__foot' }, [
+        h('span', { text: `Impreso el ${formatToday()}` }),
+      ]),
+    ])
   }
 
   /** Build the ficha body from a GET /estudiantes/:id response. */

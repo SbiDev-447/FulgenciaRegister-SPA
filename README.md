@@ -18,21 +18,23 @@
 | ---------- | ------ |
 | Backend (API REST) | Listo — 142 pruebas (141 en verde, 1 saltada sin base) |
 | Base de datos (MariaDB) | Listo — esquema y datos semilla |
-| Frontend (SPA) | Listo — 96 pruebas en verde |
+| Frontend (SPA) | Listo — 98 pruebas en verde |
 
 El backend está completo y cubierto por pruebas. En la SPA funcionan el shell, el router,
-los temas y las cinco vistas: Inicio (estadísticas), Estudiantes (lista paginada,
-búsqueda, ficha, edición y borrado con confirmación), Nueva inscripción, Documentos
-(verificación por cédula y los cuatro documentos imprimibles) y Ajustes (director que
-firma, logo del Ministerio y mantenimiento de la base). La sección "Alcance" describe el
-alcance funcional, no trabajo pendiente.
+los temas y las seis vistas: Inicio (estadísticas), Estudiantes (lista paginada,
+búsqueda, ficha —también imprimible—, edición y borrado con confirmación), Nueva
+inscripción, Documentos (verificación por cédula y los cuatro documentos imprimibles),
+Reportes (lista de asistencia por sección) y Ajustes (director que firma, logo del
+Ministerio y mantenimiento de la base). La sección "Alcance" describe el alcance
+funcional, no trabajo pendiente.
 
 ## Alcance
 
 - **Inicio:** estadísticas de inscripción — total de estudiantes, distribución por sexo
   y por año, documentos emitidos. Filtro por año académico y sección.
 - **Estudiantes:** CRUD de inscripción con ficha permanente (datos personales,
-  inscripción, representantes y documentos consignados). Búsqueda por nombre o cédula.
+  inscripción, representantes y documentos consignados), que se puede imprimir desde el
+  modal. Búsqueda por nombre o cédula.
 - **Documentos:** verificación por cédula y emisión de cuatro documentos imprimibles
   (carta de aceptación, constancia de conducta, constancia de retiro, constancia de estudio).
 - **Reportes:** lista de asistencia imprimible de una sección completa, por año y sección
@@ -201,7 +203,7 @@ El enrutado es por hash: todo ocurre en la misma página, sin recargas.
 | Ruta | Vista |
 | ---- | ----- |
 | `#/` | Inicio — estadísticas de inscripción con filtros |
-| `#/estudiantes` | Listado con búsqueda y filtros, ficha del estudiante, y acciones Ver / Editar / Borrar |
+| `#/estudiantes` | Listado con búsqueda y filtros, ficha del estudiante (imprimible), y acciones Ver / Editar / Borrar |
 | `#/inscripcion` | Wizard de inscripción en 5 pasos |
 | `#/documentos` | Verificación por cédula y emisión de los cuatro documentos |
 | `#/reportes` | Lista de asistencia de una sección completa, lista para imprimir |

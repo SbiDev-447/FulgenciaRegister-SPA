@@ -394,6 +394,28 @@ El CSS de impresión vive en `styles/views/reportes.css`, no en la hoja: oculta 
 antialiasea y las columnas pierden el separador. El `thead` se repite en cada página y
 las filas no se cortan al medio (`break-inside: avoid`).
 
+### 2.8 Cómo se imprime una ficha
+
+La ficha vive en un modal, pero no se imprime el modal: el botón "Imprimir ficha"
+construye una hoja aparte en `.ficha-print` (dentro de la vista, fuera del diálogo).
+
+```text
+1. GET /api/estudiantes/:id              → el registro completo que ya cargó el modal
+2. buildFichaSheet(record)               → membrete + datos agrupados + inscripciones + representantes
+3. printArea.replaceChildren(sheet)      → nodo real, no innerHTML
+4. await img.decode()                    → espera el escudo
+5. window.print()                        → vista de impresión del navegador
+```
+
+El botón queda deshabilitado hasta que el registro llega, para que un clic rápido no
+imprima una hoja vacía. Los datos personales se agrupan en **Datos personales** (cédula,
+sexo, fecha y lugar de nacimiento), **Contacto** (teléfono, correo, dirección) y **Datos
+físicos y salud** (talla, peso, uniforme, alergias, enfermedades); los campos vacíos no
+se imprimen. Las inscripciones repiten la fecha en `dd/mm/aaaa`, el estado (regular o
+repite) y los documentos consignados en una línea; los representantes llevan parentesco,
+cédula, teléfono y correo. Misma regla que los documentos: el servidor entrega datos, el
+navegador compone.
+
 ---
 
 ## 3. Cómo se conectan

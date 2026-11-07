@@ -314,6 +314,14 @@
     margin: 0;
   }
 
+  /* Same reason as the ficha: the preview stays painted out of sight, but its
+     height would still count as a second page. */
+  .reportes__hero,
+  .reportes__form,
+  .reportes__results {
+    display: none !important;
+  }
+
   @page {
     size: A4 portrait;
     margin: 12mm;
@@ -323,6 +331,10 @@
      Backgrounds are asked to print as-is so the header band and the zebra rows
      survive the browser's default ink-saving. */
   .roster-sheet {
+    /* The page margin is 12mm, but the browser's print dialog can shrink or
+       remove it. This inner margin keeps the sheet off the paper edge in that
+       case without moving the header or the table out of alignment. */
+    margin-inline: 8mm;
     color: #000;
     background: #fff;
     font-family: 'InterTight', Arial, Helvetica, sans-serif;
