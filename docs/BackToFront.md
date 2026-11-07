@@ -92,6 +92,8 @@ app.use('/api/auth', authRoutes)
 app.use('/api/estudiantes', estudianteRoutes)
 app.use('/api/documentos', documentosRoutes)
 app.use('/api/estadisticas', estadisticasRoutes)
+app.use('/api/reportes', reportesRoutes)
+app.use('/api/ajustes', ajustesRoutes)
 app.use(express.static(clientDir))   // la SPA: HTML, CSS, JS, assets
 app.use('/api', notFound)            // 404 en JSON para la API
 app.use(errorHandler)                // último: todo error cae acá
@@ -137,7 +139,7 @@ métodos: `tabla`, `query`, `createAllTables`, `addModel`, `end`. Todo lo demás
 (`select`, `paginate`, `insert`, `update`, `delete`, …) vive en lo que devuelve
 `db.tabla('x')`. La tabla de métodos y sus trampas está en `usDataBase.md` §2.2.
 
-### 1.5 Los cinco módulos
+### 1.5 Los seis módulos
 
 **`auth`** — login, sesión, cierre.
 
@@ -179,6 +181,13 @@ métodos: `tabla`, `query`, `createAllTables`, `addModel`, `end`. Todo lo demás
 
 **`estadisticas`** — solo lectura, con filtros opcionales por año y sección. Devuelve
 totales por sexo, una fila por año académico y el conteo de documentos emitidos.
+
+**`reportes`** — solo lectura, para imprimir. `GET /api/reportes/seccion` exige año y
+sección, resuelve el año escolar **más reciente** con inscripciones en ese grupo y
+devuelve la lista completa sin paginar (una hoja impresa no tiene botón "siguiente"):
+N°, apellidos y nombres, cédula, sexo, teléfono y correo. Elegir un solo año escolar
+evita que un estudiante que repitió el mismo año aparezca dos veces o que se mezclen dos
+cohortes en la misma hoja; `anio_escolar` permite fijar uno anterior.
 
 **`ajustes`** — lo institucional y el mantenimiento.
 
@@ -367,6 +376,24 @@ configuró nada) y, si hay un logo subido, `extractSheet(html, { logoUrl })` cam
 Si esa llamada falla, la carta se emite igual con el placeholder: un ajuste caído no
 puede impedir que la escuela entregue un documento.
 
+### 2.7 Cómo se imprime la lista de una sección
+
+La vista `Reportes` no reutiliza los esqueletos de las cartas: arma una hoja propia.
+
+```text
+1. api.reporteSeccion({ anio, seccion })  → lista completa del grupo (sin paginar)
+2. buildSheet(data)                        → <main class="roster-sheet"> con la tabla
+3. printArea.replaceChildren(sheet)        → nodo real, no innerHTML
+4. await img.decode()                      → espera el escudo
+5. window.print()                          → vista de impresión del navegador
+```
+
+El CSS de impresión vive en `styles/views/reportes.css`, no en la hoja: oculta todo con
+`visibility: hidden` y deja visible solo `.reportes__print`. La tabla usa líneas de
+**1px** hacia adentro y 2px afuera porque a resolución de impresión un borde de 0.6pt se
+antialiasea y las columnas pierden el separador. El `thead` se repite en cada página y
+las filas no se cortan al medio (`break-inside: avoid`).
+
 ---
 
 ## 3. Cómo se conectan
@@ -429,6 +456,7 @@ impresión falla, la emisión ya quedó en la bitácora con fecha y autor.
 | Agregar un tipo de documento | `constants/documentos.js` + un esqueleto en `client/assets/skeletons/` |
 | Cambiar años o secciones | `constants/academic.js` |
 | Agregar una vista | `client/js/views/` + una línea en `routes.js` y en `NAV_ITEMS` de `shell.js` |
+| Cambiar las columnas o el formato de la lista impresa | `client/js/views/reportes.js` (marcado y datos) + `client/styles/views/reportes.css` (pantalla e impresión) |
 | Cambiar el director o el logo que se imprime | `client/js/views/ajustes.js` (formulario) → `PUT /api/ajustes/*` → `modules/ajustes/ajustes.service.js` |
 | Agregar otro ajuste institucional | un campo nuevo en `data/ajustes.json` (`ajustes.almacen.js`) y su bloque en la vista; no hay migración ni tabla que tocar |
 | Cambiar textos de error | `client/js/ui/messages.js` (el servidor sigue respondiendo en inglés) |
@@ -440,7 +468,7 @@ impresión falla, la emisión ya quedó en la bitácora con fecha y autor.
 
 | Suite | Cómo corre | Qué prueba de verdad |
 | ----- | ---------- | -------------------- |
-| Servidor | `pnpm --filter @fulgencia/server test` | Los e2e levantan la app real en un puerto efímero (`listen(0)`) y le hablan por HTTP con `fetch`, contra la base real: login, cookie, CRUD, paginación, documentos. Si no hay `.env` o contenedor, se saltan |
+| Servidor | `pnpm --filter @fulgencia/server test` | Los e2e levantan la app real en un puerto efímero (`listen(0)`) y le hablan por HTTP con `fetch`, contra la base real: login, cookie, CRUD, paginación, documentos, reportes. Si no hay `.env` o contenedor, se saltan |
 | Cliente | `pnpm --filter @fulgencia/client test` | Cada vista se renderiza contra `client/test/dom-stub.mjs`, un DOM mínimo que implementa solo lo que las vistas usan. Verifica estructura y comportamiento, no estilos |
 
 `pnpm test` en la raíz corre las dos. Lo que ninguna suite cubre es el resultado visual:

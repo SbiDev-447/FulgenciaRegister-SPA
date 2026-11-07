@@ -35,7 +35,8 @@ alcance funcional, no trabajo pendiente.
   inscripción, representantes y documentos consignados). Búsqueda por nombre o cédula.
 - **Documentos:** verificación por cédula y emisión de cuatro documentos imprimibles
   (carta de aceptación, constancia de conducta, constancia de retiro, constancia de estudio).
-- **Reportes:** lista de asistencia imprimible de una sección completa, por año y sección.
+- **Reportes:** lista de asistencia imprimible de una sección completa, por año y sección
+  (apellidos y nombres, cédula, sexo, teléfono y correo).
 - **Ajustes:** director o directora que firma los documentos, logo del Ministerio que
   encabeza la carta, y dos tareas de mantenimiento desde la interfaz: borrar los
   representantes huérfanos y escribir un respaldo de la base en `backups/`. Sólo el rol
@@ -178,6 +179,20 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 `total` es el total **con los filtros aplicados**, no el del padrón completo, y `pages`
 nunca baja de `1`: una búsqueda sin resultados devuelve `total: 0` en lugar de un listado
 vacío sin explicación.
+
+### El reporte de sección
+
+`GET /api/reportes/seccion` no pagina: una hoja impresa no tiene botón "siguiente".
+
+| Parámetro | Obligatorio | Qué hace |
+| --------- | ----------- | -------- |
+| `anio` | sí | Año del grupo (`1er Año`, `2do Año`, …) |
+| `seccion` | sí | Sección dentro de ese año (`A`..`F` según el año) |
+| `anio_escolar` | no | Fija un año escolar anterior; sin él se usa el más reciente con estudiantes en el grupo |
+
+Devuelve `{ filtros, total, estudiantes }`, ordenado por apellidos y con los datos que
+imprime la lista: nombre completo, cédula, sexo, teléfono y correo. Elegir un solo año
+escolar evita duplicar a quien repitió y mezclar dos cohortes en la misma hoja.
 
 ## Rutas de la SPA
 

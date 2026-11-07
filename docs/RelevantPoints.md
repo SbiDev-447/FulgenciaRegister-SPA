@@ -175,6 +175,16 @@ db.tabla('estudiantes').busquedaPaginate({ cadena, campo_bus, campos, where, ord
 
 Ambas devuelven `{ data, total, page, limit, totalPages, hasNext, hasPrev }`.
 
+### El reporte de sección elige un solo año escolar
+
+Una sección no existe sola: "2do Año / A" se repite cada septiembre. La tabla
+`inscripciones` guarda una fila por estudiante y año escolar, así que filtrar solo por
+`anio` y `seccion` puede devolver dos cohortes distintas —y, si alguien repitió, a la
+misma persona dos veces—. `GET /api/reportes/seccion` resuelve el `anio_escolar` más
+reciente con inscripciones en ese grupo y filtra después por él; el parámetro opcional
+`anio_escolar` permite imprimir un año anterior. La comparación es lexicográfica porque
+el formato `YYYY-YYYY` ordena igual como texto y como fecha.
+
 ### Sintaxis de objeto en `dbtabla` (mysql-tab)
 
 Las consultas del servidor usan la forma con nombre, no la posicional:
