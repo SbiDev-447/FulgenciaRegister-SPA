@@ -45,6 +45,7 @@ function groupLabel(filtros) {
 function buildSheet(data) {
   return h('main', { class: 'roster-sheet' }, [
     h('header', { class: 'roster-sheet__head' }, [
+      h('img', { class: 'roster-sheet__logo', src: INSTITUTION.logo, alt: '' }),
       h('h1', { class: 'roster-sheet__school', text: INSTITUTION.school }),
       h('h2', { class: 'roster-sheet__title', text: 'Lista de estudiantes' }),
       h('p', { class: 'roster-sheet__meta', text: groupLabel(data.filtros) }),
@@ -73,9 +74,10 @@ function buildSheet(data) {
     ]),
     h('footer', { class: 'roster-sheet__foot' }, [
       h('span', {
-        text: `${data.total} estudiante${data.total === 1 ? '' : 's'}`,
+        class: 'roster-sheet__total',
+        text: `${data.total} estudiante${data.total === 1 ? '' : 's'} en la sección`,
       }),
-      h('span', { text: `Impreso el ${printedDate()}` }),
+      h('span', { class: 'roster-sheet__printed', text: `Impreso el ${printedDate()}` }),
     ]),
   ])
 }
@@ -98,6 +100,7 @@ export function renderReportes(container, { print } = {}) {
     disabled: true,
   })
   const submitBtn = h('button', { class: 'btn btn--primary', type: 'submit' }, [
+    icon('search'),
     h('span', { text: 'Ver lista' }),
   ])
   const results = h('div', { class: 'reportes__results' })
@@ -195,10 +198,12 @@ export function renderReportes(container, { print } = {}) {
     results.replaceChildren(
       h('article', { class: 'card reportes__card' }, [
         h('div', { class: 'reportes__card-head' }, [
-          h('div', {}, [
+          h('div', { class: 'reportes__card-title' }, [
+            h('span', { class: 'reportes__eyebrow', text: 'Vista previa' }),
             h('h3', { text: 'Lista de estudiantes' }),
             h('p', { class: 'reportes__meta', text: groupLabel(data.filtros) }),
           ]),
+          h('span', { class: 'badge reportes__badge', text: '0 estudiantes' }),
         ]),
         h('div', { class: 'reportes__empty' }, [
           h('p', { text: 'No hay estudiantes inscritos en esta sección.' }),
@@ -226,24 +231,27 @@ export function renderReportes(container, { print } = {}) {
     results.replaceChildren(
       h('article', { class: 'card reportes__card' }, [
         h('div', { class: 'reportes__card-head' }, [
-          h('div', {}, [
+          h('div', { class: 'reportes__card-title' }, [
+            h('span', { class: 'reportes__eyebrow', text: 'Vista previa' }),
             h('h3', { text: 'Lista de estudiantes' }),
             h('p', { class: 'reportes__meta', text: groupLabel(data.filtros) }),
           ]),
-          h(
-            'button',
-            {
-              class: 'btn btn--primary reportes__imprimir',
-              type: 'button',
-              on: { click: printRoster },
-            },
-            [icon('printer'), h('span', { text: 'Imprimir' })],
-          ),
+          h('div', { class: 'reportes__card-actions' }, [
+            h('span', {
+              class: 'badge reportes__badge',
+              text: `${data.total} estudiante${data.total === 1 ? '' : 's'}`,
+            }),
+            h(
+              'button',
+              {
+                class: 'btn btn--primary reportes__imprimir',
+                type: 'button',
+                on: { click: printRoster },
+              },
+              [icon('printer'), h('span', { text: 'Imprimir' })],
+            ),
+          ]),
         ]),
-        h('p', {
-          class: 'reportes__count',
-          text: `${data.total} estudiante${data.total === 1 ? '' : 's'}`,
-        }),
         h('div', { class: 'reportes__table-wrap' }, [
           h('table', { class: 'reportes__table' }, [
             h('thead', {}, [
@@ -261,11 +269,17 @@ export function renderReportes(container, { print } = {}) {
     )
   }
 
-  function printRoster() {
+  async function printRoster() {
     if (!current || current.total === 0) {
       return
     }
     printArea.replaceChildren(buildSheet(current))
+    // The crest is a cold-cache decode; printing before it settles paints its
+    // alt text instead of the image, the same trap as the letterhead.
+    const images = [...printArea.querySelectorAll('img')]
+    await Promise.all(
+      images.map((image) => (image.decode ? image.decode().catch(() => {}) : Promise.resolve())),
+    )
     doPrint()
   }
 
