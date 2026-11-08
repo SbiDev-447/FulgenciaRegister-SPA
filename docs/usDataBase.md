@@ -4,13 +4,9 @@
 > MariaDB, **qué guarda cada tabla**, **cómo se relacionan** y **qué comandos SQL**
 > usar para trabajar la base fuera del servidor (DBeaver, TablePlus, MySQL Workbench,
 > línea de comandos...).
->
-> Este archivo vive en `docs/` y **sí** está versionado: viaja con el repositorio. La
-> idea de dejarlo fuera fue de una versión anterior del proyecto; hoy se mantiene al día
-> con cada cambio de esquema, igual que `Mermaid.md`.
 
 Todo lo que dice acá está comprobado contra la base real (octubre 2026). Cuando algo es
-una recomendación y no un hecho del sistema, lo digo explícitamente.
+una recomendación y no un hecho del sistema, se informa explícitamente.
 
 ---
 
