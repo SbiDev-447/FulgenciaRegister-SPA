@@ -1,7 +1,7 @@
 'use strict'
 
 const db = require('../../config/db')
-const { YEARS } = require('../../constants/academic')
+const { YEARS, findYear } = require('../../constants/academic')
 
 /**
  * Aggregate the dashboard cards.
@@ -13,10 +13,16 @@ const { YEARS } = require('../../constants/academic')
  *   F -> mujeres, M -> hombres.
  * - `porAnio`: one entry per year label in YEARS order, counting inscriptions
  *   whose `seccion` matches the `seccion` filter (if given). This is the
- *   distribution across years, so the `anio` filter does NOT restrict it.
+ *   cross-year panorama, so the `anio` filter does NOT restrict it.
+ * - `porSeccion`: only when `anio` is given, one entry per section of that year
+ *   (in the academic order), counting inscriptions in that year that also match
+ *   the `seccion` filter. It is the year-scoped counterpart of `porAnio`, so
+ *   the breakdown always answers the active filter instead of ignoring it.
  * - `documentosEmitidos`: count of `documentos_emitidos` rows whose
  *   `estudiante_id` belongs to the filtered student set from `estudiantes`
  *   above; with no filters it counts every row.
+ * - `actualizadoEn`: ISO timestamp of the aggregation, so the dashboard can
+ *   tell the user how fresh the numbers are.
  *
  * @param {{ anio?: string, seccion?: string }} filters
  * @returns {Promise<object>}
@@ -37,6 +43,19 @@ async function getEstadisticas(filters = {}) {
     YEARS.map((year) => [year.label, { anio: year.label, total: 0, mujeres: 0, hombres: 0 }]),
   )
 
+  // `porSeccion` mirrors the same distribution, but scoped to the selected
+  // year. It is empty when no year filter is active (the chart shows the
+  // cross-year panorama instead).
+  const porSeccion = anio
+    ? (findYear(anio)?.sections ?? []).map((section) => ({
+        seccion: section,
+        total: 0,
+        mujeres: 0,
+        hombres: 0,
+      }))
+    : []
+  const porSeccionByLabel = new Map(porSeccion.map((entry) => [entry.seccion, entry]))
+
   for (const ins of inscriptions) {
     if ((!anio || ins.anio === anio) && (!seccion || ins.seccion === seccion)) {
       matchingIds.add(ins.estudiante_id)
@@ -45,13 +64,14 @@ async function getEstadisticas(filters = {}) {
     if (!seccion || ins.seccion === seccion) {
       const entry = porAnioByLabel.get(ins.anio)
       if (entry) {
-        const student = studentById.get(ins.estudiante_id)
-        entry.total += 1
-        if (student && student.sexo === 'F') {
-          entry.mujeres += 1
-        } else if (student && student.sexo === 'M') {
-          entry.hombres += 1
-        }
+        addToBreakdown(entry, studentById.get(ins.estudiante_id))
+      }
+    }
+
+    if (anio && ins.anio === anio && (!seccion || ins.seccion === seccion)) {
+      const entry = porSeccionByLabel.get(ins.seccion)
+      if (entry) {
+        addToBreakdown(entry, studentById.get(ins.estudiante_id))
       }
     }
   }
@@ -88,7 +108,19 @@ async function getEstadisticas(filters = {}) {
     filtros: { anio: anio ?? null, seccion: seccion ?? null },
     estudiantes: { total, mujeres, hombres },
     porAnio: YEARS.map((year) => porAnioByLabel.get(year.label)),
+    porSeccion,
     documentosEmitidos,
+    actualizadoEn: new Date().toISOString(),
+  }
+}
+
+/** Add one inscription to a {total,mujeres,hombres} accumulator by sex. */
+function addToBreakdown(entry, student) {
+  entry.total += 1
+  if (student && student.sexo === 'F') {
+    entry.mujeres += 1
+  } else if (student && student.sexo === 'M') {
+    entry.hombres += 1
   }
 }
 

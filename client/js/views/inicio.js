@@ -4,6 +4,7 @@
 // (AGENTS/docs/ARQUITECTURA.md §6: no innerHTML with data).
 
 import { h, clear } from "../ui/dom.js";
+import { icon } from "../ui/icons.js";
 import { api } from "../api.js";
 import { errorCopy } from "../ui/messages.js";
 
@@ -27,6 +28,16 @@ export function renderInicio(container, { user } = {}) {
     "aria-label": "Filtrar por sección",
     disabled: true,
   });
+  const clearBtn = h(
+    "button",
+    {
+      class: "btn btn--ghost inicio__clear",
+      type: "button",
+      hidden: true,
+      on: { click: clearFilters },
+    },
+    [h("span", { text: "Limpiar filtros" })],
+  );
   const results = h("div", { class: "inicio__results" });
 
   const view = h("section", { class: "inicio" }, [
@@ -51,6 +62,7 @@ export function renderInicio(container, { user } = {}) {
           h("span", { text: "Sección" }),
           seccionSelect,
         ]),
+        clearBtn,
       ],
     ),
     results,
@@ -68,35 +80,134 @@ export function renderInicio(container, { user } = {}) {
   }
 
   function renderStats(data) {
-    const { estudiantes, documentosEmitidos, porAnio } = data;
+    const {
+      estudiantes,
+      documentosEmitidos,
+      porAnio = [],
+      porSeccion = [],
+      filtros,
+      actualizadoEn,
+    } = data;
+
+    // The breakdown must answer the active filter instead of silently ignoring
+    // it: with a year selected we show its sections; otherwise the cross-year
+    // panorama.
+    const bySection = Boolean(filtros?.anio);
+    const rows = bySection ? porSeccion : porAnio;
+    const rowKey = bySection ? "seccion" : "anio";
+
+    const hasData =
+      estudiantes.total > 0 ||
+      documentosEmitidos > 0 ||
+      rows.some((row) => row.total > 0);
+    if (!hasData) {
+      results.replaceChildren(renderEmptyState(filtros));
+      return;
+    }
+
+    const filterActive = Boolean(filtros?.anio || filtros?.seccion);
+    const share = (value) =>
+      estudiantes.total > 0
+        ? Math.round((value / estudiantes.total) * 100)
+        : 0;
 
     const cards = [
-      { label: "Estudiantes", value: estudiantes.total },
-      { label: "Mujeres", value: estudiantes.mujeres },
-      { label: "Hombres", value: estudiantes.hombres },
-      { label: "Documentos emitidos", value: documentosEmitidos },
+      {
+        label: "Estudiantes",
+        value: estudiantes.total,
+        tone: "total",
+        hint: filterActive ? "en el filtro actual" : "en total",
+      },
+      {
+        label: "Mujeres",
+        value: estudiantes.mujeres,
+        tone: "mujeres",
+        hint: `${share(estudiantes.mujeres)}% del total`,
+      },
+      {
+        label: "Hombres",
+        value: estudiantes.hombres,
+        tone: "hombres",
+        hint: `${share(estudiantes.hombres)}% del total`,
+      },
+      {
+        label: "Documentos emitidos",
+        value: documentosEmitidos,
+        tone: "documentos",
+        hint: filterActive ? "histórico de los estudiantes filtrados" : "histórico total",
+      },
     ];
 
-    const maxTotal = Math.max(...porAnio.map((row) => row.total), 1);
+    const maxTotal = Math.max(...rows.map((row) => row.total), 1);
+
+    const legend = h("div", { class: "inicio__legend" }, [
+      h("span", { class: "inicio__legend-item" }, [
+        h("span", { class: "inicio__swatch inicio__swatch--mujeres", "aria-hidden": "true" }),
+        h("span", { text: "Mujeres" }),
+      ]),
+      h("span", { class: "inicio__legend-item" }, [
+        h("span", { class: "inicio__swatch inicio__swatch--hombres", "aria-hidden": "true" }),
+        h("span", { text: "Hombres" }),
+      ]),
+    ]);
 
     const breakdown = h("article", { class: "card inicio__breakdown" }, [
-      h("h3", { text: "Distribución por año" }),
+      h("div", { class: "inicio__breakdown-head" }, [
+        h("div", {}, [
+          h("h3", {
+            text: bySection
+              ? `Distribución por sección · ${filtros.anio}`
+              : "Distribución por año",
+          }),
+          h("p", {
+            class: "inicio__breakdown-note",
+            text: bySection
+              ? "Inscripciones del año seleccionado, por sección."
+              : "Todos los años; respeta el filtro de sección.",
+          }),
+        ]),
+        legend,
+      ]),
       h(
         "div",
         { class: "inicio__rows" },
-        porAnio.map((row) => {
+        rows.map((row) => {
+          const label = row[rowKey];
           const pct = Math.round((row.total / maxTotal) * 100);
+          const selected = bySection && filtros.seccion === label;
+          const mujeresPct = row.total > 0 ? (row.mujeres / row.total) * 100 : 0;
+          const hombresPct = row.total > 0 ? (row.hombres / row.total) * 100 : 0;
           return h(
             "div",
-            { class: "inicio__row", dataset: { anio: row.anio } },
+            {
+              class: selected ? "inicio__row is-selected" : "inicio__row",
+              dataset: bySection ? { seccion: label } : { anio: label },
+            },
             [
-              h("span", { class: "inicio__row-label", text: row.anio }),
+              h("span", { class: "inicio__row-label", text: label }),
               h("div", { class: "inicio__bar", "aria-hidden": "true" }, [
                 row.total > 0
-                  ? h("span", {
-                      class: "inicio__bar-fill",
-                      style: { width: `${Math.max(pct, 3)}%` },
-                    })
+                  ? h(
+                      "div",
+                      {
+                        class: "inicio__bar-total",
+                        style: { width: `${Math.max(pct, 3)}%` },
+                      },
+                      [
+                        mujeresPct > 0
+                          ? h("span", {
+                              class: "inicio__bar-fill inicio__bar-fill--mujeres",
+                              style: { width: `${mujeresPct}%` },
+                            })
+                          : null,
+                        hombresPct > 0
+                          ? h("span", {
+                              class: "inicio__bar-fill inicio__bar-fill--hombres",
+                              style: { width: `${hombresPct}%` },
+                            })
+                          : null,
+                      ],
+                    )
                   : null,
               ]),
               h("span", {
@@ -113,22 +224,85 @@ export function renderInicio(container, { user } = {}) {
       ),
     ]);
 
+    clearBtn.hidden = !filterActive;
+
+    const updated = timeLabel(actualizadoEn);
+
     results.replaceChildren(
       h(
         "div",
         { class: "inicio__stats" },
         cards.map((card) =>
-          h("article", { class: "card inicio__kpi" }, [
-            h("span", { class: "inicio__kpi-label", text: card.label }),
+          h("article", { class: `card inicio__kpi inicio__kpi--${card.tone}` }, [
+            h("span", { class: "inicio__kpi-label" }, [
+              h("span", { class: "inicio__kpi-dot", "aria-hidden": "true" }),
+              h("span", { text: card.label }),
+            ]),
             h("strong", {
               class: "inicio__kpi-value",
               text: numeric(card.value),
             }),
+            card.hint
+              ? h("span", { class: "inicio__kpi-hint", text: card.hint })
+              : null,
           ]),
         ),
       ),
       breakdown,
+      updated
+        ? h("p", { class: "inicio__updated", text: `Actualizado a las ${updated}` })
+        : null,
     );
+  }
+
+  function renderEmptyState(filtros) {
+    const filterActive = Boolean(filtros?.anio || filtros?.seccion);
+    const action = filterActive
+      ? h(
+          "button",
+          {
+            class: "btn btn--primary",
+            type: "button",
+            on: { click: clearFilters },
+          },
+          [h("span", { text: "Limpiar filtros" })],
+        )
+      : h("a", { class: "btn btn--primary", href: "#/inscripcion" }, [
+          h("span", { text: "Registrar el primer estudiante" }),
+        ]);
+
+    return h("div", { class: "card inicio__empty" }, [
+      h("span", { class: "inicio__empty-icon", "aria-hidden": "true" }, [
+        icon("documentos", { width: "28", height: "28" }),
+      ]),
+      h("div", { class: "inicio__empty-copy" }, [
+        h("p", {
+          class: "inicio__empty-title",
+          text: filterActive
+            ? "No hay inscripciones que coincidan con los filtros seleccionados."
+            : "Todavía no hay inscripciones registradas.",
+        }),
+        action,
+      ]),
+    ]);
+  }
+
+  function clearFilters() {
+    anioSelect.value = "";
+    fillSections(collectSections(options?.years ?? []));
+    seccionSelect.value = "";
+    load();
+  }
+
+  /** Local `HH:MM` for the aggregation timestamp, or null if unusable. */
+  function timeLabel(iso) {
+    if (!iso) return null;
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleTimeString("es-VE", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
   function renderError(error) {
@@ -145,11 +319,56 @@ export function renderInicio(container, { user } = {}) {
     );
   }
 
+  /** Skeleton placeholder while the aggregation travels; keeps layout stable. */
+  function renderLoading() {
+    const line = (variant) =>
+      h("span", {
+        class: `inicio__skeleton-line inicio__skeleton-line--${variant}`,
+      });
+
+    results.replaceChildren(
+      h(
+        "div",
+        { class: "inicio__stats", "aria-hidden": "true" },
+        Array.from({ length: 4 }, () =>
+          h("article", { class: "card inicio__kpi inicio__skeleton" }, [
+            line("label"),
+            line("value"),
+          ]),
+        ),
+      ),
+      h(
+        "article",
+        {
+          class: "card inicio__breakdown inicio__skeleton",
+          "aria-hidden": "true",
+        },
+        [
+          line("title"),
+          h(
+            "div",
+            { class: "inicio__rows" },
+            Array.from({ length: 4 }, () =>
+              h("div", { class: "inicio__skeleton-row" }, [
+                line("row-label"),
+                line("row-bar"),
+                line("row-total"),
+              ]),
+            ),
+          ),
+        ],
+      ),
+      h("p", {
+        class: "inicio__status inicio__sr",
+        role: "status",
+        text: "Cargando estadísticas…",
+      }),
+    );
+  }
+
   function load() {
     const id = ++seq;
-    results.replaceChildren(
-      h("p", { class: "inicio__status", text: "Cargando estadísticas…" }),
-    );
+    renderLoading();
     api
       .estadisticas({ anio: anioSelect.value, seccion: seccionSelect.value })
       .then((data) => {

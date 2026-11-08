@@ -180,7 +180,11 @@ métodos: `tabla`, `query`, `createAllTables`, `addModel`, `end`. Todo lo demás
   `constancia_estudio`.
 
 **`estadisticas`** — solo lectura, con filtros opcionales por año y sección. Devuelve
-totales por sexo, una fila por año académico y el conteo de documentos emitidos.
+totales por sexo, una fila por año académico (`porAnio`, panorama entre años), una fila
+por sección del año elegido cuando hay filtro de año (`porSeccion`), el conteo de
+documentos emitidos y `actualizadoEn` con la marca ISO del cálculo. La tarjeta de
+documentos cuenta el histórico de los estudiantes filtrados; el desglose responde al
+filtro activo (secciones si hay año, años si no).
 
 **`reportes`** — solo lectura, para imprimir. `GET /api/reportes/seccion` exige año y
 sección, resuelve el año escolar **más reciente** con inscripciones en ese grupo y
@@ -415,6 +419,24 @@ se imprimen. Las inscripciones repiten la fecha en `dd/mm/aaaa`, el estado (regu
 repite) y los documentos consignados en una línea; los representantes llevan parentesco,
 cédula, teléfono y correo. Misma regla que los documentos: el servidor entrega datos, el
 navegador compone.
+
+### 2.9 El tablero de Inicio
+
+`views/inicio.js` consume `GET /api/academico/opciones` (para llenar los filtros) y
+`GET /api/estadisticas` (para las cifras), ambos con su propio estado de error y botón
+de reintento.
+
+- **El desglose sigue al filtro activo**: sin año muestra `porAnio` (panorama entre
+  años); con año muestra `porSeccion` (secciones de ese año). Así el gráfico nunca
+  ignora en silencio el filtro que el usuario acaba de elegir.
+- **La tarjeta de documentos** cuenta el histórico de los estudiantes que caen en el
+  filtro; el texto bajo el número lo dice explícitamente.
+- **Mientras carga** pinta un esqueleto con la misma huella que el tablero real y un
+  `role="status"` solo para lectores de pantalla.
+- **Sin datos** distingue dos casos: sin inscripciones (invita a Nueva inscripción) y sin
+  resultados para los filtros (ofrece limpiarlos).
+- **`seq`** descarta respuestas viejas si el usuario cambia de filtro mientras viaja una
+  petición.
 
 ---
 

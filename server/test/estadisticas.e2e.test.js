@@ -118,6 +118,13 @@ test('estadisticas endpoint (require MariaDB and a configured .env)', async (t) 
     before = await res.json()
     assert.deepEqual(before.filtros, { anio: ANIO, seccion: SECCION })
     assert.equal(before.porAnio.length, YEAR_LABELS.length)
+    // A year filter exposes its own section distribution, in academic order.
+    assert.deepEqual(
+      before.porSeccion.map((entry) => entry.seccion),
+      ['A', 'B', 'C', 'D', 'E', 'F'],
+    )
+    assert.equal(typeof before.actualizadoEn, 'string')
+    assert.ok(!Number.isNaN(Date.parse(before.actualizadoEn)))
   })
 
   await t.test('seeds a deterministic fixture', async () => {
@@ -198,6 +205,31 @@ test('estadisticas endpoint (require MariaDB and a configured .env)', async (t) 
     }
   })
 
+  await t.test('reports porSeccion for the selected year', async () => {
+    const res = await api('GET', filteredUrl)
+    const after = await res.json()
+
+    assert.deepEqual(
+      after.porSeccion.map((entry) => entry.seccion),
+      ['A', 'B', 'C', 'D', 'E', 'F'],
+    )
+
+    const beforeSection = before.porSeccion.find((entry) => entry.seccion === SECCION)
+    const afterSection = after.porSeccion.find((entry) => entry.seccion === SECCION)
+    assert.equal(afterSection.total - beforeSection.total, 3)
+    assert.equal(afterSection.mujeres - beforeSection.mujeres, 2)
+    assert.equal(afterSection.hombres - beforeSection.hombres, 1)
+
+    // Every other section of the year is untouched by the fixture.
+    for (const entry of after.porSeccion) {
+      if (entry.seccion === SECCION) {
+        continue
+      }
+      const reference = before.porSeccion.find((other) => other.seccion === entry.seccion)
+      assert.deepEqual(entry, reference)
+    }
+  })
+
   await t.test('returns the cards without filters', async () => {
     const res = await api('GET', '/api/estadisticas')
     assert.equal(res.status, 200)
@@ -209,6 +241,9 @@ test('estadisticas endpoint (require MariaDB and a configured .env)', async (t) 
     assert.equal(typeof body.estudiantes.hombres, 'number')
     assert.equal(typeof body.documentosEmitidos, 'number')
     assert.equal(body.porAnio.length, YEAR_LABELS.length)
+    // No year filter: the cross-year panorama is what the chart shows.
+    assert.deepEqual(body.porSeccion, [])
+    assert.equal(typeof body.actualizadoEn, 'string')
   })
 
   await t.test('accepts a section A-F when no year is given', async () => {
