@@ -110,7 +110,7 @@ erDiagram
 | --- | --- | --- |
 | `estudiantes` → `inscripciones` | 1 : N | Un alumno acumula una inscripción por año escolar; la clave única `(estudiante_id, anio_escolar)` impide matricularlo dos veces en el mismo año. |
 | `estudiantes` → `documentos_emitidos` | 1 : N | Cada constancia o carta emitida queda registrada con su fecha y con quién la emitió. |
-| `estudiantes` ↔ `representantes` | N : M | Resuelta en `estudiante_representante`, con el `parentesco` como atributo de la relación. Un representante puede tener varios alumnos a su cargo; un alumno puede tener varios representantes. |
+| `estudiantes` ↔ `representantes` | N : M en el esquema | Resuelta en `estudiante_representante`, con el `parentesco` como atributo de la relación. Un representante puede tener varios alumnos a su cargo, pero la regla de negocio es **un representante por alumno**: la API rechaza más de uno al crear o editar. |
 | `inscripciones` → `documentos_consignados` | 1 : 1 | La columna `inscripcion_id` es única: el checklist de recaudos pertenece a la inscripción, no al alumno. |
 | `usuarios` → `inscripciones` | 1 : N (opcional) | `docente_id` es nulo cuando la inscripción no tiene docente asignado. |
 | `usuarios` → `documentos_emitidos` | 1 : N (opcional) | `usuario_id` queda en nulo si el usuario que emitió el documento se elimina, para no perder el registro de emisión. |

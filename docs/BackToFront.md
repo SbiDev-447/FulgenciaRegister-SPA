@@ -165,6 +165,15 @@ métodos: `tabla`, `query`, `createAllTables`, `addModel`, `end`. Todo lo demás
   para una aplicación de un solo operador, y **no se deben anidar transacciones**.
 - La cédula es **inmutable** después de crear la ficha: si el `PUT` trae otro par
   `tipo_ci`/`numero_ci`, es 400.
+- **Un estudiante tiene como máximo un representante.** `createEstudiante` exige
+  exactamente uno y `updateEstudiante` acepta cero o uno; más de uno es 400. La tabla
+  `estudiante_representante` sigue siendo N:M porque un representante puede compartirse
+  entre varios hermanos.
+- `createInscripcion` es el **paso de año**: dado un estudiante existente, inserta solo
+  la nueva inscripción y su fila de recaudos, sin tocar datos personales ni vínculos.
+  Resuelve la herencia de documentos leyendo la inscripción más reciente por
+  `anio_escolar` **antes** de insertar, y traduce el choque del UNIQUE
+  `(estudiante_id, anio_escolar)` a un 409.
 - El `DELETE` borra en cascada lo que cuelga del estudiante y además **barre los
   representantes que quedaron sin ningún estudiante**, en la misma transacción.
 

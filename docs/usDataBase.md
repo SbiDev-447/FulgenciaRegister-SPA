@@ -239,7 +239,9 @@ Detalle de las ideas centrales:
 - **Un representante no pertenece a un estudiante.** Es una persona propia, y el
   vínculo vive en el puente. Por eso dos hermanos comparten el mismo representante sin
   duplicar la persona, y por eso el `parentesco` está en el puente (Juan es "Madre" de
-  Pedro y "Tía" de Ana: misma persona, distinto vínculo).
+  Pedro y "Tía" de Ana: misma persona, distinto vínculo). La regla de negocio es **un
+  representante por alumno**; el esquema conserva N:M para que un representante pueda
+  tener varios alumnos. La API es quien limita el arreglo a uno (o cero al desvincular).
 - **El checklist es de la inscripción, no del estudiante.** Los recaudos se entregan
   cada año.
 - **`documentos_emitidos` es bitácora, no configuración.** Solo registra emisiones;
@@ -329,6 +331,10 @@ el camino de la inscripción.
 Es la única fuente de verdad de "quién es representante de quién". La PK compuesta
 impide duplicar el mismo par (no puedes enlazar dos veces al mismo representante con
 el mismo estudiante). Aquí sí hay `CASCADE` en ambos lados.
+
+El puente admite N:M, pero la regla del sistema es **máximo un representante por
+alumno**: `POST /api/estudiantes` exige exactamente uno y `PUT /api/estudiantes/:id`
+acepta cero o uno. Un representante puede seguir vinculado a varios hermanos.
 
 ### 5.5 `inscripciones`
 

@@ -149,6 +149,7 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 | POST | `/api/estudiantes` | Registrar estudiante |
 | GET | `/api/estudiantes/:id` | Ver estudiante |
 | PUT | `/api/estudiantes/:id` | Editar estudiante |
+| POST | `/api/estudiantes/:id/inscripciones` | Inscribir a un estudiante ya registrado en un nuevo año escolar |
 | DELETE | `/api/estudiantes/:id` | Eliminar estudiante (y los representantes que se queden sin ninguno) |
 | GET | `/api/documentos/verificar/:cedula` | Verificar una cédula |
 | POST | `/api/documentos/emitir` | Emitir un documento |
@@ -161,6 +162,27 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 | GET | `/api/ajustes/representantes-huerfanos` | Representantes que ningún estudiante referencia (sólo `admin`) |
 | POST | `/api/ajustes/purgar-representantes` | Borrarlos, revalidando en el `DELETE` (sólo `admin`) |
 | POST | `/api/ajustes/backup` | Escribir un respaldo en `backups/` (sólo `admin`) |
+
+### Inscribir un año nuevo
+
+`POST /api/estudiantes/:id/inscripciones` agrega una inscripción a un estudiante que ya
+existe, sin crear otra ficha ni tocar sus datos personales o su representante. El cuerpo
+es `{ inscripcion, documentos? }`; `inscripcion` necesita al menos `anio_escolar`, `anio`,
+`seccion` y `fecha_inscripcion`. Responde **201** con el expediente completo (el mismo
+que `GET /api/estudiantes/:id`), **404** si el estudiante no existe, **400** si la
+inscripción es inválida y **409** si ya hay una inscripción de ese estudiante para el
+mismo `anio_escolar`.
+
+Si se omite `documentos`, la nueva inscripción hereda los seis recaudos de la
+inscripción más reciente del estudiante; si se envía, cada campo debe ser booleano y se
+guarda tal cual. La fila de `documentos_consignados` siempre existe, aunque no haya
+inscripción anterior.
+
+**Regla de representantes:** un estudiante tiene como máximo un representante. `POST
+/api/estudiantes` exige exactamente uno y `PUT /api/estudiantes/:id` acepta cero (para
+desvincular) o uno; cualquier arreglo con más de un representante responde **400**. La
+relación en la base sigue siendo N:M, porque un mismo representante puede tener varios
+alumnos a su cargo.
 
 ### El listado de estudiantes
 
