@@ -431,14 +431,15 @@ de reintento.
 
 - **El desglose sigue al filtro activo**: sin año muestra `porAnio` (panorama entre
   años); con año muestra `porSeccion` (secciones de ese año). Así el gráfico nunca
-  ignora en silencio el filtro que el usuario acaba de elegir.
+  ignora en silencio el filtro que el usuario acaba de elegir. Los años y secciones sin
+  inscripciones se omiten en lugar de pintar una barra vacía.
 - **La tarjeta de documentos** cuenta el histórico de los estudiantes que caen en el
   filtro; el texto bajo el número lo dice explícitamente.
-- **Composición de la matrícula**: dos barras de dos segmentos sobre la misma base de
-  estudiantes. `condicion` separa regulares de repitientes (`repite` manda sobre un
-  `regular` contradictorio, igual que en el alta) y `continuidad` separa nuevos de
-  continuos (inscripciones en más de un `anio_escolar`). Si ambas parejas son cero, el
-  panel no se pinta.
+- **Composición de la matrícula**: gráfico de barras verticales en dos grupos.
+  `condicion` separa regulares de repitientes (`repite` manda sobre un `regular`
+  contradictorio, igual que en el alta) y `continuidad` separa continuos de nuevos
+  (inscripciones en más de un `anio_escolar`). Las cuatro barras comparten escala; si
+  todas son cero, el panel no se pinta. Es CSS puro, sin dependencias de gráficos.
 - **Mientras carga** pinta un esqueleto con la misma huella que el tablero real y un
   `role="status"` solo para lectores de pantalla.
 - **Sin datos** distingue dos casos: sin inscripciones (invita a Nueva inscripción) y sin

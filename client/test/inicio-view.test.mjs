@@ -69,7 +69,10 @@ test('inicio switches the breakdown to sections when a year is chosen', async (t
     return jsonResponse({
       filtros: { anio: null, seccion: null },
       estudiantes: { total: 3, mujeres: 2, hombres: 1 },
-      porAnio: [{ anio: '1er Año', total: 3, mujeres: 2, hombres: 1 }],
+      porAnio: [
+        { anio: '1er Año', total: 3, mujeres: 2, hombres: 1 },
+        { anio: '2do Año', total: 0, mujeres: 0, hombres: 0 },
+      ],
       porSeccion: [],
       documentosEmitidos: 1,
       actualizadoEn: '2026-11-07T12:00:00.000Z',
@@ -82,6 +85,8 @@ test('inicio switches the breakdown to sections when a year is chosen', async (t
 
   // The cross-year panorama is the no-filter default.
   assert.match(textOf(container), /Distribución por año/)
+  // Years without inscriptions are dropped instead of rendering blank bars.
+  assert.equal(findAll(container, '.inicio__row').length, 1)
 
   anioSelect.value = '1er Año'
   await dispatch(anioSelect, 'change')
@@ -99,9 +104,14 @@ test('inicio switches the breakdown to sections when a year is chosen', async (t
   assert.match(text, /67% del total/)
   // Condition and continuity get their own composition panel.
   assert.match(text, /Composición de la matrícula/)
-  assert.equal(findAll(container, '.inicio__trayectoria-item').length, 2)
+  assert.equal(findAll(container, '.inicio__chart-bar').length, 4)
+  assert.match(text, /Regulares/)
   assert.match(text, /Repitientes/)
+  assert.match(text, /Continuos/)
   assert.match(text, /Nuevos/)
+  // The tallest value scales every bar, so it fills the chart height.
+  const tallest = findAll(container, '.inicio__chart-column')[0]
+  assert.equal(tallest.style.height, '100%')
   // An active filter exposes the reset affordance.
   assert.equal(findAll(container, '.inicio__clear')[0].hidden, false)
 })

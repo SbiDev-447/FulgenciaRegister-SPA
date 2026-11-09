@@ -140,7 +140,11 @@ export function renderInicio(container, { user } = {}) {
       },
     ];
 
-    const maxTotal = Math.max(...rows.map((row) => row.total), 1);
+    // Years/sections with no inscriptions contribute an empty track and a row
+    // of zeroes, which reads as blank space. Keep the chart to rows that carry
+    // data; the hasData guard above still covers the all-zero case.
+    const visibleRows = rows.filter((row) => row.total > 0);
+    const maxTotal = Math.max(...visibleRows.map((row) => row.total), 1);
 
     const legend = h("div", { class: "inicio__legend" }, [
       h("span", { class: "inicio__legend-item" }, [
@@ -165,7 +169,7 @@ export function renderInicio(container, { user } = {}) {
             class: "inicio__breakdown-note",
             text: bySection
               ? "Inscripciones del año seleccionado, por sección."
-              : "Todos los años; respeta el filtro de sección.",
+              : "Años con inscripciones; respeta el filtro de sección.",
           }),
         ]),
         legend,
@@ -173,7 +177,7 @@ export function renderInicio(container, { user } = {}) {
       h(
         "div",
         { class: "inicio__rows" },
-        rows.map((row) => {
+        visibleRows.map((row) => {
           const label = row[rowKey];
           const pct = Math.round((row.total / maxTotal) * 100);
           const selected = bySection && filtros.seccion === label;
@@ -262,29 +266,34 @@ export function renderInicio(container, { user } = {}) {
   }
 
   /**
-   * Composition panel for repetition and continuity. Both groups use the same
-   * shape: a base segment (regular/continuing) and an accent segment (repeat/new).
+   * Composition panel for repetition and continuity, as a plain CSS bar chart:
+   * two groups (condition, continuity) with two vertical bars each.
    */
   function renderTrayectoria(condicion, continuidad) {
     const grupos = [
       {
         key: "condicion",
         label: "Condición",
-        base: { label: "Regulares", value: condicion?.regulares ?? 0 },
-        mark: { label: "Repitientes", value: condicion?.repitientes ?? 0 },
+        series: [
+          { label: "Regulares", value: condicion?.regulares ?? 0, tone: "base" },
+          { label: "Repitientes", value: condicion?.repitientes ?? 0, tone: "mark" },
+        ],
       },
       {
         key: "continuidad",
         label: "Continuidad",
-        base: { label: "Continuos", value: continuidad?.continuos ?? 0 },
-        mark: { label: "Nuevos", value: continuidad?.nuevos ?? 0 },
+        series: [
+          { label: "Continuos", value: continuidad?.continuos ?? 0, tone: "base" },
+          { label: "Nuevos", value: continuidad?.nuevos ?? 0, tone: "mark" },
+        ],
       },
     ];
 
-    const tieneDatos = grupos.some(
-      (grupo) => grupo.base.value + grupo.mark.value > 0,
+    const max = Math.max(
+      ...grupos.flatMap((grupo) => grupo.series.map((serie) => serie.value)),
+      0,
     );
-    if (!tieneDatos) return null;
+    if (max === 0) return null;
 
     return h("article", { class: "card inicio__breakdown inicio__trayectoria" }, [
       h("div", { class: "inicio__breakdown-head" }, [
@@ -292,58 +301,56 @@ export function renderInicio(container, { user } = {}) {
           h("h3", { text: "Composición de la matrícula" }),
           h("p", {
             class: "inicio__breakdown-note",
-            text: "Sobre los estudiantes del filtro actual.",
+            text: "Estudiantes del filtro actual, por condición y continuidad.",
           }),
         ]),
       ]),
       h(
         "div",
-        { class: "inicio__trayectoria-grid" },
-        grupos.map((grupo) => {
-          const total = grupo.base.value + grupo.mark.value;
-          const markPct = total > 0 ? (grupo.mark.value / total) * 100 : 0;
-          return h(
+        {
+          class: "inicio__chart",
+          role: "group",
+          "aria-label": "Composición de la matrícula",
+        },
+        grupos.map((grupo) =>
+          h(
             "div",
-            {
-              class: "inicio__trayectoria-item",
-              dataset: { grupo: grupo.key },
-            },
+            { class: "inicio__chart-group", dataset: { grupo: grupo.key } },
             [
+              h(
+                "div",
+                { class: "inicio__chart-bars" },
+                grupo.series.map((serie) =>
+                  h("figure", { class: "inicio__chart-bar" }, [
+                    h("div", { class: "inicio__chart-track" }, [
+                      h(
+                        "div",
+                        {
+                          class: `inicio__chart-column inicio__chart-column--${serie.tone}`,
+                          style: { height: `${(serie.value / max) * 100}%` },
+                        },
+                        [
+                          h("span", {
+                            class: "inicio__chart-value",
+                            text: numeric(serie.value),
+                          }),
+                        ],
+                      ),
+                    ]),
+                    h("figcaption", {
+                      class: "inicio__chart-name",
+                      text: serie.label,
+                    }),
+                  ]),
+                ),
+              ),
               h("span", {
-                class: "inicio__trayectoria-label",
+                class: "inicio__chart-group-label",
                 text: grupo.label,
               }),
-              h("div", { class: "inicio__trayectoria-bar", "aria-hidden": "true" }, [
-                h("span", {
-                  class: "inicio__trayectoria-fill inicio__trayectoria-fill--base",
-                  style: { width: `${100 - markPct}%` },
-                }),
-                h("span", {
-                  class: "inicio__trayectoria-fill inicio__trayectoria-fill--mark",
-                  style: { width: `${markPct}%` },
-                }),
-              ]),
-              h("div", { class: "inicio__trayectoria-values" }, [
-                h("span", { class: "inicio__trayectoria-value" }, [
-                  h("span", {
-                    class: "inicio__swatch inicio__swatch--base",
-                    "aria-hidden": "true",
-                  }),
-                  h("span", { text: grupo.base.label }),
-                  h("strong", { text: numeric(grupo.base.value) }),
-                ]),
-                h("span", { class: "inicio__trayectoria-value" }, [
-                  h("span", {
-                    class: "inicio__swatch inicio__swatch--mark",
-                    "aria-hidden": "true",
-                  }),
-                  h("span", { text: grupo.mark.label }),
-                  h("strong", { text: numeric(grupo.mark.value) }),
-                ]),
-              ]),
             ],
-          );
-        }),
+          ),
+        ),
       ),
     ]);
   }
