@@ -172,44 +172,47 @@
     }
   }
 
-  .inscripcion__docs {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--space-3);
-  }
-
-  .inscripcion__check.input-error {
-    color: var(--color-danger);
-
-    input {
-      outline: 2px solid var(--color-danger);
-      outline-offset: 2px;
-    }
-  }
-
   .inscripcion__hint {
     margin: 0;
     color: var(--color-text-muted);
     font-size: 0.85rem;
   }
+}
 
-  .inscripcion__check {
-    display: inline-flex;
-    align-items: flex-start;
-    gap: var(--space-2);
-    color: var(--color-text);
-    font-size: 0.92rem;
+/* The consigned-documents checklist is shared by the wizard and the ficha's
+   "new school year" form, so these rules cannot live inside `.inscripcion`:
+   the modal form uses `.ficha-form` as its root. */
+.inscripcion__docs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
 
-    /* Align the control with the FIRST text line, not with the center of the
-       whole label: these labels wrap, and centering the control against a
-       multi-line block is what made the two options look uneven. */
-    input[type='checkbox'],
-    input[type='radio'] {
-      width: 1.1rem;
-      height: 1.1rem;
-      margin-top: 0.16rem;
-      accent-color: var(--color-primary);
-    }
+.inscripcion__check.input-error {
+  color: var(--color-danger);
+
+  input {
+    outline: 2px solid var(--color-danger);
+    outline-offset: 2px;
+  }
+}
+
+.inscripcion__check {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: 0.92rem;
+
+  /* Align the control with the FIRST text line, not with the center of the
+     whole label: these labels wrap, and centering the control against a
+     multi-line block is what made the two options look uneven. */
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.16rem;
+    accent-color: var(--color-primary);
   }
 }
 

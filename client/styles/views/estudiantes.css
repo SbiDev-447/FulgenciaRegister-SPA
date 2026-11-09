@@ -337,8 +337,17 @@
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: var(--space-4);
 
-    .field--full {
+    .field--full,
+    .ficha-form__section-title,
+    .ficha-form__hint {
       grid-column: 1 / -1;
+    }
+
+    .ficha-form__section-title {
+      margin: var(--space-2) 0 0;
+      padding-bottom: var(--space-2);
+      border-bottom: 1px solid var(--color-border);
+      font-size: 1rem;
     }
   }
 
@@ -348,6 +357,15 @@
     display: grid;
     grid-template-columns: 64px minmax(0, 1fr);
     gap: var(--space-2);
+
+    /* The cédula is immutable server-side, so the number field must look as
+       locked as the disabled type select instead of like a normal input. */
+    .input[readonly] {
+      background: var(--color-disabled-bg);
+      border-color: var(--color-disabled-border);
+      color: var(--color-disabled-text);
+      cursor: not-allowed;
+    }
   }
 }
 

@@ -115,9 +115,12 @@ vacía **desvincula** pero no borra: ese representante puede seguir siendo de ot
 estudiante, y una edición no debería borrar datos de terceros. Esos casos los resuelve
 el comando, que nunca toca un representante que conserve algún enlace.
 
-El formulario de edición de la SPA edita **solo la ficha del propio estudiante**: no
-envía representantes ni inscripciones, que tienen sus propias pantallas. La cédula se
-muestra pero no se envía — el servidor la rechaza como inmutable.
+El formulario de edición de la SPA edita la ficha del estudiante **y su representante**:
+envía `representantes` con el `id` de la persona compartida, de modo que el servidor
+actualiza sus datos para todos los hermanos vinculados; el `parentesco` viaja en el mismo
+objeto pero se guarda solo en el vínculo de ese estudiante. Las inscripciones siguen en su
+propia pantalla. La cédula del estudiante se muestra pero no se envía — el servidor la
+rechaza como inmutable.
 
 Un campo opcional que se deja en blanco se envía como `null`, nunca como `""`:
 `peso` es `decimal(5,2)` y una cadena vacía responde 500. Por lo mismo, los campos que

@@ -169,6 +169,12 @@ métodos: `tabla`, `query`, `createAllTables`, `addModel`, `end`. Todo lo demás
   exactamente uno y `updateEstudiante` acepta cero o uno; más de uno es 400. La tabla
   `estudiante_representante` sigue siendo N:M porque un representante puede compartirse
   entre varios hermanos.
+- En `updateEstudiante`, un representante con `id` se edita **en sitio**: primero se
+  comprueba que ese id ya esté vinculado al estudiante (si no, 400), después se actualiza
+  la fila de `representantes` con los campos de la persona y por último el `parentesco`
+  de ese vínculo. Como la fila es compartida, los hermanos ven el cambio; el parentesco
+  de ellos no se toca. Sin `id` se mantiene el camino de `findOrCreateRepresentante` por
+  cédula, que es el que usa la inscripción nueva.
 - `createInscripcion` es el **paso de año**: dado un estudiante existente, inserta solo
   la nueva inscripción y su fila de recaudos, sin tocar datos personales ni vínculos.
   Resuelve la herencia de documentos leyendo la inscripción más reciente por

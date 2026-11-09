@@ -29,7 +29,7 @@ export async function renderInscripcion(container, _options = {}) {
       h('div', { class: 'inscripcion-view__hero' }, [
         h('h2', { text: 'Nueva inscripción' }),
         h('p', {
-          text: 'Cinco pasos: datos del estudiante, datos físicos y salud, inscripción, representante y documentos.',
+          text: 'Registre a los Nuevos Estudiantes completando los datos.',
         }),
       ]),
       status,

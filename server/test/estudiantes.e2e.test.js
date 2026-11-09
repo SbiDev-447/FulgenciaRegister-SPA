@@ -979,6 +979,115 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     assert.equal(recordBody.representantes[0].numero_ci, singleRepCi)
   })
 
+  await t.test('updates a shared representative in place for every linked student', async () => {
+    const siblingCi = uniqueCi('75')
+    const sibling = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        ...contactoObligatorio,
+        tipo_ci: 'V',
+        numero_ci: siblingCi,
+        primer_nombre: 'Hermano',
+        primer_apellido: 'Compartido',
+        fecha_nacimiento: '2012-04-10',
+        sexo: 'M',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+      representantes: [
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: singleRepCi, nombre: 'Ana Pérez', parentesco: 'Madre' },
+      ],
+      documentos: { ...allDocumentos },
+    })
+    assert.equal(sibling.status, 201)
+    const siblingId = (await sibling.json()).estudiante.id
+    extraStudentIds.push(siblingId)
+
+    const first = await (await api('GET', `/api/estudiantes/${singleRepStudentId}`)).json()
+    const repId = first.representantes[0].id
+
+    const updated = await api('PUT', `/api/estudiantes/${singleRepStudentId}`, {
+      representantes: [
+        {
+          id: repId,
+          nombre: 'Ana Actualizada',
+          tipo_ci: 'V',
+          numero_ci: singleRepCi,
+          telefono: '0414-0001122',
+          correo: 'ana.actualizada@ejemplo.com',
+          parentesco: 'Madre',
+        },
+      ],
+    })
+    assert.equal(updated.status, 200)
+    const updatedBody = await updated.json()
+    assert.equal(updatedBody.representantes[0].nombre, 'Ana Actualizada')
+    assert.equal(updatedBody.representantes[0].telefono, '0414-0001122')
+
+    const siblingRecord = await (await api('GET', `/api/estudiantes/${siblingId}`)).json()
+    assert.equal(
+      siblingRecord.representantes[0].nombre,
+      'Ana Actualizada',
+      'the shared representative row is updated for every linked student',
+    )
+    assert.equal(siblingRecord.representantes[0].telefono, '0414-0001122')
+
+    // Parentesco belongs to the link, not to the shared person.
+    await api('PUT', `/api/estudiantes/${singleRepStudentId}`, {
+      representantes: [
+        {
+          id: repId,
+          nombre: 'Ana Actualizada',
+          tipo_ci: 'V',
+          numero_ci: singleRepCi,
+          telefono: '0414-0001122',
+          correo: 'ana.actualizada@ejemplo.com',
+          parentesco: 'Tía',
+        },
+      ],
+    })
+    const siblingAfter = await (await api('GET', `/api/estudiantes/${siblingId}`)).json()
+    assert.equal(siblingAfter.representantes[0].parentesco, 'Madre')
+
+    const unlinked = await api('PUT', `/api/estudiantes/${singleRepStudentId}`, {
+      representantes: [
+        {
+          id: 999999,
+          nombre: 'Intruso',
+          tipo_ci: 'V',
+          numero_ci: '99999999',
+          telefono: '0414-0000000',
+          correo: 'intruso@ejemplo.com',
+          parentesco: 'Padre',
+        },
+      ],
+    })
+    assert.equal(unlinked.status, 400)
+    assert.match((await unlinked.json()).message, /not linked to this student/)
+
+    // A rejected representative must roll back the student patch in the same request.
+    const nameBefore = (await (await api('GET', `/api/estudiantes/${singleRepStudentId}`)).json()).estudiante.primer_nombre
+    const rollback = await api('PUT', `/api/estudiantes/${singleRepStudentId}`, {
+      estudiante: { primer_nombre: 'ROLLBACK' },
+      representantes: [
+        {
+          id: 999999,
+          nombre: 'Intruso',
+          tipo_ci: 'V',
+          numero_ci: '99999999',
+          telefono: '0414-0000000',
+          correo: 'intruso@ejemplo.com',
+        },
+      ],
+    })
+    assert.equal(rollback.status, 400)
+    const afterRollback = await (await api('GET', `/api/estudiantes/${singleRepStudentId}`)).json()
+    assert.equal(afterRollback.estudiante.primer_nombre, nameBefore)
+  })
+
   // --- S3/S4: enrolling an existing student in a new school year -------------
   // The endpoint adds an inscription to an existing record; it never creates a
   // student and never touches personal data or representatives.

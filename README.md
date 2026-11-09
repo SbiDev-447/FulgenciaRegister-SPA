@@ -16,9 +16,9 @@
 
 | Componente | Estado |
 | ---------- | ------ |
-| Backend (API REST) | Listo — 142 pruebas (141 en verde, 1 saltada sin base) |
+| Backend (API REST) | Listo — 156 pruebas (155 en verde, 1 saltada sin base) |
 | Base de datos (MariaDB) | Listo — esquema y datos semilla |
-| Frontend (SPA) | Listo — 98 pruebas en verde |
+| Frontend (SPA) | Listo — 107 pruebas en verde |
 
 El backend está completo y cubierto por pruebas. En la SPA funcionan el shell, el router,
 los temas y las seis vistas: Inicio (estadísticas), Estudiantes (lista paginada,
@@ -148,7 +148,7 @@ Opcionales: `PORT` (`3000` por defecto), `JWT_EXPIRES_IN` (`8h` por defecto) y
 | GET | `/api/estudiantes` | Listar y buscar estudiantes |
 | POST | `/api/estudiantes` | Registrar estudiante |
 | GET | `/api/estudiantes/:id` | Ver estudiante |
-| PUT | `/api/estudiantes/:id` | Editar estudiante |
+| PUT | `/api/estudiantes/:id` | Editar estudiante y su representante |
 | POST | `/api/estudiantes/:id/inscripciones` | Inscribir a un estudiante ya registrado en un nuevo año escolar |
 | DELETE | `/api/estudiantes/:id` | Eliminar estudiante (y los representantes que se queden sin ninguno) |
 | GET | `/api/documentos/verificar/:cedula` | Verificar una cédula |
@@ -183,6 +183,12 @@ inscripción anterior.
 desvincular) o uno; cualquier arreglo con más de un representante responde **400**. La
 relación en la base sigue siendo N:M, porque un mismo representante puede tener varios
 alumnos a su cargo.
+
+El `PUT` puede enviar el representante con su `id` para editar a la persona compartida.
+El servidor comprueba que ese `id` esté vinculado al estudiante, actualiza la fila de
+`representantes` y el cambio se ve en todos los hermanos; el `parentesco` se actualiza
+solo en el vínculo de ese estudiante. Sin `id`, el representante se busca o crea por
+cédula, que es el camino que usan la inscripción nueva y los clientes anteriores.
 
 ### El listado de estudiantes
 
@@ -240,6 +246,7 @@ enlace directo o una recarga funcionan igual.
 | Documento | Para qué sirve |
 | --------- | -------------- |
 | [`docs/BackToFront.md`](./docs/BackToFront.md) | Cómo funciona el backend, cómo funciona el frontend y cómo se conectan, siguiendo una petición de punta a punta |
+| [`docs/Metodos-Herramientas-Librerias.md`](./docs/Metodos-Herramientas-Librerias.md) | Qué métodos, herramientas y librerías usa el proyecto, cómo se usan y por qué se eligieron |
 | [`docs/Informe.md`](./docs/Informe.md) | Qué es el proyecto, por qué existe y qué problema resuelve, en un párrafo |
 | [`docs/Mermaid.md`](./docs/Mermaid.md) | Esquema de la base en Mermaid, con cardinalidades y reglas de borrado |
 | [`docs/MermaidFulgencia.pdf`](./docs/MermaidFulgencia.pdf) | El mismo esquema exportado a PDF, para imprimir o adjuntar |

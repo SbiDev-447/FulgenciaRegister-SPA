@@ -100,6 +100,9 @@ function assertValidRepresentantes(representantes, { allowEmpty = false } = {}) 
       item.numero_ci = normalizeNumeroCi(item.numero_ci)
     }
     const details = {}
+    if (item.id !== undefined && (!Number.isInteger(item.id) || item.id <= 0)) {
+      details.id = 'must be a positive integer'
+    }
     if (!validators.isNonEmptyString(item.nombre)) {
       details.nombre = 'is required'
     }

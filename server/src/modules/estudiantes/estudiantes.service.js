@@ -646,8 +646,25 @@ async function reconcileRepresentantes(estudianteId, representantes) {
 
   const resolved = []
   for (const item of representantes) {
-    const rep = await findOrCreateRepresentante(item)
-    resolved.push({ id: rep.id, parentesco: toParentesco(item.parentesco) })
+    let representativeId
+    if (item.id !== undefined) {
+      // An edit identified by id updates the shared person in place. It must
+      // already be linked here: without this check any id would be editable.
+      if (!currentById.has(item.id)) {
+        throw HttpError.badRequest('Representative is not linked to this student', {
+          id: 'not linked to this student',
+        })
+      }
+      const sets = pick(item, REPRESENTANTE_FIELDS)
+      if (Object.keys(sets).length > 0) {
+        await db.tabla('representantes').update(sets, { id: item.id })
+      }
+      representativeId = item.id
+    } else {
+      const rep = await findOrCreateRepresentante(item)
+      representativeId = rep.id
+    }
+    resolved.push({ id: representativeId, parentesco: toParentesco(item.parentesco) })
   }
 
   const targetIds = resolved.map((entry) => entry.id)

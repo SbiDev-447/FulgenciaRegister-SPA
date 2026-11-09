@@ -23,4 +23,11 @@ test('the view paints the cédula form and the hidden print target', () => {
   assert.equal(findAll(root, '.documentos__print').length, 1, 'expected the print target')
   assert.equal(findAll(root, '.documentos__emit').length, 0, 'no document buttons before a search')
   assert.match(textOf(root), /Documentos/)
+  assert.match(
+    textOf(root),
+    /Ingrese la cédula de un estudiante para emitir documentos automatizados:/,
+    'the hero must explain the search',
+  )
+  assert.match(textOf(root), /Carta de Aceptación/, 'the hero must list the issuable documents')
+  assert.match(textOf(root), /Constancia de Estudio/, 'the list must include every document')
 })

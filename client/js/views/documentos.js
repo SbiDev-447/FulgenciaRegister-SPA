@@ -13,6 +13,13 @@ import { errorCopy } from '../ui/messages.js'
 import { DOCUMENT_TYPES, letterValues, fillLetter, extractSheet } from '../letter.js'
 import { INSTITUTION } from '../institution.js'
 
+/** The issuable documents, listed from the same source as the buttons. */
+const DOCUMENT_LABELS = Object.values(DOCUMENT_TYPES).map((type) => type.label)
+const DOCUMENT_LIST =
+  DOCUMENT_LABELS.length > 1
+    ? `${DOCUMENT_LABELS.slice(0, -1).join(', ')} y ${DOCUMENT_LABELS[DOCUMENT_LABELS.length - 1]}`
+    : DOCUMENT_LABELS[0] ?? ''
+
 /** Today as `YYYY-MM-DD` in the operator's own calendar, not UTC. */
 function todayIso(now = new Date()) {
   const month = String(now.getMonth() + 1).padStart(2, '0')
@@ -94,7 +101,7 @@ export function renderDocumentos(container, { print } = {}) {
       h('div', { class: 'documentos__hero' }, [
         h('h2', { text: 'Documentos' }),
         h('p', {
-          text: 'Verificá al estudiante por su cédula y emití cualquiera de los cuatro documentos. Se abren en la vista de impresión del navegador.',
+          text: `Ingrese la cédula de un estudiante para emitir documentos automatizados: ${DOCUMENT_LIST}.`,
         }),
       ]),
       form,

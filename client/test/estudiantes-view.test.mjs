@@ -72,6 +72,7 @@ const RECORD = {
   ],
   representantes: [
     {
+      id: 55,
       nombre: 'Ana Gómez',
       parentesco: 'Madre',
       tipo_ci: 'V',
@@ -204,10 +205,16 @@ test('the cédula is shown read-only and never travels in the payload', async ()
 
     const form = findAll(document.body, '.modal')[0] && findAll(findAll(document.body, '.modal')[0], 'form')[0]
     const numeroCi = inputNamed(form, 'numero_ci')
+    const tipoCi = findAll(form, 'select[name="tipo_ci"]')[0]
     assert.ok(numeroCi, 'the cédula must stay visible on the form')
     assert.ok(
       numeroCi.hasAttribute('readonly') || numeroCi.hasAttribute('disabled'),
-      'the cédula is immutable: it must not be editable',
+      'the cédula number is immutable: it must not be editable',
+    )
+    assert.ok(tipoCi, 'the cédula type must stay visible')
+    assert.ok(
+      tipoCi.hasAttribute('disabled'),
+      'the cédula type is immutable: it must look and act locked',
     )
 
     await dispatch(form, 'submit')
@@ -217,6 +224,44 @@ test('the cédula is shown read-only and never travels in the payload', async ()
     assert.ok(put, 'saving must send a PUT')
     assert.equal(put.body.estudiante.tipo_ci, undefined, 'tipo_ci must not be sent')
     assert.equal(put.body.estudiante.numero_ci, undefined, 'numero_ci must not be sent')
+  } finally {
+    stallFetch()
+  }
+})
+
+test('editing the representative sends its id so the shared person is updated', async () => {
+  resetBody()
+  respondWith(apiStub())
+  try {
+    const container = await mountList()
+    await dispatch(rowActions(container)[1], 'click')
+    await flush()
+
+    const form = findAll(findAll(document.body, '.modal')[0], 'form')[0]
+    assert.equal(inputNamed(form, 'representante_nombre').value, 'Ana Gómez')
+    assert.equal(inputNamed(form, 'representante_numero_ci').value, '87654321')
+    assert.equal(inputNamed(form, 'representante_parentesco').value, 'Madre')
+
+    const repName = inputNamed(form, 'representante_nombre')
+    const repEmail = inputNamed(form, 'representante_correo')
+    const repParentesco = inputNamed(form, 'representante_parentesco')
+    repName.value = 'Ana Actualizada'
+    repEmail.value = 'ana.nueva@ejemplo.com'
+    repParentesco.value = 'Tía'
+    await dispatch(repName, 'input')
+    await dispatch(repEmail, 'input')
+    await dispatch(repParentesco, 'input')
+    await dispatch(form, 'submit')
+    await flush()
+
+    const put = calls.find((call) => call.method === 'PUT')
+    assert.ok(put, 'saving must send a PUT')
+    assert.equal(put.body.representantes.length, 1)
+    assert.equal(put.body.representantes[0].id, 55, 'the id identifies the shared person')
+    assert.equal(put.body.representantes[0].nombre, 'Ana Actualizada')
+    assert.equal(put.body.representantes[0].correo, 'ana.nueva@ejemplo.com')
+    assert.equal(put.body.representantes[0].parentesco, 'Tía')
+    assert.equal(put.body.estudiante.representante_nombre, undefined, 'rep fields stay out of the student patch')
   } finally {
     stallFetch()
   }
@@ -246,7 +291,8 @@ test('saving sends a PUT with the edited fields and closes the modal', async () 
     assert.equal(put.body.estudiante.fecha_nacimiento, '2010-03-04')
     // This slice edits the student's own record only.
     assert.equal(put.body.inscripcion, undefined, 'inscriptions are out of this slice')
-    assert.equal(put.body.representantes, undefined, 'representatives are out of this slice')
+    assert.equal(put.body.representantes.length, 1, 'the representative section travels unchanged')
+    assert.equal(put.body.representantes[0].id, 55)
 
     assert.equal(findAll(document.body, '.modal').length, 0, 'the modal must close after saving')
     // The list is reloaded so the row shows the new data.
@@ -561,6 +607,44 @@ test('Inscribir en nuevo año posts a new inscription, reloads and reopens the f
     assert.equal(findAll(document.body, '.ficha').length, 1, 'the ficha must reopen')
     const listGets = calls.filter((call) => call.method === 'GET' && call.url === '/api/estudiantes')
     assert.equal(listGets.length, 2, 'the list must be reloaded after saving')
+  } finally {
+    stallFetch()
+  }
+})
+
+test('choosing "Repite el año" fills the grade the student is already in', async () => {
+  resetBody()
+  respondWith(apiStub())
+  try {
+    const container = await mountList()
+    await dispatch(rowActions(container)[0], 'click')
+    await flush()
+
+    const ficha = findAll(document.body, '.modal')[0]
+    const nueva = findAll(ficha, '.modal__footer .btn').find(
+      (button) => textOf(button) === 'Inscribir en nuevo año',
+    )
+    await dispatch(nueva, 'click')
+    await flush()
+
+    const form = findAll(findAll(document.body, '.modal')[0], 'form')[0]
+    const [regular, repite] = findAll(form, 'input[name="tipo_inscripcion"]')
+    assert.equal(regular.checked, true, 'regular is the default')
+    regular.checked = false
+    repite.checked = true
+    await dispatch(repite, 'change')
+
+    assert.equal(controlNamed(form, 'anio').value, '1er Año', 'the current grade is pre-selected')
+    assert.equal(controlNamed(form, 'seccion').disabled, false, 'its sections are available')
+    // The school year still advances: repeating 1er Año happens in the next
+    // school year, not in the one already registered.
+    assert.equal(controlNamed(form, 'anio_escolar').value, '2027-2028')
+
+    // Switching back to regular must not leave the repeated grade behind.
+    regular.checked = true
+    repite.checked = false
+    await dispatch(regular, 'change')
+    assert.equal(controlNamed(form, 'anio').value, '', 'regular asks for the grade again')
   } finally {
     stallFetch()
   }

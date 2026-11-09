@@ -316,9 +316,11 @@ ficha.
 | `estado_civil` | `varchar(30)` | sí | sin datos en la base actual |
 | `direccion_habitacion` | `text` | sí | |
 
-Persona propia: se reutiliza por `(tipo_ci, numero_ci)` y **nunca se actualiza** al
-reutilizarla. Si un hermano cambia el teléfono del padre, ese cambio no llega acá por
-el camino de la inscripción.
+Persona propia: al inscribir un hermano se reutiliza por `(tipo_ci, numero_ci)` y **no se
+actualiza** en ese camino. La edición explícita desde la ficha sí puede cambiar la fila:
+el `PUT` con el `id` del representante actualiza sus datos personales y, como la fila es
+compartida, el cambio alcanza a todos los hermanos. El `parentesco` no vive acá sino en el
+puente, así que no se propaga.
 
 ### 5.4 `estudiante_representante` (el puente)
 
@@ -334,7 +336,9 @@ el mismo estudiante). Aquí sí hay `CASCADE` en ambos lados.
 
 El puente admite N:M, pero la regla del sistema es **máximo un representante por
 alumno**: `POST /api/estudiantes` exige exactamente uno y `PUT /api/estudiantes/:id`
-acepta cero o uno. Un representante puede seguir vinculado a varios hermanos.
+acepta cero o uno. Un representante puede seguir vinculado a varios hermanos. Al editar
+con `id`, el servidor exige que ese representante ya esté vinculado a ese estudiante
+(400 si no lo está) y actualiza solo el `parentesco` de su fila del puente.
 
 ### 5.5 `inscripciones`
 

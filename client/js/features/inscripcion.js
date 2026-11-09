@@ -141,13 +141,6 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     value: formatLatamDate(localDateIso(now)),
   })
   autoSeparateDate(fechaInscripcion)
-  // Mutually exclusive by domain: a regular registration is a new admission or
-  // a promotion to the next year; the only alternative is repeating the year.
-  // Native radios sharing a name make the pair exclusive, so the third
-  // "neither" state cannot be produced from this form.
-  const regular = h('input', { type: 'radio', name: 'tipo_inscripcion', checked: true })
-  const repite = h('input', { type: 'radio', name: 'tipo_inscripcion' })
-
   anioSelect.addEventListener('change', () => {
     const year = years.find((entry) => entry.label === anioSelect.value)
     const sections = year ? year.sections : []
@@ -269,11 +262,12 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
         field('Sección *', seccionSelect),
         field('Año escolar *', anioEscolar),
         field('Fecha de inscripción *', fechaInscripcion),
-        h('label', { class: 'inscripcion__check' }, [
-          regular,
-          h('span', { text: 'Regular (nuevo ingreso o cambio de año)' }),
+        // A new student cannot be a repeater: the condition is fixed, not a
+        // choice. Repeating a year is handled from the student's ficha.
+        h('div', { class: 'field field--full' }, [
+          h('span', { class: 'field__label', text: 'Condición' }),
+          h('span', { class: 'inscripcion__hint', text: 'Regular - Nuevo Ingreso' }),
         ]),
-        h('label', { class: 'inscripcion__check' }, [repite, h('span', { text: 'Repite el año' })]),
       ]),
     ]),
     h('section', { class: 'inscripcion__section' }, [
@@ -745,8 +739,6 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
         seccion: seccionSelect.value,
         anio_escolar: anioEscolar.value,
         fecha_inscripcion: parseLatamDate(fechaInscripcion.value),
-        regular: regular.checked,
-        repite: repite.checked,
       },
       representantes,
       documentos,

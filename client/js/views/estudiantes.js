@@ -822,8 +822,10 @@ export function renderEstudiantes(container, { print } = {}) {
   /** The edit form, filled from GET /estudiantes/:id. */
   function renderEditForm(record, { saveBtn, onSaved }) {
     const { estudiante } = record
+    const representante = record.representantes?.[0] ?? null
     const errorHost = h('div', { class: 'ficha-form__errors' })
     const controls = new Map()
+    const repControls = new Map()
 
     const ciType = h('select', {
       class: 'input',
@@ -842,6 +844,75 @@ export function renderEstudiantes(container, { print } = {}) {
       'aria-label': 'Cédula del estudiante (no editable)',
     })
 
+    // The representative is its own person and may be shared by siblings, so
+    // the edit is sent with its id: the API updates that row in place and every
+    // linked student sees the new data. Parentesco, on the other hand, belongs
+    // to the link and stays specific to this student.
+    const repName = h('input', {
+      class: 'input',
+      name: 'representante_nombre',
+      type: 'text',
+      value: representante?.nombre ?? '',
+    })
+    const repCiType = h('select', {
+      class: 'input',
+      name: 'representante_tipo_ci',
+      'aria-label': 'Tipo de cédula del representante',
+    }, [h('option', { value: 'V', text: 'V' }), h('option', { value: 'E', text: 'E' })])
+    repCiType.value = representante?.tipo_ci ?? 'V'
+    const repCiNumber = h('input', {
+      class: 'input',
+      name: 'representante_numero_ci',
+      type: 'text',
+      inputmode: 'numeric',
+      value: representante?.numero_ci ?? '',
+      'aria-label': 'Cédula del representante',
+    })
+    const repPhone = h('input', {
+      class: 'input',
+      name: 'representante_telefono',
+      type: 'text',
+      value: representante?.telefono ?? '',
+    })
+    const repEmail = h('input', {
+      class: 'input',
+      name: 'representante_correo',
+      type: 'email',
+      value: representante?.correo ?? '',
+    })
+    const repParentesco = h('input', {
+      class: 'input',
+      name: 'representante_parentesco',
+      type: 'text',
+      value: representante?.parentesco ?? '',
+      placeholder: 'Ej: Madre',
+    })
+    if (representante) {
+      repControls.set('nombre', repName)
+      repControls.set('numero_ci', repCiNumber)
+      repControls.set('telefono', repPhone)
+      repControls.set('correo', repEmail)
+    }
+
+    const representativeSection = representante
+      ? [
+          h('h3', { class: 'ficha-form__section-title', text: 'Representante' }),
+          editField('Nombre del representante *', repName, { full: true }),
+          editField(
+            'Cédula del representante *',
+            h('div', { class: 'ficha-form__ci' }, [repCiType, repCiNumber]),
+            { full: true },
+          ),
+          editField('Teléfono del representante *', repPhone),
+          editField('Correo del representante *', repEmail),
+          editField('Parentesco', repParentesco),
+          h('p', {
+            class: 'ficha-form__hint',
+            text: 'Si este representante está compartido, sus datos personales se actualizan para todos sus estudiantes.',
+          }),
+        ]
+      : []
+
     const grid = h('div', { class: 'ficha-form__grid' }, [
       editField('Cédula', h('div', { class: 'ficha-form__ci' }, [ciType, ciNumber]), { full: true }),
       ...EDIT_FIELDS.map((field) => {
@@ -849,11 +920,12 @@ export function renderEstudiantes(container, { print } = {}) {
         controls.set(field.name, control)
         return editField(field.label, control, { full: field.full })
       }),
+      ...representativeSection,
     ])
 
     function clearProblems() {
       errorHost.replaceChildren()
-      for (const control of controls.values()) {
+      for (const control of [...controls.values(), ...repControls.values()]) {
         control.classList.remove('input-error')
       }
     }
@@ -901,6 +973,40 @@ export function renderEstudiantes(container, { print } = {}) {
           })
         }
       }
+
+      if (representante) {
+        const repNameValue = repName.value.trim()
+        const repCiDigits = repCiNumber.value.replace(/\D/g, '')
+        const repPhoneValue = repPhone.value.trim()
+        const repEmailValue = repEmail.value.trim()
+
+        if (!repNameValue) {
+          problems.push({ control: repName, message: 'El nombre del representante es obligatorio.' })
+        }
+        if (!repCiDigits || repCiDigits.length > 12) {
+          problems.push({
+            control: repCiNumber,
+            message: 'La cédula del representante debe tener entre 1 y 12 dígitos.',
+          })
+        }
+        if (!repPhoneValue) {
+          problems.push({ control: repPhone, message: 'El teléfono del representante es obligatorio.' })
+        } else if (!isValidPhone(repPhoneValue)) {
+          problems.push({
+            control: repPhone,
+            message: 'El teléfono del representante no tiene un formato válido.',
+          })
+        }
+        if (!repEmailValue) {
+          problems.push({ control: repEmail, message: 'El correo del representante es obligatorio.' })
+        } else if (!isValidEmail(repEmailValue)) {
+          problems.push({
+            control: repEmail,
+            message: 'El correo del representante no tiene un formato válido.',
+          })
+        }
+      }
+
       return problems
     }
 
@@ -925,7 +1031,24 @@ export function renderEstudiantes(container, { print } = {}) {
           patch[field.name] = value
         }
       }
-      return { estudiante: patch }
+      if (!representante) {
+        return { estudiante: patch }
+      }
+
+      return {
+        estudiante: patch,
+        representantes: [
+          {
+            id: representante.id,
+            nombre: repName.value.trim(),
+            tipo_ci: repCiType.value,
+            numero_ci: repCiNumber.value.replace(/\D/g, ''),
+            telefono: repPhone.value.trim(),
+            correo: repEmail.value.trim(),
+            parentesco: repParentesco.value.trim() || null,
+          },
+        ],
+      }
     }
 
     function onSubmit(event) {
@@ -963,7 +1086,7 @@ export function renderEstudiantes(container, { print } = {}) {
     }, [
       h('p', {
         class: 'ficha-form__hint',
-        text: 'La cédula identifica al estudiante y no se puede cambiar. Las inscripciones, los representantes y los documentos se gestionan en sus propias pantallas.',
+        text: 'La cédula identifica al estudiante y no se puede cambiar. Las inscripciones y los documentos se gestionan en sus propias pantallas.',
       }),
       errorHost,
       grid,
@@ -1024,7 +1147,7 @@ export function renderEstudiantes(container, { print } = {}) {
       return { key, label, input }
     })
 
-    anioSelect.addEventListener('change', () => {
+    function fillSectionsForGrade() {
       const year = years.find((entry) => entry.label === anioSelect.value)
       const sections = year ? year.sections : []
       seccionSelect.replaceChildren(
@@ -1032,6 +1155,30 @@ export function renderEstudiantes(container, { print } = {}) {
         ...sections.map((section) => h('option', { value: section, text: section })),
       )
       seccionSelect.disabled = sections.length === 0
+    }
+
+    // True while the grade came from the "repite" shortcut, so switching back
+    // to regular clears it instead of silently keeping the repeated grade.
+    let gradeAutoFilled = false
+    anioSelect.addEventListener('change', () => {
+      gradeAutoFilled = false
+      fillSectionsForGrade()
+    })
+
+    // Repeating means staying in the same grade. The school year still advances
+    // (the year already registered belongs to the current inscription).
+    repite.addEventListener('change', () => {
+      if (!repite.checked || !latest?.anio) return
+      anioSelect.value = latest.anio
+      gradeAutoFilled = true
+      fillSectionsForGrade()
+    })
+
+    regular.addEventListener('change', () => {
+      if (!regular.checked || !gradeAutoFilled) return
+      gradeAutoFilled = false
+      anioSelect.value = ''
+      fillSectionsForGrade()
     })
 
     const errorHost = h('div', { class: 'ficha-form__errors' })

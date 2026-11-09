@@ -177,6 +177,32 @@ test('the representatives step allows a single representative and offers no way 
   )
 })
 
+test('new enrolment does not manage the repeater condition', async () => {
+  answerOptions()
+  const { renderInscripcion } = await import('../js/views/inscripcion.js')
+  const container = makeEl('div')
+
+  try {
+    await renderInscripcion(container, { user: {} })
+  } finally {
+    stallFetch()
+  }
+
+  assert.ok(
+    textOf(container).includes('Regular - Nuevo Ingreso'),
+    'the state must stay visible as information',
+  )
+  assert.ok(
+    !textOf(container).includes('Repite el año'),
+    'a new student cannot be a repeater',
+  )
+  assert.equal(
+    findAll(container, '[name="tipo_inscripcion"]').length,
+    0,
+    'the wizard must not offer a condition control',
+  )
+})
+
 test('the wizard asks for dates as dd/mm/aaaa, not as a locale-dependent picker', async () => {
   answerOptions()
   const { renderInscripcion } = await import('../js/views/inscripcion.js')
