@@ -240,6 +240,23 @@
       gap: var(--space-2);
     }
 
+    /* Icon-only actions: a compact square target. The label lives in
+       aria-label/title, so the glyph carries the meaning and the column keeps
+       its space. Colours still come from the ghost/danger variants and the
+       icon inherits `currentColor`, so light and dark themes both read well. */
+    .estudiantes__actions .estudiantes__action--ver,
+    .estudiantes__actions .estudiantes__action--editar,
+    .estudiantes__actions .estudiantes__action--borrar {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
     /* The row itself is clickable, so its buttons must read as clickable too. */
     .estudiantes__actions .btn {
       cursor: pointer;

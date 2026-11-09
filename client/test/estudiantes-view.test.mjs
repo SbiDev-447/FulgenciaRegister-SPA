@@ -135,17 +135,30 @@ function inputNamed(root, name) {
   return findAll(root, `input[name="${name}"]`)[0]
 }
 
-test('every row offers Ver, Editar and Borrar', async () => {
+function controlNamed(root, name) {
+  return findAll(root, `[name="${name}"]`)[0]
+}
+
+test('every row offers Ver, Editar and Borrar as icon-only buttons', async () => {
   resetBody()
   respondWith(apiStub())
   try {
     const container = await mountList()
     const actions = rowActions(container)
-    assert.deepEqual(
-      actions.map((button) => textOf(button)),
-      ['Ver', 'Editar', 'Borrar'],
-      'the row is missing one of the three actions the spec asks for',
-    )
+    assert.equal(actions.length, 3, 'the row is missing one of the three actions the spec asks for')
+
+    const expected = [
+      { label: 'Ver', title: 'Ver' },
+      { label: 'Editar', title: 'Editar' },
+      { label: 'Borrar', title: 'Borrar' },
+    ]
+    actions.forEach((button, index) => {
+      const { label, title } = expected[index]
+      assert.equal(button.getAttribute('aria-label'), `${label}: María Pérez`)
+      assert.equal(button.getAttribute('title'), title)
+      assert.equal(findAll(button, 'svg').length, 1, `${label} must render an SVG icon`)
+      assert.equal(textOf(button), '', `${label} must not show visible text`)
+    })
   } finally {
     stallFetch()
   }
@@ -481,6 +494,111 @@ test('Imprimir ficha builds a sheet from the loaded record and calls the printer
     assert.match(text, /Partida de nacimiento/)
     assert.match(text, /Ana Gómez/)
     assert.match(text, /Impreso el \d{2}\/\d{2}\/\d{4}/)
+  } finally {
+    stallFetch()
+  }
+})
+
+/** Fill the "Inscribir en nuevo año" form with a valid inscription. */
+async function fillNuevaInscripcion(form, { anioEscolar = '2027-2028' } = {}) {
+  const anio = controlNamed(form, 'anio')
+  anio.value = '1er Año'
+  await dispatch(anio, 'change')
+  controlNamed(form, 'seccion').value = 'A'
+  controlNamed(form, 'anio_escolar').value = anioEscolar
+}
+
+test('Inscribir en nuevo año posts a new inscription, reloads and reopens the ficha', async () => {
+  resetBody()
+  respondWith(apiStub())
+  try {
+    const container = await mountList()
+    await dispatch(rowActions(container)[0], 'click')
+    await flush()
+
+    const ficha = findAll(document.body, '.modal')[0]
+    const nueva = findAll(ficha, '.modal__footer .btn').find(
+      (button) => textOf(button) === 'Inscribir en nuevo año',
+    )
+    assert.ok(nueva, 'the ficha must offer "Inscribir en nuevo año"')
+
+    await dispatch(nueva, 'click')
+    await flush()
+
+    // The ficha closes before the form opens: one overlay at a time.
+    assert.equal(findAll(document.body, '.modal').length, 1)
+    const form = findAll(findAll(document.body, '.modal')[0], 'form')[0]
+    assert.ok(form, 'the action must open the step-over form')
+
+    // The next school year is pre-filled from the latest inscription.
+    assert.equal(controlNamed(form, 'anio_escolar').value, '2027-2028')
+    // The six consigned documents start from the most recent inscription.
+    assert.equal(inputNamed(form, 'partida_nacimiento').checked, true)
+    assert.equal(inputNamed(form, 'copia_cedula').checked, true)
+    assert.equal(inputNamed(form, 'boleta').checked, false)
+    assert.equal(inputNamed(form, 'fotos').checked, true)
+
+    await fillNuevaInscripcion(form)
+    await dispatch(form, 'submit')
+    await flush()
+
+    const post = calls.find((call) => call.method === 'POST')
+    assert.ok(post, 'saving must POST the new inscription')
+    assert.equal(post.url, '/api/estudiantes/7/inscripciones')
+    assert.equal(post.body.inscripcion.anio, '1er Año')
+    assert.equal(post.body.inscripcion.seccion, 'A')
+    assert.equal(post.body.inscripcion.anio_escolar, '2027-2028')
+    assert.equal(post.body.inscripcion.regular, true)
+    assert.equal(post.body.inscripcion.repite, false)
+    assert.match(post.body.inscripcion.fecha_inscripcion, /^\d{4}-\d{2}-\d{2}$/)
+    assert.equal(post.body.documentos.partida_nacimiento, true)
+    assert.equal(post.body.documentos.boleta, false)
+    // Personal data and representatives are out of this flow.
+    assert.equal(post.body.estudiante, undefined)
+    assert.equal(post.body.representantes, undefined)
+
+    // The form closes, the list reloads and the ficha reopens with the record.
+    assert.equal(findAll(document.body, '.ficha').length, 1, 'the ficha must reopen')
+    const listGets = calls.filter((call) => call.method === 'GET' && call.url === '/api/estudiantes')
+    assert.equal(listGets.length, 2, 'the list must be reloaded after saving')
+  } finally {
+    stallFetch()
+  }
+})
+
+test('a 409 from the step-over endpoint shows the duplicate school-year message', async () => {
+  resetBody()
+  const base = apiStub()
+  respondWith(async (url, options = {}) => {
+    if (options.method === 'POST' && url.includes('/inscripciones')) {
+      calls.push({ url, method: 'POST', body: options.body ? JSON.parse(options.body) : null })
+      return jsonResponse({ code: 'inscripcion_duplicada', message: 'conflict' }, 409)
+    }
+    return base(url, options)
+  })
+  try {
+    const container = await mountList()
+    await dispatch(rowActions(container)[0], 'click')
+    await flush()
+
+    const ficha = findAll(document.body, '.modal')[0]
+    const nueva = findAll(ficha, '.modal__footer .btn').find(
+      (button) => textOf(button) === 'Inscribir en nuevo año',
+    )
+    await dispatch(nueva, 'click')
+    await flush()
+
+    const modal = findAll(document.body, '.modal')[0]
+    const form = findAll(modal, 'form')[0]
+    await fillNuevaInscripcion(form)
+    await dispatch(form, 'submit')
+    await flush()
+
+    assert.ok(
+      textOf(modal).includes('Ya existe una inscripción para ese año escolar.'),
+      `the conflict must name its cause, got: ${textOf(modal)}`,
+    )
+    assert.equal(findAll(document.body, '.modal').length, 1, 'the form stays open to fix the year')
   } finally {
     stallFetch()
   }

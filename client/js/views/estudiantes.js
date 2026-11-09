@@ -113,6 +113,26 @@ const EDIT_FIELDS = [
 /** Shared by the edit form and the submit button that lives in the modal footer. */
 const EDIT_FORM_ID = 'estudiante-edit-form'
 
+/** The step-over form's id, so its footer button submits it from outside. */
+const NUEVA_INSCRIPCION_FORM_ID = 'estudiante-nueva-inscripcion-form'
+
+/** Icon per row action; the label lives in aria-label and title. */
+const ROW_ACTION_ICONS = { ver: 'eye', editar: 'edit', borrar: 'trash' }
+
+/**
+ * The school year after `value` (`2025-2026` -> `2026-2027`), or the current
+ * one when there is no readable previous year.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function nextSchoolYear(value) {
+  const now = new Date()
+  const match = /^(\d{4})-\d{4}$/.exec(String(value ?? '').trim())
+  if (!match) return `${now.getFullYear()}-${now.getFullYear() + 1}`
+  const start = Number(match[1]) + 1
+  return `${start}-${start + 1}`
+}
+
 /**
  * Format a stored date as `dd/mm/yyyy`, the order a Latin American reader
  * expects, and never through the browser locale.
@@ -414,7 +434,26 @@ export function renderEstudiantes(container, { print } = {}) {
       type: 'button',
       on: { click: () => closeFicha?.() },
     }, [h('span', { text: 'Cerrar' })])
-    const modal = openModal({ title: 'Ficha del estudiante', content: status, footer: [printButton, closeButton] })
+    // Step-over action (S5): close the ficha first so the new form never opens
+    // on top of another overlay.
+    const nuevaInscripcionButton = h('button', {
+      class: 'btn btn--ghost',
+      type: 'button',
+      disabled: true,
+      on: {
+        click: () => {
+          if (!record) return
+          const loaded = record
+          closeFicha?.()
+          openNuevaInscripcion(loaded)
+        },
+      },
+    }, [icon('plus'), h('span', { text: 'Inscribir en nuevo año' })])
+    const modal = openModal({
+      title: 'Ficha del estudiante',
+      content: status,
+      footer: [printButton, nuevaInscripcionButton, closeButton],
+    })
     closeFicha = modal.close
 
     api
@@ -422,6 +461,7 @@ export function renderEstudiantes(container, { print } = {}) {
       .then((data) => {
         record = data
         printButton.disabled = false
+        nuevaInscripcionButton.disabled = false
         modal.element.querySelector('.modal__body')?.replaceChildren(renderFicha(data))
       })
       .catch((error) => {
@@ -679,13 +719,14 @@ export function renderEstudiantes(container, { print } = {}) {
       class: classes.join(' '),
       type: 'button',
       'aria-label': `${label}: ${name}`,
+      title: label,
       on: {
         click: (event) => {
           event.stopPropagation()
           onClick()
         },
       },
-    }, [h('span', { text: label })])
+    }, [icon(ROW_ACTION_ICONS[kind])])
   }
 
   /** A labelled control, with the same field markup the wizard uses. */
@@ -927,6 +968,222 @@ export function renderEstudiantes(container, { print } = {}) {
       errorHost,
       grid,
     ])
+  }
+
+  /**
+   * Step-over form (S5): enrol this already-registered student in a new school
+   * year. It builds only the inscription and its consigned documents; personal
+   * data and representatives keep their own flows. A 409 means the student
+   * already has an inscription for that school year.
+   */
+  function openNuevaInscripcion(record) {
+    const years = options?.years ?? []
+    const latest = record.inscripciones?.[0]
+    const latestDocs = latest?.documentos ?? {}
+
+    const anioSelect = h('select', { class: 'input', name: 'anio' }, [
+      h('option', { value: '', text: 'Selecciona…' }),
+      ...years.map((year) => h('option', { value: year.label, text: year.label })),
+    ])
+    const seccionSelect = h('select', { class: 'input', name: 'seccion', disabled: true }, [
+      h('option', { value: '', text: 'Selecciona…' }),
+    ])
+    // The next school year in the sequence, or the current one when the record
+    // has no inscription to continue from.
+    const anioEscolar = h('input', {
+      class: 'input',
+      name: 'anio_escolar',
+      type: 'text',
+      value: nextSchoolYear(latest?.anio_escolar),
+      placeholder: 'AAAA-AAAA',
+    })
+    const fechaInscripcion = h('input', {
+      class: 'input',
+      name: 'fecha_inscripcion',
+      type: 'text',
+      inputmode: 'numeric',
+      placeholder: 'dd/mm/aaaa',
+      maxlength: DATE_FIELD_LENGTH,
+      value: formatToday(),
+    })
+    autoSeparateDate(fechaInscripcion)
+
+    // Native radios sharing a name are mutually exclusive, so "regular" and
+    // "repite" cannot both be true.
+    const regular = h('input', { type: 'radio', name: 'tipo_inscripcion', checked: true })
+    const repite = h('input', { type: 'radio', name: 'tipo_inscripcion' })
+
+    // The six consigned documents start from the most recent inscription's
+    // state; the operator may correct them before saving.
+    const documentoInputs = Object.entries(DOC_LABELS).map(([key, label]) => {
+      const input = h('input', {
+        type: 'checkbox',
+        name: key,
+        checked: Boolean(latestDocs[key]),
+      })
+      return { key, label, input }
+    })
+
+    anioSelect.addEventListener('change', () => {
+      const year = years.find((entry) => entry.label === anioSelect.value)
+      const sections = year ? year.sections : []
+      seccionSelect.replaceChildren(
+        h('option', { value: '', text: 'Selecciona…' }),
+        ...sections.map((section) => h('option', { value: section, text: section })),
+      )
+      seccionSelect.disabled = sections.length === 0
+    })
+
+    const errorHost = h('div', { class: 'ficha-form__errors' })
+
+    function clearProblems() {
+      errorHost.replaceChildren()
+      for (const control of [anioSelect, seccionSelect, anioEscolar, fechaInscripcion]) {
+        control.classList.remove('input-error')
+      }
+    }
+
+    function showProblems(problems) {
+      for (const { control } of problems) {
+        control.classList.add('input-error')
+      }
+      errorHost.replaceChildren(
+        h('div', { class: 'alert alert--error', role: 'alert' }, [
+          h('p', { text: 'Revisa los campos marcados:' }),
+          h('ul', {}, problems.map((problem) => h('li', { text: problem.message }))),
+        ]),
+      )
+      problems[0]?.control.focus()
+    }
+
+    function validate() {
+      const problems = []
+      if (!anioSelect.value) {
+        problems.push({ control: anioSelect, message: 'Selecciona el año de la nueva inscripción.' })
+      } else if (!seccionSelect.value) {
+        problems.push({
+          control: seccionSelect,
+          message: `Selecciona la sección para ${anioSelect.value}.`,
+        })
+      }
+      if (!/^\d{4}-\d{4}$/.test(String(anioEscolar.value ?? '').trim())) {
+        problems.push({
+          control: anioEscolar,
+          message: 'El año escolar debe tener la forma AAAA-AAAA (ej: 2026-2027).',
+        })
+      }
+      if (!parseLatamDate(fechaInscripcion.value)) {
+        problems.push({
+          control: fechaInscripcion,
+          message: 'La fecha de inscripción debe tener la forma dd/mm/aaaa (ej: 15/09/2026).',
+        })
+      }
+      return problems
+    }
+
+    let closeForm = null
+    const cancelBtn = h('button', {
+      class: 'btn btn--ghost',
+      type: 'button',
+      on: { click: () => closeForm?.() },
+    }, [h('span', { text: 'Cancelar' })])
+    const saveBtn = h('button', {
+      class: 'btn btn--primary',
+      type: 'submit',
+      form: NUEVA_INSCRIPCION_FORM_ID,
+    }, [h('span', { text: 'Guardar inscripción' })])
+
+    function onSubmit(event) {
+      event.preventDefault()
+      clearProblems()
+
+      const problems = validate()
+      if (problems.length > 0) {
+        showProblems(problems)
+        return
+      }
+
+      saveBtn.disabled = true
+      saveBtn.replaceChildren(h('span', { text: 'Guardando…' }))
+
+      const documentos = Object.fromEntries(
+        documentoInputs.map(({ key, input }) => [key, input.checked]),
+      )
+
+      api
+        .crearInscripcion(record.estudiante.id, {
+          inscripcion: {
+            anio: anioSelect.value,
+            seccion: seccionSelect.value,
+            anio_escolar: String(anioEscolar.value ?? '').trim(),
+            fecha_inscripcion: parseLatamDate(fechaInscripcion.value),
+            regular: regular.checked,
+            repite: repite.checked,
+          },
+          documentos,
+        })
+        .then(() => {
+          modal.close()
+          // Refresh the list and reopen the ficha so the new inscription shows.
+          load({ resetPage: true })
+          openFicha(record.estudiante.id)
+        })
+        .catch((error) => {
+          // A conflict is expected and has a message of its own: the year is
+          // already registered for this student, not a generic failure.
+          const message =
+            error.status === 409
+              ? 'Ya existe una inscripción para ese año escolar.'
+              : errorCopy(error, 'No se pudo guardar la inscripción.')
+          errorHost.replaceChildren(
+            h('div', { class: 'alert alert--error', role: 'alert' }, [h('p', { text: message })]),
+          )
+          saveBtn.disabled = false
+          saveBtn.replaceChildren(h('span', { text: 'Guardar inscripción' }))
+        })
+    }
+
+    const form = h('form', {
+      id: NUEVA_INSCRIPCION_FORM_ID,
+      class: 'ficha-form',
+      novalidate: true,
+      on: { submit: onSubmit },
+    }, [
+      h('p', {
+        class: 'ficha-form__hint',
+        text: 'Inscribe al alumno en un nuevo año escolar. Sus datos personales y su representante no cambian.',
+      }),
+      errorHost,
+      h('div', { class: 'ficha-form__grid' }, [
+        editField('Año *', anioSelect),
+        editField('Sección *', seccionSelect),
+        editField('Año escolar *', anioEscolar),
+        editField('Fecha de inscripción *', fechaInscripcion),
+        h('div', { class: 'field field--full' }, [
+          h('span', { class: 'field__label', text: 'Condición *' }),
+          h('label', { class: 'inscripcion__check' }, [
+            regular,
+            h('span', { text: 'Regular (cambio de año)' }),
+          ]),
+          h('label', { class: 'inscripcion__check' }, [repite, h('span', { text: 'Repite el año' })]),
+        ]),
+        h('div', { class: 'field field--full' }, [
+          h('span', { class: 'field__label', text: 'Documentos consignados' }),
+          h('div', { class: 'inscripcion__docs' },
+            documentoInputs.map(({ label, input }) =>
+              h('label', { class: 'inscripcion__check' }, [input, h('span', { text: label })]),
+            ),
+          ),
+        ]),
+      ]),
+    ])
+
+    const modal = openModal({
+      title: 'Inscribir en nuevo año',
+      content: form,
+      footer: [cancelBtn, saveBtn],
+    })
+    closeForm = modal.close
   }
 
   /**

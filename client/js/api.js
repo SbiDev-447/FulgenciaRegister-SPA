@@ -140,6 +140,18 @@ export const api = {
    */
   actualizarEstudiante: (id, payload) => request(`/estudiantes/${id}`, { method: 'PUT', body: payload }),
   /**
+   * Enrol an already-registered student in a new school year. Does not create a
+   * student and never touches their personal data or representatives.
+   *
+   * `documentos` is optional: when omitted, the API inherits the consigned
+   * documents of the student's most recent inscription. A 409 means the student
+   * already has an inscription for that `anio_escolar`.
+   * @param {number} id
+   * @param {{ inscripcion: object, documentos?: object }} payload
+   */
+  crearInscripcion: (id, payload) =>
+    request(`/estudiantes/${id}/inscripciones`, { method: 'POST', body: payload }),
+  /**
    * Hard delete. The API cascades the inscriptions, their consigned documents
    * and the representative links, and sweeps the representatives left with no
    * student at all.
