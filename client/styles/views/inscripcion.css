@@ -170,11 +170,6 @@
     .inscripcion__ci {
       flex: 1 1 240px;
     }
-
-    .inscripcion__rep-remove {
-      margin-left: auto;
-      align-self: end;
-    }
   }
 
   .inscripcion__docs {

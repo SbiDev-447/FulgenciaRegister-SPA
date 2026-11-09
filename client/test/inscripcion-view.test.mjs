@@ -155,6 +155,28 @@ test('the students action requests the inscription route', async () => {
   assert.equal(window.location.hash, '/inscripcion')
 })
 
+test('the representatives step allows a single representative and offers no way to add more', async () => {
+  answerOptions()
+  const { renderInscripcion } = await import('../js/views/inscripcion.js')
+  const container = makeEl('div')
+
+  try {
+    await renderInscripcion(container, { user: {} })
+  } finally {
+    stallFetch()
+  }
+
+  assert.equal(
+    findAll(container, '.inscripcion__rep').length,
+    1,
+    'the wizard must paint exactly one representative row',
+  )
+  assert.ok(
+    !textOf(container).includes('Añadir representante'),
+    'adding additional representatives must no longer be offered',
+  )
+})
+
 test('the wizard asks for dates as dd/mm/aaaa, not as a locale-dependent picker', async () => {
   answerOptions()
   const { renderInscripcion } = await import('../js/views/inscripcion.js')

@@ -1,6 +1,6 @@
 // Inscription feature: the "Nueva inscripción" wizard, painted by the view at
-// `#/inscripcion` (S22). Collects the student data, their first inscription, the
-// representatives (dynamic rows) and the consigned documents, mirrors the
+// `#/inscripcion` (S22). Collects the student data, their first inscription, a
+// single representative and the consigned documents, mirrors the
 // backend validators client-side and posts to POST /api/estudiantes. Markup is
 // built with h() and textContent only (AGENTS/docs/ARQUITECTURA.md §6).
 
@@ -14,7 +14,6 @@ import {
 } from '../ui/format.js'
 import { errorCopy } from '../ui/messages.js'
 import { api } from '../api.js'
-import { icon } from '../ui/icons.js'
 
 /** Labels for the consigned-document keys, shared with the ficha view. */
 export const DOC_LABELS = {
@@ -163,7 +162,9 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
 
   const repsContainer = h('div', { class: 'inscripcion__reps' })
 
-  function repRow() {
+  // Exactly one representative per student: the row is fixed, so there is no
+  // add or remove control that could produce a second link from this form.
+  function representanteRow() {
     const repNombre = textInput({ placeholder: 'Nombre y apellido' })
     const repTipoCi = h('select', { class: 'input', 'aria-label': 'Tipo de cédula del representante' }, [
       h('option', { value: 'V', text: 'V' }),
@@ -174,7 +175,7 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     const repTelefono = textInput({ inputmode: 'tel', placeholder: 'Teléfono' })
     const repCorreo = h('input', { class: 'input', type: 'email', placeholder: 'Correo' })
 
-    const row = h('div', { class: 'inscripcion__rep' }, [
+    return h('div', { class: 'inscripcion__rep' }, [
       field('Nombre y apellido *', repNombre),
       h('div', { class: 'inscripcion__ci' }, [
         field('Tipo', repTipoCi),
@@ -183,23 +184,10 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
       field('Parentesco', repParentesco),
       field('Teléfono *', repTelefono),
       field('Correo *', repCorreo),
-      h('button', { class: 'btn btn--ghost inscripcion__rep-remove', type: 'button' }, [
-        h('span', { text: 'Quitar' }),
-      ]),
     ])
-
-    row.querySelector('.inscripcion__rep-remove').addEventListener('click', () => {
-      row.remove()
-    })
-
-    return { row, repNombre, repTipoCi, repNumeroCi, repParentesco, repTelefono, repCorreo }
   }
 
-  const addRepButton = h('button', { class: 'btn btn--ghost', type: 'button' }, [
-    icon('plus'),
-    h('span', { text: 'Añadir representante' }),
-  ])
-  addRepButton.addEventListener('click', () => addRepButton.before(repRow().row))
+  const representante = representanteRow()
 
   // --- Documentos ---------------------------------------------------------------
 
@@ -289,9 +277,12 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
       ]),
     ]),
     h('section', { class: 'inscripcion__section' }, [
-      h('h3', { class: 'inscripcion__section-title', text: 'Representantes' }),
+      h('h3', { class: 'inscripcion__section-title', text: 'Representante' }),
+      h('p', {
+        class: 'inscripcion__hint',
+        text: 'Un solo representante por alumno.',
+      }),
       repsContainer,
-      addRepButton,
     ]),
     documentosSection,
   ])
@@ -305,7 +296,7 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
     'Datos del estudiante',
     'Datos físicos y salud',
     'Inscripción',
-    'Representantes',
+    'Representante',
     'Documentos',
   ]
   const steps = Array.from(form.querySelectorAll('.inscripcion__section'))
@@ -329,7 +320,7 @@ export function renderInscripcionWizard(container, { opciones, onExit }) {
   const footer = h('footer', { class: 'inscripcion__footer' }, [cancelBtn, backBtn, submitBtn])
 
   /** Place the reps toolbar inside the reps section (append after rows). */
-  repsContainer.append(repRow().row, addRepButton)
+  repsContainer.append(representante)
 
   clear(container)
   container.append(form, footer)
