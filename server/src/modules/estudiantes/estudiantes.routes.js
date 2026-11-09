@@ -11,6 +11,9 @@ router.use(requireAuth)
 
 router.get('/', controller.list)
 router.post('/', controller.create)
+// Enroll an existing student in a new school year. The method and path are
+// distinct from GET /:id, so the record endpoint is never captured.
+router.post('/:id/inscripciones', controller.createInscripcion)
 router.get('/:id', controller.getById)
 router.put('/:id', controller.update)
 router.delete('/:id', controller.remove)

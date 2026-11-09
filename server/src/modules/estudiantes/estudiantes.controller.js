@@ -81,12 +81,23 @@ function assertValidInscripcion(inscripcion, { partial = false } = {}) {
   }
 }
 
+/**
+ * Enforce the business rule of at most one representative per student: create
+ * requires exactly one, update accepts zero (to unlink) or one.
+ * @param {unknown} representantes
+ * @param {{ allowEmpty?: boolean }} [options]
+ */
 function assertValidRepresentantes(representantes, { allowEmpty = false } = {}) {
-  if (!Array.isArray(representantes) || (representantes.length === 0 && !allowEmpty)) {
-    throw HttpError.badRequest('representantes must be a non-empty array')
+  if (!Array.isArray(representantes)) {
+    throw HttpError.badRequest('representantes must be an array')
+  }
+  if (representantes.length > 1) {
+    throw HttpError.badRequest('representantes must contain at most one representative')
+  }
+  if (representantes.length === 0 && !allowEmpty) {
+    throw HttpError.badRequest('representantes must contain exactly one representative')
   }
 
-  const seen = new Set()
   representantes.forEach((item, index) => {
     if (item.numero_ci !== undefined) {
       item.numero_ci = normalizeNumeroCi(item.numero_ci)
@@ -110,11 +121,6 @@ function assertValidRepresentantes(representantes, { allowEmpty = false } = {}) 
     if (Object.keys(details).length > 0) {
       throw HttpError.badRequest(`Invalid representative at index ${index}`, details)
     }
-    const ciKey = `${item.tipo_ci}-${item.numero_ci}`
-    if (seen.has(ciKey)) {
-      throw HttpError.badRequest('Invalid representative at index', { index, duplicate_ci: ciKey })
-    }
-    seen.add(ciKey)
   })
 }
 
@@ -198,6 +204,32 @@ async function create(req, res, next) {
   }
 }
 
+async function createInscripcion(req, res, next) {
+  try {
+    const id = parseId(req.params.id)
+    const body = req.body ?? {}
+    if (!isObject(body.inscripcion)) {
+      throw HttpError.badRequest('inscripcion is required and must be an object')
+    }
+
+    assertValidInscripcion(body.inscripcion)
+    if (body.documentos !== undefined) {
+      if (!isObject(body.documentos)) {
+        throw HttpError.badRequest('documentos must be an object')
+      }
+      assertValidDocumentos(body.documentos)
+    }
+
+    const record = await service.createInscripcion(id, {
+      inscripcion: body.inscripcion,
+      documentos: body.documentos,
+    })
+    res.status(201).json(record)
+  } catch (error) {
+    next(error)
+  }
+}
+
 async function update(req, res, next) {
   try {
     const id = parseId(req.params.id)
@@ -256,4 +288,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create, update, remove }
+module.exports = { list, getById, create, createInscripcion, update, remove }

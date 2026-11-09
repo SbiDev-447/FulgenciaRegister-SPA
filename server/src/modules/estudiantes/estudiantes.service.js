@@ -115,10 +115,24 @@ function normalizeInscriptionStatus(data) {
   data.repite = isRepeater
 }
 
+function isDuplicateError(error) {
+  // MySQL error 1062 / ER_DUP_ENTRY.
+  return Boolean(error && (error.errno === 1062 || error.code === 'ER_DUP_ENTRY'))
+}
+
 function toDuplicateError(error) {
-  // MySQL error 1062 / ER_DUP_ENTRY: the (tipo_ci, numero_ci) pair already exists.
-  if (error && (error.errno === 1062 || error.code === 'ER_DUP_ENTRY')) {
+  // The (tipo_ci, numero_ci) pair already exists.
+  if (isDuplicateError(error)) {
     return HttpError.conflict('Duplicate record: the (tipo_ci, numero_ci) pair already exists')
+  }
+  return error
+}
+
+function toInscriptionConflict(error) {
+  // The composite UNIQUE (estudiante_id, anio_escolar) rejected the insert:
+  // another request won the race after our own duplicate check.
+  if (isDuplicateError(error)) {
+    return HttpError.conflict('The student already has an inscription for this school year')
   }
   return error
 }
@@ -435,6 +449,95 @@ async function createEstudiante(payload) {
 }
 
 /**
+ * Documents to copy into a new inscription. An explicit `documentos` object
+ * wins; when omitted the new inscription inherits the documents of the
+ * student's most recent inscription (highest anio_escolar). With no previous
+ * inscription the empty object lets the columns take their default of 0.
+ * @param {number} estudianteId
+ * @param {object|undefined} documentos
+ * @returns {Promise<object>}
+ */
+async function resolveDocumentos(estudianteId, documentos) {
+  if (documentos !== undefined) {
+    return pickDocuments(documentos)
+  }
+
+  const previous = await db
+    .tabla('inscripciones')
+    .select({ where: { estudiante_id: estudianteId }, order: 'anio_escolar DESC', limit: 1 })
+  const latest = previous[0]
+  if (!latest) {
+    return {}
+  }
+
+  const docRow = await db
+    .tabla('documentos_consignados')
+    .selectOne({ where: { inscripcion_id: latest.id } })
+  return docRow ? pick(docRow, DOCUMENT_FIELDS) : {}
+}
+
+/**
+ * Transactional enrollment of an existing student in a new school year. The
+ * student's personal data and representatives are untouched: this only inserts
+ * the inscription and its consigned-documents row.
+ * @param {number} estudianteId
+ * @param {{ inscripcion: object, documentos?: object }} payload
+ * @returns {Promise<object>} full record (same shape as GET /:id)
+ * @throws {HttpError} 404 when the student does not exist, 409 on a repeated
+ *   anio_escolar
+ */
+async function createInscripcion(estudianteId, payload = {}) {
+  const { inscripcion, documentos } = payload
+
+  // NOTE: transactions run on a single instance-global `_transactionConn`, so
+  // two concurrent requests would share one connection. Acceptable for this
+  // single-operator app; NEVER nest a transaction inside another.
+  await db.beginTransaction()
+  try {
+    const student = await db.tabla('estudiantes').selectById(estudianteId)
+    if (!student) {
+      throw HttpError.notFound('Estudiante not found')
+    }
+
+    const existing = await db
+      .tabla('inscripciones')
+      .selectOne({ where: { estudiante_id: estudianteId, anio_escolar: inscripcion.anio_escolar } })
+    if (existing) {
+      throw HttpError.conflict('The student already has an inscription for this school year')
+    }
+
+    // Resolve inheritance before inserting so the new row is not its own
+    // "most recent inscription".
+    const documentoData = await resolveDocumentos(estudianteId, documentos)
+
+    const inscripcionData = {
+      estudiante_id: estudianteId,
+      ...pick(inscripcion, INSCRIPTION_FIELDS),
+    }
+    if (inscripcionData.regular === undefined) {
+      inscripcionData.regular = true
+    }
+    if (inscripcionData.repite === undefined) {
+      inscripcionData.repite = false
+    }
+    normalizeInscriptionStatus(inscripcionData)
+
+    const inserted = await db.tabla('inscripciones').insert(inscripcionData)
+
+    // One documents row per inscription, always: inherited, provided or default.
+    await db
+      .tabla('documentos_consignados')
+      .insert({ inscripcion_id: inserted.insertId, ...documentoData })
+
+    await db.commit()
+    return getFullRecord(estudianteId)
+  } catch (error) {
+    await db.rollback().catch(() => {})
+    throw toInscriptionConflict(error)
+  }
+}
+
+/**
  * Transactional update. The cédula pair is immutable: any payload value that
  * differs from the stored pair is a 400. The inscription to touch is the one
  * identified by `inscripcion.anio_escolar`; its documents follow it.
@@ -618,6 +721,7 @@ module.exports = {
   listEstudiantes,
   getFullRecord,
   createEstudiante,
+  createInscripcion,
   updateEstudiante,
   deleteEstudiante,
   DOCUMENT_FIELDS,

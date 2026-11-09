@@ -838,6 +838,305 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     assert.equal(res.status, 404)
   })
 
+  // --- S2: the API keeps a single representative per student ------------------
+  // The wizard already offers one row (S1); the API must enforce the same rule
+  // so any other client cannot store a second representative.
+
+  let singleRepStudentId = null
+  let singleRepCi = null
+
+  await t.test('rejects a create with more than one representative with 400', async () => {
+    const studentCi = uniqueCi('61')
+    const repCiA = uniqueCi('62')
+    const repCiB = uniqueCi('63')
+    const res = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        ...contactoObligatorio,
+        tipo_ci: 'V',
+        numero_ci: studentCi,
+        primer_nombre: 'Doble',
+        primer_apellido: 'Representante',
+        fecha_nacimiento: '2012-04-10',
+        sexo: 'F',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+      representantes: [
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: repCiA, nombre: 'Ana Pérez', parentesco: 'Madre' },
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: repCiB, nombre: 'Luis Pérez', parentesco: 'Padre' },
+      ],
+      documentos: { ...allDocumentos },
+    })
+    const body = await res.json()
+    // Before the rule exists the student is created, so register the rows for
+    // cleanup first: a red run must not leave them behind.
+    if (body.estudiante) {
+      extraStudentIds.push(body.estudiante.id)
+      createdRepCis.push(repCiA, repCiB)
+    }
+    assert.equal(res.status, 400)
+    assert.equal(body.code, 'bad_request')
+    assert.match(body.message, /at most one representative/)
+    assert.equal(
+      (await db.tabla('estudiantes').select(null, null, { numero_ci: studentCi })).length,
+      0,
+      'a rejected create must not store the student',
+    )
+  })
+
+  await t.test('still creates a student with exactly one representative', async () => {
+    const studentCi = uniqueCi('64')
+    const repCi = uniqueCi('65')
+    const res = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        ...contactoObligatorio,
+        tipo_ci: 'V',
+        numero_ci: studentCi,
+        primer_nombre: 'Único',
+        primer_apellido: 'Representante',
+        fecha_nacimiento: '2012-04-10',
+        sexo: 'F',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+      representantes: [
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: repCi, nombre: 'Ana Pérez', parentesco: 'Madre' },
+      ],
+      documentos: { ...allDocumentos },
+    })
+    assert.equal(res.status, 201)
+    const body = await res.json()
+    extraStudentIds.push(body.estudiante.id)
+    createdRepCis.push(repCi)
+    assert.equal(body.representantes.length, 1)
+    singleRepStudentId = body.estudiante.id
+    singleRepCi = repCi
+  })
+
+  await t.test('rejects an update with more than one representative with 400', async () => {
+    const repCiA = uniqueCi('73')
+    const repCiB = uniqueCi('74')
+    // GREEN never stores these, but a red run would; register them either way.
+    createdRepCis.push(repCiA, repCiB)
+
+    const res = await api('PUT', `/api/estudiantes/${singleRepStudentId}`, {
+      representantes: [
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: repCiA, nombre: 'Ana Pérez', parentesco: 'Madre' },
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: repCiB, nombre: 'Luis Pérez', parentesco: 'Padre' },
+      ],
+    })
+    assert.equal(res.status, 400)
+    const body = await res.json()
+    assert.equal(body.code, 'bad_request')
+    assert.match(body.message, /at most one representative/)
+
+    const record = await api('GET', `/api/estudiantes/${singleRepStudentId}`)
+    const recordBody = await record.json()
+    assert.equal(recordBody.representantes.length, 1, 'a rejected update must keep the existing link')
+    assert.equal(recordBody.representantes[0].numero_ci, singleRepCi)
+  })
+
+  // --- S3/S4: enrolling an existing student in a new school year -------------
+  // The endpoint adds an inscription to an existing record; it never creates a
+  // student and never touches personal data or representatives.
+
+  const nuevoAnioStudentCi = uniqueCi('67')
+  const nuevoAnioRepCi = uniqueCi('68')
+  let nuevoAnioStudentId = null
+
+  await t.test('creates a second inscription for an existing student', async () => {
+    const created = await api('POST', '/api/estudiantes', {
+      estudiante: {
+        ...contactoObligatorio,
+        tipo_ci: 'V',
+        numero_ci: nuevoAnioStudentCi,
+        primer_nombre: 'Paso',
+        primer_apellido: 'De Año',
+        fecha_nacimiento: '2012-04-10',
+        sexo: 'F',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+      representantes: [
+        { ...repObligatorio, tipo_ci: 'V', numero_ci: nuevoAnioRepCi, nombre: 'Ana Pérez', parentesco: 'Madre' },
+      ],
+      documentos: { ...allDocumentos },
+    })
+    assert.equal(created.status, 201)
+    const createdBody = await created.json()
+    nuevoAnioStudentId = createdBody.estudiante.id
+    extraStudentIds.push(nuevoAnioStudentId)
+    createdRepCis.push(nuevoAnioRepCi)
+
+    const res = await api('POST', `/api/estudiantes/${nuevoAnioStudentId}/inscripciones`, {
+      inscripcion: {
+        anio_escolar: '2026-2027',
+        anio: '2do Año',
+        seccion: 'B',
+        fecha_inscripcion: '2026-09-15',
+      },
+    })
+    assert.equal(res.status, 201)
+    const body = await res.json()
+    assert.equal(body.estudiante.id, nuevoAnioStudentId, 'the record must belong to the same student')
+    assert.equal(body.inscripciones.length, 2)
+
+    const nueva = body.inscripciones.find((ins) => ins.anio_escolar === '2026-2027')
+    assert.ok(nueva, 'the new inscription must be part of the record')
+    assert.equal(nueva.anio, '2do Año')
+    assert.equal(nueva.seccion, 'B')
+    // No `documentos` sent: inherit the ones consigned for the latest (here the
+    // only previous) inscription instead of resetting them to zero.
+    for (const key of Object.keys(allDocumentos)) {
+      assert.equal(nueva.documentos[key], 1, `${key} must be inherited from the previous inscription`)
+    }
+  })
+
+  await t.test('rejects a second inscription for the same school year with 409', async () => {
+    const res = await api('POST', `/api/estudiantes/${nuevoAnioStudentId}/inscripciones`, {
+      inscripcion: {
+        anio_escolar: '2026-2027',
+        anio: '2do Año',
+        seccion: 'B',
+        fecha_inscripcion: '2026-09-15',
+      },
+    })
+    assert.equal(res.status, 409)
+    const body = await res.json()
+    assert.equal(body.code, 'conflict')
+  })
+
+  await t.test('rejects an inscription for an unknown student with 404', async () => {
+    const res = await api('POST', '/api/estudiantes/999999999/inscripciones', {
+      inscripcion: {
+        anio_escolar: '2026-2027',
+        anio: '2do Año',
+        seccion: 'B',
+        fecha_inscripcion: '2026-09-15',
+      },
+    })
+    assert.equal(res.status, 404)
+    assert.equal((await res.json()).code, 'not_found')
+  })
+
+  await t.test('rejects an invalid section in a new inscription with 400', async () => {
+    const res = await api('POST', `/api/estudiantes/${nuevoAnioStudentId}/inscripciones`, {
+      inscripcion: {
+        anio_escolar: '2027-2028',
+        anio: '3er Año',
+        seccion: 'F',
+        fecha_inscripcion: '2027-09-15',
+      },
+    })
+    assert.equal(res.status, 400)
+    const body = await res.json()
+    assert.equal(body.code, 'bad_request')
+    assert.equal(body.details.seccion, 'invalid section for the year')
+    const stored = await db
+      .tabla('inscripciones')
+      .select(null, null, { estudiante_id: nuevoAnioStudentId })
+    assert.equal(stored.length, 2, 'a rejected inscription must not be stored')
+  })
+
+  await t.test('stores provided documents instead of inheriting them', async () => {
+    const provided = {
+      partida_nacimiento: false,
+      copia_cedula: true,
+      boleta: false,
+      fotos: true,
+      carpeta: false,
+      certificado_6to_grado: true,
+    }
+    const res = await api('POST', `/api/estudiantes/${nuevoAnioStudentId}/inscripciones`, {
+      inscripcion: {
+        anio_escolar: '2027-2028',
+        anio: '3er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2027-09-15',
+        repite: true,
+      },
+      documentos: provided,
+    })
+    assert.equal(res.status, 201)
+    const body = await res.json()
+    const nueva = body.inscripciones.find((ins) => ins.anio_escolar === '2027-2028')
+    assert.ok(nueva, 'the new inscription must be part of the record')
+    for (const [key, value] of Object.entries(provided)) {
+      assert.equal(nueva.documentos[key], value ? 1 : 0, `${key} must keep the provided value`)
+    }
+    assert.equal(nueva.regular, 0)
+    assert.equal(nueva.repite, 1)
+  })
+
+  await t.test('rejects non-boolean documents in a new inscription with 400', async () => {
+    const countBefore = (
+      await db.tabla('inscripciones').select(null, null, { estudiante_id: nuevoAnioStudentId })
+    ).length
+    const res = await api('POST', `/api/estudiantes/${nuevoAnioStudentId}/inscripciones`, {
+      inscripcion: {
+        anio_escolar: '2028-2029',
+        anio: '4to Año',
+        seccion: 'A',
+        fecha_inscripcion: '2028-09-15',
+      },
+      documentos: { boleta: 'si' },
+    })
+    assert.equal(res.status, 400)
+    const body = await res.json()
+    assert.equal(body.code, 'bad_request')
+    assert.equal(body.details.boleta, 'must be a boolean')
+    const countAfter = (
+      await db.tabla('inscripciones').select(null, null, { estudiante_id: nuevoAnioStudentId })
+    ).length
+    assert.equal(countAfter, countBefore, 'a rejected inscription must not change stored data')
+  })
+
+  await t.test('inserts default documents when the student has no previous inscription', async () => {
+    // The endpoint only makes sense for a registered student, but that student
+    // may predate the inscriptions feature: no history means no documents to
+    // inherit, and the row must still exist with the column defaults (0).
+    const bareCi = uniqueCi('69')
+    const inserted = await db.tabla('estudiantes').insert({
+      tipo_ci: 'V',
+      numero_ci: bareCi,
+      primer_nombre: 'Sin',
+      primer_apellido: 'Historial',
+      fecha_nacimiento: '2012-04-10',
+      sexo: 'F',
+    })
+    const bareId = inserted.insertId
+    extraStudentIds.push(bareId)
+
+    const res = await api('POST', `/api/estudiantes/${bareId}/inscripciones`, {
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+    })
+    assert.equal(res.status, 201)
+    const body = await res.json()
+    assert.equal(body.inscripciones.length, 1)
+    const docs = body.inscripciones[0].documentos
+    assert.ok(docs, 'a consigned-documents row must always be inserted')
+    for (const key of Object.keys(allDocumentos)) {
+      assert.equal(docs[key], 0, `${key} must default to 0 without a previous inscription`)
+    }
+  })
+
   // --- S3: leaving no representative behind ----------------------------------
   // The bridge rows disappear with the student (FK CASCADE), so a representative
   // linked only to the deleted student used to stay forever as unreachable
@@ -877,14 +1176,16 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
   const enlacesDe = (estudianteId) =>
     db.tabla('estudiante_representante').select(null, null, { estudiante_id: estudianteId })
 
-  // A carries an exclusive representative plus one shared with B.
+  // A carries an exclusive representative plus one shared with B. The API now
+  // caps a student at one representative (S2), so the second link is seeded at
+  // the schema level: the N:M relationship still exists, and pre-existing data
+  // can carry it even though the API will no longer create it.
   const exclusiveCi = uniqueCi('41')
   const sharedCi = uniqueCi('42')
   createdRepCis.push(exclusiveCi, sharedCi)
 
   const createdA = await crearConRepresentantes(uniqueCi('43'), [
     { ci: exclusiveCi, nombre: 'Representante Exclusivo', parentesco: 'Madre' },
-    { ci: sharedCi, nombre: 'Representante Compartido', parentesco: 'Padre' },
   ])
   assert.equal(createdA.status, 201, 'the mixed case could not be created')
   const mixedId = (await createdA.json()).estudiante.id
@@ -900,6 +1201,11 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
   extraStudentIds.push(siblingId)
 
   const sharedRow = (await representantesPorCi(sharedCi))[0]
+  await db.tabla('estudiante_representante').insert({
+    estudiante_id: mixedId,
+    representante_id: sharedRow.id,
+    parentesco: 'Padre',
+  })
 
   await t.test('a rejected delete of an unknown student changes nothing', async () => {
     const snapshot = async () => ({
