@@ -85,6 +85,8 @@ export function renderInicio(container, { user } = {}) {
       documentosEmitidos,
       porAnio = [],
       porSeccion = [],
+      condicion,
+      continuidad,
       filtros,
       actualizadoEn,
     } = data;
@@ -227,32 +229,123 @@ export function renderInicio(container, { user } = {}) {
     clearBtn.hidden = !filterActive;
 
     const updated = timeLabel(actualizadoEn);
+    const trayectoria = renderTrayectoria(condicion, continuidad);
 
     results.replaceChildren(
+      ...[
+        h(
+          "div",
+          { class: "inicio__stats" },
+          cards.map((card) =>
+            h("article", { class: `card inicio__kpi inicio__kpi--${card.tone}` }, [
+              h("span", { class: "inicio__kpi-label" }, [
+                h("span", { class: "inicio__kpi-dot", "aria-hidden": "true" }),
+                h("span", { text: card.label }),
+              ]),
+              h("strong", {
+                class: "inicio__kpi-value",
+                text: numeric(card.value),
+              }),
+              card.hint
+                ? h("span", { class: "inicio__kpi-hint", text: card.hint })
+                : null,
+            ]),
+          ),
+        ),
+        breakdown,
+        trayectoria,
+        updated
+          ? h("p", { class: "inicio__updated", text: `Actualizado a las ${updated}` })
+          : null,
+      ].filter(Boolean),
+    );
+  }
+
+  /**
+   * Composition panel for repetition and continuity. Both groups use the same
+   * shape: a base segment (regular/continuing) and an accent segment (repeat/new).
+   */
+  function renderTrayectoria(condicion, continuidad) {
+    const grupos = [
+      {
+        key: "condicion",
+        label: "Condición",
+        base: { label: "Regulares", value: condicion?.regulares ?? 0 },
+        mark: { label: "Repitientes", value: condicion?.repitientes ?? 0 },
+      },
+      {
+        key: "continuidad",
+        label: "Continuidad",
+        base: { label: "Continuos", value: continuidad?.continuos ?? 0 },
+        mark: { label: "Nuevos", value: continuidad?.nuevos ?? 0 },
+      },
+    ];
+
+    const tieneDatos = grupos.some(
+      (grupo) => grupo.base.value + grupo.mark.value > 0,
+    );
+    if (!tieneDatos) return null;
+
+    return h("article", { class: "card inicio__breakdown inicio__trayectoria" }, [
+      h("div", { class: "inicio__breakdown-head" }, [
+        h("div", {}, [
+          h("h3", { text: "Composición de la matrícula" }),
+          h("p", {
+            class: "inicio__breakdown-note",
+            text: "Sobre los estudiantes del filtro actual.",
+          }),
+        ]),
+      ]),
       h(
         "div",
-        { class: "inicio__stats" },
-        cards.map((card) =>
-          h("article", { class: `card inicio__kpi inicio__kpi--${card.tone}` }, [
-            h("span", { class: "inicio__kpi-label" }, [
-              h("span", { class: "inicio__kpi-dot", "aria-hidden": "true" }),
-              h("span", { text: card.label }),
-            ]),
-            h("strong", {
-              class: "inicio__kpi-value",
-              text: numeric(card.value),
-            }),
-            card.hint
-              ? h("span", { class: "inicio__kpi-hint", text: card.hint })
-              : null,
-          ]),
-        ),
+        { class: "inicio__trayectoria-grid" },
+        grupos.map((grupo) => {
+          const total = grupo.base.value + grupo.mark.value;
+          const markPct = total > 0 ? (grupo.mark.value / total) * 100 : 0;
+          return h(
+            "div",
+            {
+              class: "inicio__trayectoria-item",
+              dataset: { grupo: grupo.key },
+            },
+            [
+              h("span", {
+                class: "inicio__trayectoria-label",
+                text: grupo.label,
+              }),
+              h("div", { class: "inicio__trayectoria-bar", "aria-hidden": "true" }, [
+                h("span", {
+                  class: "inicio__trayectoria-fill inicio__trayectoria-fill--base",
+                  style: { width: `${100 - markPct}%` },
+                }),
+                h("span", {
+                  class: "inicio__trayectoria-fill inicio__trayectoria-fill--mark",
+                  style: { width: `${markPct}%` },
+                }),
+              ]),
+              h("div", { class: "inicio__trayectoria-values" }, [
+                h("span", { class: "inicio__trayectoria-value" }, [
+                  h("span", {
+                    class: "inicio__swatch inicio__swatch--base",
+                    "aria-hidden": "true",
+                  }),
+                  h("span", { text: grupo.base.label }),
+                  h("strong", { text: numeric(grupo.base.value) }),
+                ]),
+                h("span", { class: "inicio__trayectoria-value" }, [
+                  h("span", {
+                    class: "inicio__swatch inicio__swatch--mark",
+                    "aria-hidden": "true",
+                  }),
+                  h("span", { text: grupo.mark.label }),
+                  h("strong", { text: numeric(grupo.mark.value) }),
+                ]),
+              ]),
+            ],
+          );
+        }),
       ),
-      breakdown,
-      updated
-        ? h("p", { class: "inicio__updated", text: `Actualizado a las ${updated}` })
-        : null,
-    );
+    ]);
   }
 
   function renderEmptyState(filtros) {

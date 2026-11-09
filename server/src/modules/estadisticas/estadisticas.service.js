@@ -21,6 +21,12 @@ const { YEARS, findYear } = require('../../constants/academic')
  * - `documentosEmitidos`: count of `documentos_emitidos` rows whose
  *   `estudiante_id` belongs to the filtered student set from `estudiantes`
  *   above; with no filters it counts every row.
+ * - `condicion`: among the filtered students, how many have a repeating
+ *   inscription (`repite`, which wins over `regular` on contradictory rows) and
+ *   how many are regular. Counted once per student, like `estudiantes`.
+ * - `continuidad`: among the filtered students, `nuevos` are those whose whole
+ *   history is a single school year; `continuos` have inscriptions in more than
+ *   one school year (`anio_escolar`), i.e. they were already in the system.
  * - `actualizadoEn`: ISO timestamp of the aggregation, so the dashboard can
  *   tell the user how fresh the numbers are.
  *
@@ -34,9 +40,22 @@ async function getEstadisticas(filters = {}) {
   const inscriptions = await db.tabla('inscripciones').select()
   const studentById = new Map(students.map((student) => [student.id, student]))
 
+  // Whole history per student feeds continuity; the same pass also records
+  // whether any matching inscription is a repeat.
+  const inscriptionsByStudent = new Map()
+  for (const ins of inscriptions) {
+    if (!inscriptionsByStudent.has(ins.estudiante_id)) {
+      inscriptionsByStudent.set(ins.estudiante_id, [])
+    }
+    inscriptionsByStudent.get(ins.estudiante_id).push(ins)
+  }
+
   // `estudiantes` card scope: students owning an inscription matching the
   // anio/seccion filters.
   const matchingIds = new Set()
+  // Per-student repetition flag over the matching inscriptions. `repite` wins
+  // over a contradictory `regular`, mirroring the write-side normalization.
+  const repeaterById = new Map()
 
   // `porAnio` accumulator, seeded so every year label is present in order.
   const porAnioByLabel = new Map(
@@ -59,6 +78,10 @@ async function getEstadisticas(filters = {}) {
   for (const ins of inscriptions) {
     if ((!anio || ins.anio === anio) && (!seccion || ins.seccion === seccion)) {
       matchingIds.add(ins.estudiante_id)
+      repeaterById.set(
+        ins.estudiante_id,
+        repeaterById.get(ins.estudiante_id) === true || Boolean(ins.repite),
+      )
     }
 
     if (!seccion || ins.seccion === seccion) {
@@ -79,6 +102,10 @@ async function getEstadisticas(filters = {}) {
   let total = 0
   let mujeres = 0
   let hombres = 0
+  let repitientes = 0
+  let regulares = 0
+  let nuevos = 0
+  let continuos = 0
   for (const id of matchingIds) {
     const student = studentById.get(id)
     if (!student) {
@@ -89,6 +116,23 @@ async function getEstadisticas(filters = {}) {
       mujeres += 1
     } else if (student.sexo === 'M') {
       hombres += 1
+    }
+
+    if (repeaterById.get(id)) {
+      repitientes += 1
+    } else {
+      regulares += 1
+    }
+
+    // Continuity is a property of the student's whole history, counted in
+    // distinct school years so a repeated grade still reads as "continuo".
+    const schoolYears = new Set(
+      (inscriptionsByStudent.get(id) ?? []).map((entry) => entry.anio_escolar),
+    )
+    if (schoolYears.size > 1) {
+      continuos += 1
+    } else {
+      nuevos += 1
     }
   }
 
@@ -107,6 +151,8 @@ async function getEstadisticas(filters = {}) {
   return {
     filtros: { anio: anio ?? null, seccion: seccion ?? null },
     estudiantes: { total, mujeres, hombres },
+    condicion: { repitientes, regulares },
+    continuidad: { nuevos, continuos },
     porAnio: YEARS.map((year) => porAnioByLabel.get(year.label)),
     porSeccion,
     documentosEmitidos,

@@ -55,6 +55,8 @@ test('inicio switches the breakdown to sections when a year is chosen', async (t
       return jsonResponse({
         filtros: { anio: '1er Año', seccion: null },
         estudiantes: { total: 3, mujeres: 2, hombres: 1 },
+        condicion: { repitientes: 1, regulares: 2 },
+        continuidad: { nuevos: 2, continuos: 1 },
         porAnio: [{ anio: '1er Año', total: 3, mujeres: 2, hombres: 1 }],
         porSeccion: [
           { seccion: 'A', total: 2, mujeres: 1, hombres: 1 },
@@ -95,6 +97,11 @@ test('inicio switches the breakdown to sections when a year is chosen', async (t
   assert.equal(findAll(container, '.inicio__bar-fill--hombres').length, 1)
   // The two sex cards now explain their share of the total.
   assert.match(text, /67% del total/)
+  // Condition and continuity get their own composition panel.
+  assert.match(text, /Composición de la matrícula/)
+  assert.equal(findAll(container, '.inicio__trayectoria-item').length, 2)
+  assert.match(text, /Repitientes/)
+  assert.match(text, /Nuevos/)
   // An active filter exposes the reset affordance.
   assert.equal(findAll(container, '.inicio__clear')[0].hidden, false)
 })

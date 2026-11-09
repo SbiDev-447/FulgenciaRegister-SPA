@@ -125,12 +125,18 @@ test('estadisticas endpoint (require MariaDB and a configured .env)', async (t) 
     )
     assert.equal(typeof before.actualizadoEn, 'string')
     assert.ok(!Number.isNaN(Date.parse(before.actualizadoEn)))
+    assert.equal(typeof before.condicion.repitientes, 'number')
+    assert.equal(typeof before.condicion.regulares, 'number')
+    assert.equal(typeof before.continuidad.nuevos, 'number')
+    assert.equal(typeof before.continuidad.continuos, 'number')
   })
 
   await t.test('seeds a deterministic fixture', async () => {
-    // Three students, one inscription each, all inside the isolated filter.
+    // Three students, one inscription each inside the isolated filter. Ana
+    // repeats the grade and also carries a previous school year, so she is a
+    // repeater and a continuing student; the other two are new and regular.
     const fixtures = [
-      { nombre: 'Ana', apellido: 'Uno', sexo: 'F', offset: '01' },
+      { nombre: 'Ana', apellido: 'Uno', sexo: 'F', offset: '01', repite: true, previa: true },
       { nombre: 'Beto', apellido: 'Dos', sexo: 'M', offset: '02' },
       { nombre: 'Carla', apellido: 'Tres', sexo: 'F', offset: '03' },
     ]
@@ -150,8 +156,22 @@ test('estadisticas endpoint (require MariaDB and a configured .env)', async (t) 
         anio_escolar: ANIO_ESCOLAR,
         anio: ANIO,
         seccion: SECCION,
+        regular: fixture.repite ? 0 : 1,
+        repite: fixture.repite ? 1 : 0,
         fecha_inscripcion: '2026-09-15',
       })
+
+      if (fixture.previa) {
+        // Another school year, another section: continuity sees it, the
+        // section-scoped charts and the year filter do not.
+        await db.tabla('inscripciones').insert({
+          estudiante_id: id,
+          anio_escolar: '2025-2026',
+          anio: '1er Año',
+          seccion: 'A',
+          fecha_inscripcion: '2025-09-15',
+        })
+      }
     }
 
     // Two emitted documents belonging to the filtered set.
@@ -177,6 +197,28 @@ test('estadisticas endpoint (require MariaDB and a configured .env)', async (t) 
     assert.equal(
       after.estudiantes.total,
       after.estudiantes.mujeres + after.estudiantes.hombres,
+    )
+  })
+
+  await t.test('reports condition and continuity for the filtered view', async () => {
+    const res = await api('GET', filteredUrl)
+    const after = await res.json()
+
+    // Ana repeats and already had a previous school year; Beto and Carla are
+    // new regular students.
+    assert.equal(after.condicion.repitientes - before.condicion.repitientes, 1)
+    assert.equal(after.condicion.regulares - before.condicion.regulares, 2)
+    assert.equal(after.continuidad.nuevos - before.continuidad.nuevos, 2)
+    assert.equal(after.continuidad.continuos - before.continuidad.continuos, 1)
+
+    // Both partitions cover the filtered students exactly once.
+    assert.equal(
+      after.condicion.repitientes + after.condicion.regulares,
+      after.estudiantes.total,
+    )
+    assert.equal(
+      after.continuidad.nuevos + after.continuidad.continuos,
+      after.estudiantes.total,
     )
   })
 
@@ -244,6 +286,14 @@ test('estadisticas endpoint (require MariaDB and a configured .env)', async (t) 
     // No year filter: the cross-year panorama is what the chart shows.
     assert.deepEqual(body.porSeccion, [])
     assert.equal(typeof body.actualizadoEn, 'string')
+    assert.equal(
+      body.condicion.repitientes + body.condicion.regulares,
+      body.estudiantes.total,
+    )
+    assert.equal(
+      body.continuidad.nuevos + body.continuidad.continuos,
+      body.estudiantes.total,
+    )
   })
 
   await t.test('accepts a section A-F when no year is given', async () => {

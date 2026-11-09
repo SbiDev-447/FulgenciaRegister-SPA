@@ -182,9 +182,12 @@ métodos: `tabla`, `query`, `createAllTables`, `addModel`, `end`. Todo lo demás
 **`estadisticas`** — solo lectura, con filtros opcionales por año y sección. Devuelve
 totales por sexo, una fila por año académico (`porAnio`, panorama entre años), una fila
 por sección del año elegido cuando hay filtro de año (`porSeccion`), el conteo de
-documentos emitidos y `actualizadoEn` con la marca ISO del cálculo. La tarjeta de
-documentos cuenta el histórico de los estudiantes filtrados; el desglose responde al
-filtro activo (secciones si hay año, años si no).
+documentos emitidos, `condicion` (repitientes vs regulares), `continuidad` (nuevos vs
+continuos, según si el estudiante tiene inscripciones en más de un `anio_escolar`) y
+`actualizadoEn` con la marca ISO del cálculo. La tarjeta de documentos cuenta el
+histórico de los estudiantes filtrados; el desglose responde al filtro activo
+(secciones si hay año, años si no). `condicion` y `continuidad` cuentan estudiantes del
+filtro, no inscripciones, y cada pareja suma exactamente `estudiantes.total`.
 
 **`reportes`** — solo lectura, para imprimir. `GET /api/reportes/seccion` exige año y
 sección, resuelve el año escolar **más reciente** con inscripciones en ese grupo y
@@ -431,6 +434,11 @@ de reintento.
   ignora en silencio el filtro que el usuario acaba de elegir.
 - **La tarjeta de documentos** cuenta el histórico de los estudiantes que caen en el
   filtro; el texto bajo el número lo dice explícitamente.
+- **Composición de la matrícula**: dos barras de dos segmentos sobre la misma base de
+  estudiantes. `condicion` separa regulares de repitientes (`repite` manda sobre un
+  `regular` contradictorio, igual que en el alta) y `continuidad` separa nuevos de
+  continuos (inscripciones en más de un `anio_escolar`). Si ambas parejas son cero, el
+  panel no se pinta.
 - **Mientras carga** pinta un esqueleto con la misma huella que el tablero real y un
   `role="status"` solo para lectores de pantalla.
 - **Sin datos** distingue dos casos: sin inscripciones (invita a Nueva inscripción) y sin
