@@ -888,6 +888,41 @@ test('estudiantes endpoints (require MariaDB and a configured .env)', async (t) 
     )
   })
 
+  await t.test('keeps the baseline message for an empty or non-array representative payload', async () => {
+    const studentCi = uniqueCi('66')
+    const base = {
+      estudiante: {
+        ...contactoObligatorio,
+        tipo_ci: 'V',
+        numero_ci: studentCi,
+        primer_nombre: 'Sin',
+        primer_apellido: 'Representante',
+        fecha_nacimiento: '2012-04-10',
+        sexo: 'F',
+      },
+      inscripcion: {
+        anio_escolar: '2025-2026',
+        anio: '1er Año',
+        seccion: 'A',
+        fecha_inscripcion: '2025-09-15',
+      },
+      documentos: { ...allDocumentos },
+    }
+
+    for (const representantes of [[], 'x']) {
+      const res = await api('POST', '/api/estudiantes', { ...base, representantes })
+      const body = await res.json()
+      assert.equal(res.status, 400)
+      assert.equal(body.message, 'representantes must be a non-empty array')
+    }
+
+    assert.equal(
+      (await db.tabla('estudiantes').select(null, null, { numero_ci: studentCi })).length,
+      0,
+      'the rejected payloads must not store the student',
+    )
+  })
+
   await t.test('still creates a student with exactly one representative', async () => {
     const studentCi = uniqueCi('64')
     const repCi = uniqueCi('65')

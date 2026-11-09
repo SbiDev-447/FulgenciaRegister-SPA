@@ -88,14 +88,11 @@ function assertValidInscripcion(inscripcion, { partial = false } = {}) {
  * @param {{ allowEmpty?: boolean }} [options]
  */
 function assertValidRepresentantes(representantes, { allowEmpty = false } = {}) {
-  if (!Array.isArray(representantes)) {
-    throw HttpError.badRequest('representantes must be an array')
+  if (!Array.isArray(representantes) || (representantes.length === 0 && !allowEmpty)) {
+    throw HttpError.badRequest('representantes must be a non-empty array')
   }
   if (representantes.length > 1) {
     throw HttpError.badRequest('representantes must contain at most one representative')
-  }
-  if (representantes.length === 0 && !allowEmpty) {
-    throw HttpError.badRequest('representantes must contain exactly one representative')
   }
 
   representantes.forEach((item, index) => {
